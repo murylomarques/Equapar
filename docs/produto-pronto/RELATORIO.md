@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 feitos; próximo: L1. Testes de navegador pendentes (servidor parado por falta de memória): S4, S11, S12. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 e L1 feitos; próximo: L2. Testes de navegador pendentes (servidor parado por falta de memória): S4, S11, S12. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -45,3 +45,9 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | S10 Senha (NIST SP 800-63B) | feito | `src/lib/senha.test.ts`: antes, "cavalo correto bateria grampo" era recusada (sem números) e "Abc123!xyz" (10 caracteres) aceita; depois, sem regra de composição, mínimo 15 (8 com duas etapas), até 64, recusa senhas comuns/repetidas/sequências e o próprio e-mail. Lista local (nenhum serviço externo recebe a senha); sem troca periódica. Regras visíveis no campo atualizadas. Commit "S10" | Decisão sem certeza: a lista de senhas comuns é local e curta; consultar uma base de vazamentos (ex.: k-anonymity do HIBP) seria integração de terceiro (trava 5) |
 | S11 Esqueci minha senha | parcial | `src/lib/redefinir-senha.test.ts`: link assinado vale 1 hora, serve uma vez só (leva a impressão do hash atual; mudou a senha, o link morre), de outra pessoa ou alterado não vale; sem migração. Telas `/esqueci-senha` e `/redefinir-senha`, link na tela Entrar; resposta igual para e-mail sem conta; 3 pedidos por e-mail e 10 por IP por dia; ao salvar, encerra todas as sessões. Commit "S11" | Rodar `e2e/bloqueadoras/s11-esqueci-senha.mjs` quando houver servidor de teste |
 | S12 Convites sem senha temporária | parcial | `src/app/app/configuracoes/convite.test.ts`: antes, quem convidava via "Senha temporária (mostrada só agora)"; depois, a pessoa é criada sem senha e recebe link de 7 dias (`convite.test.ts`: vence, vale uma vez, não pode ser alterado); tela `/convite` para criar a senha e entrar. Sem migração. Commit "S12" | Rodar `e2e/bloqueadoras/s12-convite.mjs` quando houver servidor de teste |
+
+## Fase 0: lógica e promessas
+
+| Item | Situação | Prova | Pendente |
+| --- | --- | --- | --- |
+| L1 Números que não batem | feito | `src/lib/prazos.test.ts`: antes, o cartão de Hoje contava ações e o filtro da Carteira contava contratos (números diferentes); depois, `contratosComPrazoEm(contratos, dias)` é a única regra do cartão, da saudação, dos filtros de 30/60 dias e do resumo semanal (7 dias). Rótulos dizem "contratos com prazo". Commit "L1" | Conferir na tela quando houver servidor |

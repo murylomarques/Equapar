@@ -189,3 +189,17 @@ export function acoesDoContrato(c: ContratoComRel, hoje = hojeUTC()): Acao[] {
   }
   return out;
 }
+
+/**
+ * L1. Contratos com prazo nos próximos `dias` dias: o próximo prazo do contrato (pedir, fim da vigência,
+ * data-base ou resposta do órgão) cai entre hoje e hoje + dias. Usada pelo cartão e pela saudação de
+ * Hoje, pelo filtro da Carteira e pelo resumo semanal, para os três contarem o mesmo conjunto.
+ */
+export function contratosComPrazoEm<T extends ContratoComRel>(contratos: T[], dias: number, hoje = hojeUTC()): T[] {
+  return contratos.filter((c) => {
+    const p = proximoPrazo(c, hoje);
+    if (!p) return false;
+    const d = Math.round((Date.UTC(p.data.getUTCFullYear(), p.data.getUTCMonth(), p.data.getUTCDate()) - hoje.getTime()) / 86_400_000);
+    return d >= 0 && d <= dias;
+  });
+}

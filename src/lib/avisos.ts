@@ -5,8 +5,8 @@
 import type { Conta, Contrato, Convencao, Pedido, Usuario } from "@prisma/client";
 import { db } from "./db";
 import { appUrl, enviar, MODELOS, type ModeloWhatsapp } from "./mensagens";
-import { acoesDoContrato, prazoResposta } from "./prazos";
-import { data, diasAte, hojeUTC, reais, reaisResumo } from "./format";
+import { acoesDoContrato, contratosComPrazoEm, prazoResposta } from "./prazos";
+import { data, diasAte, hojeUTC, plural, reais, reaisResumo } from "./format";
 
 type Prefs = { prazo?: "EMAIL" | "WHATSAPP" | "AMBOS"; resposta?: "EMAIL" | "WHATSAPP" | "AMBOS"; deferido?: "EMAIL" | "WHATSAPP" | "AMBOS"; semanal?: boolean; hora?: number };
 
@@ -176,6 +176,7 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
     // Resumo semanal: segunda às 7h (ou no horário escolhido)
     if (segunda) {
       const acoes = contratos.flatMap((c) => acoesDoContrato(c, hoje)).filter((a) => !a.limite || diasAte(a.limite, agora) <= 7);
+      const comPrazo = contratosComPrazoEm(contratos, 7, hoje).length; // L1: mesma regra do cartão de Hoje e do filtro
       const aguardando = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "PROTOCOLADO").map((p) => ({ c, p })));
       const receber = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "DEFERIDO" || p.estado === "FATURADO").map((p) => ({ c, p })));
       const totalReceber = receber.reduce((s, { p }) => s + Number(p.valorDeferido ?? p.diferencaRetroativa ?? 0), 0);
@@ -200,7 +201,7 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
           tipo: "SEMANAL",
           canal: "EMAIL",
           destino: u.email,
-          assunto: `Sua semana: ${acoes.length} prazos, ${aguardando.length} pedidos no órgão, ${reaisResumo(totalReceber)} a receber`,
+          assunto: `Sua semana: ${plural(comPrazo, "contrato com prazo", "contratos com prazo")}, ${aguardando.length} pedidos no órgão, ${reaisResumo(totalReceber)} a receber`,
           corpo: linhas.join("\n"),
         });
         if (r) resumo.semanais++;

@@ -4,7 +4,7 @@ import { CalendarClock, CheckCircle2, DollarSign, FolderOpen, Hourglass } from "
 import { contexto, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { contratosDoContexto } from "@/lib/consultas";
-import { acoesDoContrato, prazoResposta, prazosDoContrato } from "@/lib/prazos";
+import { acoesDoContrato, contratosComPrazoEm, prazoResposta, prazosDoContrato } from "@/lib/prazos";
 import { addDias, data, diasAte, emDias, hojeUTC, plural, reais, reaisResumo, saudacao } from "@/lib/format";
 import { SeloSimples } from "@/components/selo";
 import { FormAcao } from "@/components/form-acao";
@@ -58,8 +58,8 @@ export default async function Hoje() {
   const aguardando = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "PROTOCOLADO").map((p) => ({ c, p })));
   const receber = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "DEFERIDO" || p.estado === "FATURADO").map((p) => ({ c, p })));
   const totalReceber = receber.reduce((s, { p }) => s + Number(p.valorDeferido ?? 0), 0);
-  // B2: mesmo critério da lista "Precisa de você"
-  const prazos30 = acoes.filter((a) => a.limite && diasAte(a.limite) >= 0 && diasAte(a.limite) <= 30).length;
+  // L1: mesmo conjunto do filtro "Prazo em 30 dias" da Carteira e do resumo semanal
+  const prazos30 = contratosComPrazoEm(contratos, 30, hoje).length;
 
   const ate90 = addDias(hoje, 90);
   const eventos = contratos
@@ -83,7 +83,7 @@ export default async function Hoje() {
       <div style={{ marginBottom: 24 }}>
         <h1>Hoje</h1>
         <p className="mb-0" style={{ fontSize: 17 }}>
-          {saudacao()}, {ctx.usuario.nome.split(" ")[0]}. Próximos 30 dias: {plural(prazos30, "prazo", "prazos")}.
+          {saudacao()}, {ctx.usuario.nome.split(" ")[0]}. Próximos 30 dias: {plural(prazos30, "contrato com prazo", "contratos com prazo")}.
         </p>
       </div>
 
@@ -91,7 +91,7 @@ export default async function Hoje() {
         <CartaoNumero
           href="/app/carteira?filtro=prazo30"
           icone={CalendarClock}
-          rotulo="Prazos em 30 dias"
+          rotulo="Contratos com prazo em 30 dias"
           valor={prazos30}
           detalhe={prazos30 ? "Ver os contratos" : "Nenhum prazo próximo"}
           tom={prazos30 ? "carimbo" : undefined}

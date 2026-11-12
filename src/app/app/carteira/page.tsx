@@ -3,8 +3,8 @@ import Link from "next/link";
 import { FolderOpen, Layers, SearchX } from "lucide-react";
 import { contexto, pode } from "@/lib/auth";
 import { contratosDoContexto, type ContratoCompleto } from "@/lib/consultas";
-import { oportunidade, proximoPrazo, seloSituacao } from "@/lib/prazos";
-import { data, diasAte, MESES, plural, reais } from "@/lib/format";
+import { contratosComPrazoEm, oportunidade, proximoPrazo, seloSituacao } from "@/lib/prazos";
+import { data, MESES, plural, reais } from "@/lib/format";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { Alerta, CabecalhoPagina } from "@/components/ui/estrutura";
@@ -21,18 +21,12 @@ const FILTROS: { id: string; nome: string; teste: (c: ContratoCompleto) => boole
   {
     id: "prazo30",
     nome: "Prazo em 30 dias",
-    teste: (c) => {
-      const p = proximoPrazo(c);
-      return !!p && diasAte(p.data) <= 30;
-    },
+    teste: (c) => contratosComPrazoEm([c], 30).length > 0, // L1: mesmo conjunto do cartão de Hoje
   },
   {
     id: "prazo60",
     nome: "Prazo em 60 dias",
-    teste: (c) => {
-      const p = proximoPrazo(c);
-      return !!p && diasAte(p.data) <= 60;
-    },
+    teste: (c) => contratosComPrazoEm([c], 60).length > 0,
   },
   { id: "semconvencao", nome: "Sem convenção informada", teste: (c) => c.maoDeObraDedicada && c.tipoReajuste === "REPACTUACAO" && !c.convencao },
   { id: "pedido", nome: "Pedido em andamento", teste: (c) => c.pedidos.some((p) => !["RECEBIDO", "INDEFERIDO"].includes(p.estado)) },
