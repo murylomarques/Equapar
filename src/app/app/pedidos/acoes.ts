@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { contratoDaConta, exigir, pedidoDaConta, registrarHistorico } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ErroCampos, tentar, texto, type Resultado } from "@/lib/acao";
@@ -17,6 +17,7 @@ import { iaAtiva, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
 import { salvarArquivo } from "@/lib/storage";
 import { oportunidade } from "@/lib/prazos";
+import { aoTrocarPlanilhaAtual } from "@/lib/pedido-regras";
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
@@ -33,7 +34,7 @@ async function criarPedido(ctx: Awaited<ReturnType<typeof exigir>>, contratoId: 
   const op = completo ? oportunidade(completo) : null;
   // reaproveita a planilha "agora" do último pedido deferido como planilha atual
   const anterior = await db.pedido.findFirst({
-    where: { contratoId: c.id, estado: { in: ["DEFERIDO", "FATURADO", "RECEBIDO"] }, planilhaAgora: { not: undefined } },
+    where: { contratoId: c.id, estado: { in: ["DEFERIDO", "FATURADO", "RECEBIDO"] }, planilhaAgora: { not: Prisma.AnyNull } },
     orderBy: { criadoEm: "desc" },
   });
   const p = await db.pedido.create({
@@ -138,11 +139,21 @@ export async function salvarPlanilha(pedidoId: string, qual: "antes" | "agora", 
   });
 }
 
+/** C1: a planilha nova do passo 3 é refeita quando a atual é trocada; exige confirmação explícita. */
+function trocaDaPlanilhaAtual(p: Parameters<typeof aoTrocarPlanilhaAtual>[0], fd: FormData): { erro: string } | ReturnType<typeof aoTrocarPlanilhaAtual> {
+  const t = aoTrocarPlanilhaAtual(p);
+  if (t.precisaConfirmar && fd.get("refazerPlanilhaNova") !== "1")
+    return { erro: "Já existe uma planilha nova no passo 3. Confirme que ela será refeita a partir desta planilha atual." };
+  return t;
+}
+
 export async function enviarPlanilha(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
     const arquivo = fd.get("arquivo");
     if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o arquivo da planilha." };
+    const troca = trocaDaPlanilhaAtual(p, fd);
+    if ("erro" in troca) return troca;
     const s = await salvarArquivo(ctx.conta.id, arquivo);
     await db.documento.create({ data: { pedidoId: p.id, contratoId: p.contratoId, tipo: "PLANILHA", nome: s.nome, mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
     let imp;
@@ -157,9 +168,12 @@ export async function enviarPlanilha(_: Resultado, fd: FormData): Promise<Result
     if (!imp.planilha.tipos.length) return { erro: "Não achamos linhas de custo neste arquivo. Confira se é a planilha de custos ou preencha a partir do modelo." };
     await db.pedido.update({
       where: { id: p.id },
-      data: { planilhaAntes: json(imp.planilha), planilhaAgora: undefined, linhasNaoLidas: json(imp.naoLidas), memoriaAprovadaEm: null, memoriaAprovadaPor: null },
+      data: { ...troca.data, planilhaAntes: json(imp.planilha), linhasNaoLidas: json(imp.naoLidas) },
     });
-    await registrarHistorico(ctx, `Enviou a planilha atual (${s.nome})`, { pedidoId: p.id, contratoId: p.contratoId });
+    await registrarHistorico(ctx, `Enviou a planilha atual (${s.nome})${troca.precisaConfirmar ? ": a planilha nova do passo 3 será refeita a partir dela" : ""}`, {
+      pedidoId: p.id,
+      contratoId: p.contratoId,
+    });
     revalidatePath(`/app/pedidos/${p.id}/passo/2`);
     return { ok: `Lemos ${imp.lidas} linhas.${imp.naoLidas.length ? ` Confira as ${imp.naoLidas.length} que não entendemos.` : ""}` };
   });
@@ -167,8 +181,11 @@ export async function enviarPlanilha(_: Resultado, fd: FormData): Promise<Result
 
 export async function usarModelo(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
-    const { p } = await pedidoEditavel(fd);
-    await db.pedido.update({ where: { id: p.id }, data: { planilhaAntes: json(planilhaModelo()), linhasNaoLidas: json([]) } });
+    const { ctx, p } = await pedidoEditavel(fd);
+    const troca = trocaDaPlanilhaAtual(p, fd);
+    if ("erro" in troca) return troca;
+    await db.pedido.update({ where: { id: p.id }, data: { ...troca.data, planilhaAntes: json(planilhaModelo()), linhasNaoLidas: json([]) } });
+    if (troca.precisaConfirmar) await registrarHistorico(ctx, "Trocou a planilha atual pelo modelo: a planilha nova do passo 3 será refeita", { pedidoId: p.id, contratoId: p.contratoId });
     revalidatePath(`/app/pedidos/${p.id}/passo/2`);
     return { ok: "Modelo em branco criado. Preencha com os números da proposta." };
   });

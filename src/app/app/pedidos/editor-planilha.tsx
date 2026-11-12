@@ -51,26 +51,27 @@ export function EditorPlanilha({
   const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
   const [moduloCelular, setModuloCelular] = useState<ModuloId>("M1");
   const confirmar = useConfirmar();
-  const primeira = useRef(true);
+  // Último conteúdo gravado: só salva quando o conteúdo realmente muda.
+  // (Um "primeira vez" não basta: o React monta duas vezes em desenvolvimento e o editor
+  // gravava a planilha antiga por cima de um envio novo.)
+  const ultimoSalvo = useRef(JSON.stringify(inicial));
   const tabela = useRef<HTMLDivElement>(null);
 
   // ----- salvamento automático
   const salvar = useCallback(
     (p: PlanilhaCustos) => {
+      const conteudo = JSON.stringify(p);
       setSalvo({ tipo: "salvando" });
       iniciar(async () => {
-        const r = await salvarPlanilha(pedidoId, qual, JSON.stringify(p));
+        const r = await salvarPlanilha(pedidoId, qual, conteudo);
+        if (!r.erro) ultimoSalvo.current = conteudo;
         setSalvo(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "salvo", texto: r.ok ?? "Salvo" });
       });
     },
     [pedidoId, qual],
   );
   useEffect(() => {
-    if (primeira.current) {
-      primeira.current = false;
-      return;
-    }
-    if (somenteLeitura) return;
+    if (somenteLeitura || JSON.stringify(planilha) === ultimoSalvo.current) return;
     const t = setTimeout(() => salvar(planilha), 800);
     return () => clearTimeout(t);
   }, [planilha, somenteLeitura, salvar]);

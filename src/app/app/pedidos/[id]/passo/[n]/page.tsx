@@ -125,17 +125,29 @@ async function Passo1({ p, contaId, leitura }: { p: P; contaId: string; leitura:
   );
 }
 
+const AVISO_REFAZER = "A planilha nova do passo 3 será refeita a partir desta. As alterações do passo 3 serão perdidas.";
+
 function Passo2({ p, leitura }: { p: P; leitura: boolean }) {
   const naoLidas = (p.linhasNaoLidas as LinhaNaoLida[] | null) ?? [];
+  // C1: trocar a planilha atual refaz a planilha nova do passo 3
+  const temNova = !!p.planilhaAgora;
+  const refazer = temNova ? { titulo: "Trocar a planilha atual?", texto: AVISO_REFAZER, confirmar: "Trocar e refazer o passo 3", perigo: true } : undefined;
   return (
     <div className="pilha" style={{ gap: 24 }}>
+      {temNova && !leitura && (
+        <Alerta tipo="atencao" titulo="Este pedido já tem a planilha nova do passo 3">
+          Se você trocar a planilha atual, a planilha nova será refeita a partir dela e as alterações do passo 3 serão perdidas.{" "}
+          <a href={`/api/pedidos/${p.id}/arquivos/planilha.xlsx`}>Baixar a planilha nova antes (Excel)</a>
+        </Alerta>
+      )}
       {!leitura && (
         <div className="grade-2">
           <div className="cartao">
             <h2>Planilha de custos atual</h2>
             <p className="secundario">A da proposta ou a do último apostilamento. A Equapar lê as linhas e pede confirmação só do que não entendeu.</p>
-            <FormAcao action={enviarPlanilha}>
+            <FormAcao action={enviarPlanilha} confirmar={refazer}>
               <input type="hidden" name="pedidoId" value={p.id} />
+              {temNova && <input type="hidden" name="refazerPlanilhaNova" value="1" />}
               <AreaArquivo tipos={iaAtiva() ? ["excel", "pdf"] : ["excel"]} enviarAoEscolher textoEnviando="Lendo a planilha…" />
             </FormAcao>
           </div>
@@ -144,9 +156,19 @@ function Passo2({ p, leitura }: { p: P; leitura: boolean }) {
             <p className="secundario">Comece do modelo da IN 05/2017 e digite os números da proposta. Nenhum valor vem preenchido.</p>
             <FormAcao
               action={usarModelo}
-              confirmar={p.planilhaAntes ? { titulo: "Trocar a planilha atual pelo modelo em branco?", texto: "As linhas digitadas até agora serão substituídas.", confirmar: "Usar o modelo", perigo: true } : undefined}
+              confirmar={
+                p.planilhaAntes
+                  ? {
+                      titulo: "Trocar a planilha atual pelo modelo em branco?",
+                      texto: temNova ? `As linhas digitadas até agora serão substituídas. ${AVISO_REFAZER}` : "As linhas digitadas até agora serão substituídas.",
+                      confirmar: "Usar o modelo",
+                      perigo: true,
+                    }
+                  : undefined
+              }
             >
               <input type="hidden" name="pedidoId" value={p.id} />
+              {temNova && <input type="hidden" name="refazerPlanilhaNova" value="1" />}
               <BotaoEnvio className="btn">Começar do modelo em branco</BotaoEnvio>
             </FormAcao>
           </div>
