@@ -46,7 +46,7 @@ export function MemoriaView({
             Todas as linhas <span className="n">({comp.linhas.length})</span>
           </button>
           <button type="button" className="filtro" aria-pressed={soMudou} onClick={() => setSoMudou(true)}>
-            Só o que mudou <span className="n">({mudaram})</span>
+            Linhas com valor diferente <span className="n">({mudaram})</span>
           </button>
         </div>
         <button type="button" className="btn btn-pequeno" onClick={() => window.print()}>

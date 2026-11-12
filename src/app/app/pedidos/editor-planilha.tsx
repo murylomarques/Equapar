@@ -215,7 +215,7 @@ export function EditorPlanilha({
         {antes && (
           <div className="filtros mb-0" role="group" aria-label="Quais linhas mostrar">
             <button type="button" className="filtro" aria-pressed={soMudou} onClick={() => setSoMudou(true)}>
-              Mostrar só o que mudou <span className="n">({mudou.size})</span>
+              Linhas que você alterou <span className="n">({mudou.size})</span>
             </button>
             <button type="button" className="filtro" aria-pressed={!soMudou} onClick={() => setSoMudou(false)}>
               Mostrar todas <span className="n">({totalLinhas})</span>
