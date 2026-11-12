@@ -103,8 +103,10 @@ export async function onboardingImportar(_: Resultado, fd: FormData): Promise<Re
 export async function onboardingMarcar(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
+    // L3: só os contratos que a tela mostrou (campo "exibido"), da própria conta e não arquivados
     const marcados = new Set(fd.getAll("maoDeObra").map(String));
-    const contratos = await db.contrato.findMany({ where: { empresa: { contaId: ctx.conta.id } }, select: { id: true } });
+    const exibidos = fd.getAll("exibido").map(String);
+    const contratos = await db.contrato.findMany({ where: { id: { in: exibidos }, arquivado: false, empresa: { contaId: ctx.conta.id } }, select: { id: true } });
     for (const c of contratos) await db.contrato.update({ where: { id: c.id }, data: { maoDeObraDedicada: marcados.has(c.id) } });
     redirect("/app/boas-vindas?passo=convencoes");
   });

@@ -119,6 +119,7 @@ function Marcar({ contratos }: { contratos: { id: string; numero: string; orgao:
             {contratos.map((c) => (
               <li key={c.id}>
                 <label className="radio-cartao">
+                  <input type="hidden" name="exibido" value={c.id} />
                   <input type="checkbox" name="maoDeObra" value={c.id} defaultChecked={c.maoDeObraDedicada} />
                   <span style={{ minWidth: 0 }}>
                     <strong>

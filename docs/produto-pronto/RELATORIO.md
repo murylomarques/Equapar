@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1 e L2 feitos; próximo: L3. Testes de navegador pendentes (servidor parado por falta de memória): S4, S11, S12. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L3 feitos; próximo: L4. Testes de navegador pendentes (servidor parado por falta de memória): S4, S11, S12. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -52,3 +52,4 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | --- | --- | --- | --- |
 | L1 Números que não batem | feito | `src/lib/prazos.test.ts`: antes, o cartão de Hoje contava ações e o filtro da Carteira contava contratos (números diferentes); depois, `contratosComPrazoEm(contratos, dias)` é a única regra do cartão, da saudação, dos filtros de 30/60 dias e do resumo semanal (7 dias). Rótulos dizem "contratos com prazo". Commit "L1" | Conferir na tela quando houver servidor |
 | L2 "Só o que mudou" com dois sentidos | feito | Passo 3: "Linhas que você alterou (N)" (linhas digitadas); memória: "Linhas com valor diferente (N)" (inclui as que mudam por consequência). Mudança só de texto. Commit "L2" | Conferir nas capturas |
+| L3 Primeiros passos alteravam todos os contratos | feito | `src/app/app/onboarding.test.ts`: antes, desmarcar na tela tirava a mão de obra dedicada também do contrato arquivado que a tela não mostrou; depois, a ação só altera os ids enviados em `exibido`, da conta e não arquivados (teste falha no código antigo e passa no novo). Commit "L3" | — |
