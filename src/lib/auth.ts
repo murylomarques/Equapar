@@ -50,28 +50,46 @@ export function limparFalhas(chave: string) {
 // Sessões
 // ---------------------------------------------------------------------------
 
-export async function criarSessao(usuarioId: string, opts: { pendente2fa?: boolean; contaId?: string } = {}) {
+/**
+ * Abre a sessão. Antes, remove as vencidas do usuário e a anterior do MESMO navegador
+ * (o cookie atual ou o mesmo user agent), para não acumular sessões a cada login.
+ * `lembrar`: 30 dias com cookie persistente; sem lembrar, 12 horas e cookie de sessão.
+ */
+export async function criarSessao(usuarioId: string, opts: { pendente2fa?: boolean; contaId?: string; lembrar?: boolean } = {}) {
   const token = tokenAleatorio();
   const h = await headers();
+  const c = await cookies();
+  const userAgent = h.get("user-agent")?.slice(0, 200) ?? null;
+  const anterior = c.get(COOKIE)?.value;
+  await db.sessao.deleteMany({
+    where: {
+      OR: [
+        { usuarioId, expiraEm: { lt: new Date() } },
+        ...(anterior ? [{ id: sha256(anterior) }] : []),
+        ...(userAgent ? [{ usuarioId, userAgent }] : []),
+      ],
+    },
+  });
   const contaId =
     opts.contaId ?? (await db.membro.findFirst({ where: { usuarioId }, orderBy: { criadoEm: "asc" } }))?.contaId ?? null;
+  const lembrar = opts.lembrar ?? true;
+  const duracaoMs = lembrar ? DURACAO_DIAS * 86_400_000 : 12 * 3_600_000;
   await db.sessao.create({
     data: {
       id: sha256(token),
       usuarioId,
       contaId,
       pendente2fa: !!opts.pendente2fa,
-      userAgent: h.get("user-agent")?.slice(0, 200) ?? null,
-      expiraEm: new Date(Date.now() + DURACAO_DIAS * 86_400_000),
+      userAgent,
+      expiraEm: new Date(Date.now() + duracaoMs),
     },
   });
-  const c = await cookies();
   c.set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: DURACAO_DIAS * 86_400,
+    ...(lembrar ? { maxAge: DURACAO_DIAS * 86_400 } : {}),
   });
 }
 

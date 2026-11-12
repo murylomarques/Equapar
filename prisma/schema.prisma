@@ -109,6 +109,7 @@ model Conta {
   plano                   Plano     @default(GRATIS)
   marcaNome               String? // assessoria: nome nos PDFs
   marcaCor                String? // assessoria: cor nos PDFs
+  marcaLogo               String? // assessoria: caminho do logo (PNG/JPG) no armazenamento
   mostrarValoresWhatsapp  Boolean   @default(false)
   pilotoInicio            DateTime?
   criadoEm                DateTime  @default(now())
@@ -120,6 +121,7 @@ model Conta {
   avisos      Aviso[]
   tarefas     Tarefa[]
   faturas     Fatura[]
+  trabalhos   TrabalhoFundo[]
 }
 
 model Membro {
@@ -363,4 +365,21 @@ model Evento {
   criadoEm DateTime @default(now())
 
   @@index([nome, criadoEm])
+}
+
+// Tarefa demorada em segundo plano (ex.: exportar tudo). Avisa no sino quando termina.
+model TrabalhoFundo {
+  id          String    @id @default(cuid())
+  contaId     String
+  conta       Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  usuarioId   String
+  tipo        String // EXPORTAR
+  status      String // RODANDO, PRONTO, ERRO
+  caminho     String?
+  erro        String?
+  criadoEm    DateTime  @default(now())
+  concluidoEm DateTime?
+  vistoEm     DateTime?
+
+  @@index([usuarioId, criadoEm])
 }

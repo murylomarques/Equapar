@@ -110,6 +110,7 @@ async function main() {
   const mk = (d: Partial<Prisma.ContratoUncheckedCreateInput> & Pick<Prisma.ContratoUncheckedCreateInput, "numero" | "orgao" | "objeto" | "vigenciaInicio" | "vigenciaFim">) =>
     db.contrato.create({ data: { empresaId: empresa.id, uf: "ES", municipio: "Cidade Exemplo", esfera: "M", maoDeObraDedicada: true, convencaoId: conv.id, postos: 11, valorMensal: comp.mensalAntes, ...d } });
 
+  // Valores mensais variados (fictícios). 12/2024 e 07/2025 seguem a planilha dos pedidos de exemplo.
   // 1. Prorrogação em 18 dias, convenção nova depositada, nenhum pedido: "Pedir repactuação"
   await mk({ numero: "45/2025", orgao: "Prefeitura Municipal de Exemplo", objeto: "Serviços contínuos de limpeza e conservação predial com dedicação exclusiva de mão de obra (exemplo)", vigenciaInicio: dia(-347), vigenciaFim: dia(18), dataProposta: new Date(Date.UTC(ano - 1, 1, 20)) });
 
@@ -125,7 +126,7 @@ async function main() {
   });
 
   // 3. Pedido deferido e apostilado, falta faturar: A receber
-  const c3 = await mk({ numero: "07/2025", orgao: "Universidade Federal Exemplo", esfera: "F", objeto: "Serviços de limpeza e conservação nos campi (exemplo)", vigenciaInicio: dia(-300), vigenciaFim: dia(260), dataProposta: new Date(Date.UTC(ano - 1, 0, 5)) });
+  const c3 = await mk({ numero: "07/2025", orgao: "Universidade Federal Exemplo", esfera: "F", objeto: "Serviços de limpeza e conservação nos campi (exemplo)", vigenciaInicio: dia(-300), vigenciaFim: dia(260), dataProposta: new Date(Date.UTC(ano - 1, 0, 5)), valorMensal: comp.mensalAgora, ultimoApostilamento: dia(-12) });
   await db.pedido.create({
     data: {
       contratoId: c3.id, estado: "DEFERIDO", passoAtual: 5, convencaoId: conv.id, dataBase, planilhaAntes: json(antes), planilhaAgora: json(agora), dataReferencia: dia(-60),
@@ -135,10 +136,10 @@ async function main() {
   });
 
   // 4. Reajuste por índice
-  await mk({ numero: "03/2025", orgao: "Hospital Exemplo", objeto: "Manutenção predial preventiva e corretiva (exemplo)", vigenciaInicio: dia(-160), vigenciaFim: dia(205), tipoReajuste: "INDICE", maoDeObraDedicada: false, convencaoId: null, postos: null, clausulaReajuste: "Cláusula 9ª (exemplo): o preço será reajustado anualmente pelo IPCA, contado da data da proposta." });
+  await mk({ numero: "03/2025", orgao: "Hospital Exemplo", objeto: "Manutenção predial preventiva e corretiva (exemplo)", vigenciaInicio: dia(-160), vigenciaFim: dia(205), tipoReajuste: "INDICE", maoDeObraDedicada: false, convencaoId: null, postos: null, valorMensal: "27410.00", clausulaReajuste: "Cláusula 9ª (exemplo): o preço será reajustado anualmente pelo IPCA, contado da data da proposta." });
 
   // 5. Sem convenção informada
-  const c5 = await mk({ numero: "19/2025", orgao: "Instituto Federal Exemplo", esfera: "F", municipio: "Outra Cidade Exemplo", objeto: "Serviços de copeiragem e recepção com dedicação exclusiva (exemplo)", vigenciaInicio: dia(-90), vigenciaFim: dia(275), convencaoId: null, postos: 4 });
+  const c5 = await mk({ numero: "19/2025", orgao: "Instituto Federal Exemplo", esfera: "F", municipio: "Outra Cidade Exemplo", objeto: "Serviços de copeiragem e recepção com dedicação exclusiva (exemplo)", vigenciaInicio: dia(-90), vigenciaFim: dia(275), convencaoId: null, postos: 4, valorMensal: "21876.40" });
   await db.tarefa.create({ data: { contaId: conta.id, contratoId: c5.id, titulo: "Descobrir a convenção" } });
 
   await db.historico.create({ data: { contaId: conta.id, acao: "Dados de exemplo criados (fictícios)" } });
