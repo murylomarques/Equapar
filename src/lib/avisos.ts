@@ -138,6 +138,7 @@ export async function rodarAvisos(agora = new Date()) {
 
   const contas = await db.conta.findMany({ include: { membros: { include: { usuario: true } } } });
   for (const conta of contas) {
+    if (conta.demo) continue; // C6/L9: demonstração não recebe avisos
     const usuarios = conta.membros.map((m) => m.usuario);
     const contratos = await db.contrato.findMany({
       where: { arquivado: false, empresa: { contaId: conta.id } },

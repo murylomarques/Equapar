@@ -113,8 +113,12 @@ export async function enviar(e: Envio) {
   const corpo = e.corpo.replace(/(https?:\/\/[^\s]+)/g, (u) => appUrl(`/r/${aviso.id}?para=${encodeURIComponent(u.replace(appUrl(), ""))}`));
   let status: StatusAviso = "SIMULADO";
   let erro: string | null = null;
+  // C6: demonstração nunca envia mensagem de verdade (simulação forçada)
+  const demo = e.destino.endsWith("@demo.equapar.local") || (!!e.contaId && !!(await db.conta.findUnique({ where: { id: e.contaId }, select: { demo: true } }))?.demo);
   try {
-    if (e.canal === "EMAIL" && emailAtivo()) {
+    if (demo) {
+      console.info(`[aviso SIMULADO: demonstração] ${e.canal}`);
+    } else if (e.canal === "EMAIL" && emailAtivo()) {
       const pixel = `<img src="${appUrl(`/api/avisos/${aviso.id}/aberto`)}" width="1" height="1" alt="">`;
       await enviarEmail(e.destino, e.assunto ?? "Equapar", corpo, (e.html ?? `<pre style="font-family:inherit;white-space:pre-wrap">${escaparHtml(corpo)}</pre>`) + pixel);
       status = "ENVIADO";

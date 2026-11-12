@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Monitor } from "lucide-react";
-import { contexto, NOME_PAPEL, pode } from "@/lib/auth";
+import { contexto, ehDemo, NOME_PAPEL, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { prefsDe } from "@/lib/avisos";
 import { dataHora, reais } from "@/lib/format";
 import { navegadorLegivel, plural } from "@/lib/mascaras";
 import { emailAtivo, whatsappAtivo } from "@/lib/mensagens";
-import { EMAIL_DEMO } from "@/lib/site";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { SeloSimples } from "@/components/selo";
@@ -55,7 +54,7 @@ export default async function Configuracoes({ searchParams }: { searchParams: Pr
   const ctx = await contexto();
   const { aba = "empresa" } = await searchParams;
   const dono = pode(ctx.papel, "gerenciar_conta");
-  const demo = ctx.usuario.email === EMAIL_DEMO;
+  const demo = ehDemo(ctx);
   return (
     <>
       <CabecalhoPagina titulo="Configurações" />

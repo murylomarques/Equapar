@@ -2,6 +2,8 @@ import "server-only";
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import { db } from "./db";
+import { LIMITE_ARQUIVO_DEMO } from "./demo";
 
 const RAIZ = path.resolve(/*turbopackIgnore: true*/ process.env.STORAGE_DIR ?? path.join(process.cwd(), "storage"));
 
@@ -24,6 +26,8 @@ export const TAMANHO_MAX = 15 * 1024 * 1024;
 
 export async function salvarArquivo(contaId: string, arquivo: File) {
   if (arquivo.size > TAMANHO_MAX) throw new Error("O arquivo passa de 15 MB.");
+  if (arquivo.size > LIMITE_ARQUIVO_DEMO && (await db.conta.findUnique({ where: { id: contaId }, select: { demo: true } }))?.demo)
+    throw new Error("Na demonstração, os arquivos podem ter até 2 MB.");
   const ext = TIPOS_ACEITOS[arquivo.type] ?? path.extname(arquivo.name).toLowerCase();
   if (!Object.values(TIPOS_ACEITOS).includes(ext)) throw new Error("Formato não aceito. Envie PDF, Excel (.xlsx), Word, imagem ou CSV.");
   const rel = path.join(contaId, `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`);

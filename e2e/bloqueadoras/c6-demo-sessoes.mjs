@@ -1,6 +1,6 @@
 // C6: a demonstração não pode derrubar visitantes nem a sessão de um cliente real.
 // Esperado: todos continuam logados; a demo não encerra a sessão de outro visitante.
-import { BASE, SENHA_DONO, navegador, novaPagina, conferir, fim } from "./util.mjs";
+import { BASE, SENHA_DONO, db, navegador, novaPagina, conferir, fim } from "./util.mjs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 const b = await navegador();
@@ -28,6 +28,24 @@ try {
   const v2 = await abreDemo(UA);
   conferir((await onde(v1.p)) === "/app/hoje", "visitante 1 continua logado depois que o 2 entra com o mesmo navegador");
   conferir((await onde(v2.p)) === "/app/hoje", "visitante 2 logado");
+
+  // 1b) Demonstração isolada (C6.2): cada visitante tem a própria cópia e pode mexer
+  const nomeConv = `CCT do visitante 1 ${Date.now()}`;
+  await v1.p.goto(`${BASE}/app/convencoes`);
+  const form = v1.p.locator("form", { has: v1.p.getByRole("button", { name: "Cadastrar convenção" }) });
+  await form.getByLabel("Nome").fill(nomeConv);
+  await form.getByLabel("UF").selectOption("ES");
+  await form.getByLabel("Mês da data-base").selectOption("1");
+  await form.getByRole("button", { name: "Cadastrar convenção" }).click();
+  await v1.p.getByText(nomeConv, { exact: true }).first().waitFor();
+  conferir(true, "visitante da demonstração consegue cadastrar (experimentar)");
+  await v2.p.goto(`${BASE}/app/convencoes`);
+  conferir((await v2.p.getByText(nomeConv, { exact: true }).count()) === 0, "o outro visitante não vê o que o primeiro criou");
+  const contasDemo = await db.conta.findMany({ where: { demo: true }, select: { id: true, demoExpiraEm: true } });
+  conferir(contasDemo.length >= 2 && contasDemo.every((c) => c.demoExpiraEm > new Date()), `cada visitante ganhou uma conta demo com vencimento (${contasDemo.length})`);
+  await v1.p.goto(`${BASE}/app/configuracoes?aba=dados`);
+  const enviados = await db.aviso.count({ where: { contaId: { in: contasDemo.map((c) => c.id) }, status: "ENVIADO" } });
+  conferir(enviados === 0, "a demonstração não envia mensagem (nenhum aviso ENVIADO)");
 
   // 2) Visitante da demo tenta encerrar as outras sessões
   const v3 = await abreDemo(UA.replace("141", "140"));

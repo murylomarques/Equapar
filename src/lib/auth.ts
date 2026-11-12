@@ -154,6 +154,7 @@ export const contexto = cache(async () => {
     ? await db.membro.findUnique({ where: { usuarioId_contaId: { usuarioId: s.usuarioId, contaId: s.contaId } }, include: { conta: true } })
     : null;
   if (!membro) redirect("/criar-conta?etapa=empresa");
+  if (membro.conta.demo && membro.conta.demoExpiraEm && membro.conta.demoExpiraEm < new Date()) redirect("/demonstracao?expirou=1");
   const empresas = await db.empresa.findMany({ where: { contaId: membro.contaId }, orderBy: { razaoSocial: "asc" } });
   const empresaSelecionada = membro.conta.tipo === "ASSESSORIA" ? empresas.find((e) => e.id === s.empresaId) ?? null : empresas[0] ?? null;
   return {
@@ -170,9 +171,9 @@ export const contexto = cache(async () => {
 
 export type Contexto = Awaited<ReturnType<typeof contexto>>;
 
-/** A sessão é da demonstração (conta fictícia compartilhada, só para ver). */
-export function ehDemo(ctx: { usuario: { email: string } }) {
-  return ctx.usuario.email === EMAIL_DEMO;
+/** Demonstração compartilhada (só leitura) ou a cópia de um visitante (C6.2). */
+export function ehDemo(ctx: { usuario: { email: string }; conta?: { demo: boolean } }) {
+  return ctx.usuario.email === EMAIL_DEMO || ctx.usuario.email.endsWith("@demo.equapar.local") || !!ctx.conta?.demo;
 }
 
 const SO_VER = "A demonstração é só para ver. Crie sua conta para usar.";
@@ -183,7 +184,10 @@ const SO_VER = "A demonstração é só para ver. Crie sua conta para usar.";
  */
 export async function exigir(acao: Acao) {
   const ctx = await contexto();
-  if (acao !== "ver" && ehDemo(ctx)) throw new Error(SO_VER);
+  // Demonstração compartilhada: só ver. Cópia do visitante: pode montar pedidos, mas não gerencia a conta
+  // (convidar, exportar, plano, excluir).
+  if (acao !== "ver" && ctx.usuario.email === EMAIL_DEMO) throw new Error(SO_VER);
+  if (acao === "gerenciar_conta" && ehDemo(ctx)) throw new Error("Na demonstração, isso fica desligado. Crie sua conta para usar.");
   if (!pode(ctx.papel, acao)) throw new Error("Seu papel nesta conta não permite esta ação.");
   return ctx;
 }

@@ -1,6 +1,6 @@
 import { Bell, CalendarClock, DollarSign, FileText, LayoutList, Scale, Search, Settings, Users, LogOut } from "lucide-react";
 import Link from "next/link";
-import { contexto, escopoContratos } from "@/lib/auth";
+import { contexto, ehDemo, escopoContratos } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Logo } from "@/components/logo";
 import { MenuSuspenso } from "@/components/ui/estrutura";
@@ -8,7 +8,6 @@ import { LinkNav } from "./link-nav";
 import { SeletorEmpresa } from "./seletor-empresa";
 import { AtalhoBusca } from "./atalho-busca";
 import { sair } from "../(auth)/acoes";
-import { EMAIL_DEMO } from "@/lib/site";
 import { diasAtras } from "@/lib/format";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
@@ -29,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     db.pedido.count({ where: { contrato: escopoContratos(ctx), estado: { in: ["DEFERIDO", "FATURADO"] } } }),
   ]);
   const sino = avisosRecentes + trabalhosProntos;
-  const demo = ctx.usuario.email === EMAIL_DEMO;
+  const demo = ehDemo(ctx);
   return (
     <div className="app">
       <aside className="app-lateral" aria-label="Navegação do produto">
@@ -68,7 +67,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="app-principal">
         {demo && (
           <div className="faixa-demo">
-            Demonstração com dados fictícios, só para leitura. Nada aqui é de uma empresa real. <Link href="/criar-conta">Crie sua conta para usar</Link>.
+            {ctx.conta.demo
+              ? "Demonstração com dados fictícios: experimente à vontade. Nada é enviado por e-mail ou WhatsApp, e esta cópia some em 4 horas. "
+              : "Demonstração com dados fictícios, só para leitura. Nada aqui é de uma empresa real. "}
+            <Link href="/criar-conta">Crie sua conta para usar</Link>.
           </div>
         )}
         {!demo && !ctx.usuario.emailVerificadoEm && (
