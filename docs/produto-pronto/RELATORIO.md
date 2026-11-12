@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L10 feitos (L7 sem o teste de navegador); próximo: L11. Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L10 e L12 feitos (L7 sem o teste de navegador); L11 bloqueado (decisão do dono); próximo: L13. Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -60,3 +60,5 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | L8 Data do ofício | feito | `src/lib/data-oficio.test.ts`: às 22h30 de Brasília (01h30 UTC) um servidor em UTC datava o ofício no dia seguinte; `dataPorExtenso()` usa o fuso de Brasília (12/11/2026) também na virada do ano. Commit "L8" | — |
 | L9 Resumo semanal | feito | `src/lib/avisos-semanal.test.ts`: antes, a chave era usuário + semana (quem está em duas contas recebia um só) e a conta de exemplo também enviava; depois, chave usuário + conta + semana e contas de demonstração ou só com empresas de exemplo não enviam nenhum aviso. Commit "L9" | — |
 | L10 Totais em dinheiro | feito | `src/lib/somar.test.ts`: somar com Number acumulava erro de ponto flutuante; `somarReais()` usa o Decimal do motor. Aplicado em A receber (total e recebido em 12 meses), Hoje, Clientes e resumo semanal. Commit "L10" | — |
+| L11 Regra do retroativo | bloqueado | — | Regra de cálculo (trava 3) e migração (trava 1): decisão do dono, pedida no fim da fase 0. Padrão continua o atual |
+| L12 "Pedir revisão de especialista" | parcial | `src/lib/revisao.test.ts`: escondido atrás de `REVISAO_ESPECIALISTA_ATIVA` (padrão desligado) na tela, na gravação e no histórico; a pergunta frequente da landing deixa de prometer a revisão quando desligada. Commit "L12" | O fluxo ligado (e-mail ao revisor, situação "Em revisão", protocolo bloqueado) precisa de migração e de especialistas parceiros (item 8 da seção 8): aguarda o dono |

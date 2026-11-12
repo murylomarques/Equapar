@@ -19,6 +19,7 @@ import { apagarArquivo, salvarArquivo } from "@/lib/storage";
 import { oportunidade } from "@/lib/prazos";
 import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendenciasParaGerar, totaisGravados, type DadosAprovacaoDesfeita, type Pendencia } from "@/lib/pedido-regras";
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
+import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -344,9 +345,9 @@ export async function gerarPedido(_: Resultado, fd: FormData): Promise<Resultado
     }
     await db.pedido.update({
       where: { id: p.id },
-      data: { estado: "CALCULO_VALIDADO", geradoEm: new Date(), revisaoEspecialista: fd.get("revisao") === "on", passoAtual: 5 },
+      data: { estado: "CALCULO_VALIDADO", geradoEm: new Date(), revisaoEspecialista: revisaoEspecialistaAtiva() && fd.get("revisao") === "on", passoAtual: 5 },
     });
-    await registrarHistorico(ctx, fd.get("revisao") === "on" ? "Gerou o pedido e pediu revisão de especialista" : "Gerou o pedido", { pedidoId: p.id, contratoId: p.contratoId });
+    await registrarHistorico(ctx, revisaoEspecialistaAtiva() && fd.get("revisao") === "on" ? "Gerou o pedido e pediu revisão de especialista" : "Gerou o pedido", { pedidoId: p.id, contratoId: p.contratoId });
     await registrarEvento("pedido_gerado", { revisao: fd.get("revisao") === "on" });
   });
   if (r.erro) return r;

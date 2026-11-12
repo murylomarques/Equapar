@@ -23,6 +23,7 @@ import { CabecalhoPedido } from "../../cabecalho";
 import { EditorPlanilha } from "../../../editor-planilha";
 import { anexarDocumentoPedido, concluirPasso2, concluirPasso3, concluirPasso4, enviarPlanilha, gerarPedido, marcarItem, salvarPasso1, usarModelo } from "../../../acoes";
 import type { LinhaNaoLida } from "@/lib/planilha-import";
+import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 
 export const metadata: Metadata = { title: "Pedido de repactuação | Equapar" };
 
@@ -394,15 +395,17 @@ function Passo5({ p, leitura, podeAprovar }: { p: P; leitura: boolean; podeAprov
           {!aprovada && <Alerta tipo="atencao">A memória precisa ser aprovada por Contador ou Dono antes de gerar.</Alerta>}
           <FormAcao action={gerarPedido} semToast>
             <input type="hidden" name="pedidoId" value={p.id} />
-            <label className="check mt-16" style={{ marginBottom: 8 }}>
-              <input type="checkbox" name="revisao" defaultChecked={p.revisaoEspecialista} disabled={leitura} />
-              <span>
-                Pedir revisão de especialista
-                <span className="ajuda-texto" style={{ display: "block" }}>
-                  Cobrada à parte. Um profissional confere a memória antes do protocolo.
+            {revisaoEspecialistaAtiva() && (
+              <label className="check mt-16" style={{ marginBottom: 8 }}>
+                <input type="checkbox" name="revisao" defaultChecked={p.revisaoEspecialista} disabled={leitura} />
+                <span>
+                  Pedir revisão de especialista
+                  <span className="ajuda-texto" style={{ display: "block" }}>
+                    Cobrada à parte. Um profissional confere a memória antes do protocolo.
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
+            )}
             <div className="rodape-assistente">
               <Link href={`/app/pedidos/${p.id}/passo/4`} className="btn">
                 Voltar

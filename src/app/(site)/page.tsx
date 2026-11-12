@@ -6,6 +6,7 @@ import { Revelar } from "@/components/revelar";
 import { SITE } from "@/lib/site";
 import { TabelaPlanos } from "@/components/planos";
 import { FONTES } from "@/lib/prazos";
+import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 
 export default function Landing() {
   return (
@@ -260,7 +261,12 @@ export default function Landing() {
           {[
             ["É seguro digitar meu CNPJ?", "Sim. O Raio-X só consulta dados públicos do PNCP. Não pedimos senha, certificado ou documento."],
             ["A Equapar protocola o pedido por mim?", "Não. Você protocola pelo canal do contrato. A Equapar entrega tudo pronto e guarda o número do protocolo."],
-            ["Substitui meu advogado ou contador?", "Não. Organiza prazos, conta e documentos. Casos complexos podem ter revisão de especialista, cobrada à parte."],
+            [
+              "Substitui meu advogado ou contador?",
+              revisaoEspecialistaAtiva()
+                ? "Não. Organiza prazos, conta e documentos. Casos complexos podem ter revisão de especialista, cobrada à parte."
+                : "Não. Organiza prazos, conta e documentos. Em casos complexos, revise o pedido com o seu advogado ou contador antes de protocolar.",
+            ],
             ["Serve para reajuste por índice?", "Avisa o prazo e mostra a cláusula. A conta completa é para repactuação de contratos com mão de obra."],
             [
               "E a reforma tributária?",
