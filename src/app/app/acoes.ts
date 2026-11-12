@@ -10,6 +10,7 @@ import { registrarEvento } from "@/lib/eventos";
 import { lerData, lerDinheiro } from "@/lib/format";
 import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
 import { salvarArquivo } from "@/lib/storage";
+import { vigenciaAoImportar } from "@/lib/pncp-vigencia";
 
 // ---------------------------------------------------------------------------
 // Sessão
@@ -51,7 +52,8 @@ async function importar(empresaId: string, contaId: string) {
   for (const c of r.contratos) {
     const existe = await db.contrato.findUnique({ where: { empresaId_pncpControle: { empresaId: empresa.id, pncpControle: c.controle } } });
     if (existe) {
-      await db.contrato.update({ where: { id: existe.id }, data: { vigenciaFim: new Date(`${c.fim}T00:00:00Z`) } });
+      // L4: não apaga a vigência editada à mão; guarda o valor do PNCP para a tela mostrar os dois
+      await db.contrato.update({ where: { id: existe.id }, data: vigenciaAoImportar(existe, new Date(`${c.fim}T00:00:00Z`)) });
       continue;
     }
     await db.contrato.create({
@@ -66,6 +68,7 @@ async function importar(empresaId: string, contaId: string) {
         objeto: c.objeto,
         vigenciaInicio: new Date(`${c.inicio}T00:00:00Z`),
         vigenciaFim: new Date(`${c.fim}T00:00:00Z`),
+        vigenciaFimPncp: new Date(`${c.fim}T00:00:00Z`),
         valorGlobal: c.valorGlobal ?? undefined,
         maoDeObraDedicada: c.sugereMaoDeObra,
         pncpControle: c.controle,
@@ -230,6 +233,19 @@ export async function editarContrato(_: Resultado, fd: FormData): Promise<Result
     await registrarHistorico(ctx, "Editou os dados do contrato", { contratoId: c.id });
     revalidatePath(`/app/contratos/${c.id}`);
     return { ok: "Contrato salvo." };
+  });
+}
+
+/** L4: a pessoa escolhe a data de fim da vigência que está no PNCP. */
+export async function usarVigenciaPncp(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigir("editar_contratos");
+    const c = await contratoDaConta(ctx, texto(fd, "contratoId"));
+    if (!c.vigenciaFimPncp) return { erro: "Este contrato não tem data do PNCP." };
+    await db.contrato.update({ where: { id: c.id }, data: { vigenciaFim: c.vigenciaFimPncp } });
+    await registrarHistorico(ctx, "Trocou o fim da vigência pela data do PNCP", { contratoId: c.id });
+    revalidatePath(`/app/contratos/${c.id}`);
+    return { ok: "Fim da vigência atualizado com a data do PNCP." };
   });
 }
 

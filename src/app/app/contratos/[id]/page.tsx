@@ -30,7 +30,8 @@ import { AreaArquivo } from "@/components/ui/arquivo";
 import { CampoSelect } from "@/components/ui/campos";
 import { CabecalhoPagina, Termo } from "@/components/ui/estrutura";
 import { EstadoVazio } from "@/components/ui/apresentacao";
-import { enviarDocumentoContrato } from "../../acoes";
+import { enviarDocumentoContrato, usarVigenciaPncp } from "../../acoes";
+import { divergenciaPncp } from "@/lib/pncp-vigencia";
 import { EditarContrato } from "./editar-contrato";
 import { ItemArquivar } from "./arquivar";
 
@@ -171,6 +172,17 @@ export default async function ContratoPagina({ params, searchParams }: { params:
             <dt>Vigência</dt>
             <dd>
               {data(c.vigenciaInicio)} a {data(c.vigenciaFim)} <span className="secundario">({emDias(diasFim)})</span>
+              {divergenciaPncp(c) && (
+                <span className="legenda" style={{ display: "block" }}>
+                  PNCP: {data(c.vigenciaFimPncp)} · você registrou: {data(c.vigenciaFim)}.
+                  {podeEditar && (
+                    <FormAcao action={usarVigenciaPncp} className="fileira mt-8">
+                      <input type="hidden" name="contratoId" value={c.id} />
+                      <BotaoEnvio className="btn btn-pequeno">Usar a data do PNCP</BotaoEnvio>
+                    </FormAcao>
+                  )}
+                </span>
+              )}
             </dd>
             <dt>Postos</dt>
             <dd>{c.postos != null ? plural(c.postos, "posto", "postos") : <span className="secundario">Não informado</span>}</dd>
