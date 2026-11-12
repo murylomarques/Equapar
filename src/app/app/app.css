@@ -1,6 +1,6 @@
 .app {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
 }
 .app-lateral {
@@ -19,24 +19,45 @@
   gap: 2px;
 }
 .app-lateral nav a {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 6px 12px;
   border-radius: var(--raio);
   color: var(--tinta);
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  min-height: 40px;
-  transition: background-color 100ms ease-out;
+  font: 500 14px/20px var(--fonte);
+  min-height: 36px;
+  transition: background-color 120ms ease-out;
 }
 .app-lateral nav a:hover {
   background: #ece8df;
 }
 .app-lateral nav a[aria-current="page"] {
-  background: var(--branco);
-  box-shadow: inset 2px 0 0 var(--verde);
+  background: var(--verde-suave);
+  font-weight: 600;
+}
+.app-lateral nav a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--verde);
+}
+.app-lateral nav a .contador-nav {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--selo-ambar-bg);
+  color: var(--selo-ambar-tx);
+  font: 600 12px/20px var(--fonte);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 .app-lateral .rodape-lateral {
   margin-top: auto;
@@ -378,4 +399,100 @@
   min-height: 30px;
   font-size: 13px;
   color: var(--grafite);
+}
+
+/* ===================== Cabeçalho de página e trilha ===================== */
+.cabecalho-pagina {
+  margin-bottom: 24px;
+}
+.trilha ol {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font: var(--t-ajuda);
+  color: var(--grafite);
+}
+.trilha li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.trilha a {
+  color: var(--grafite);
+}
+.trilha a:hover {
+  color: var(--verde);
+}
+.trilha [aria-current="page"] {
+  color: var(--tinta);
+}
+.cabecalho-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cabecalho-acoes {
+  flex-shrink: 0;
+}
+
+/* ===================== Passos ===================== */
+.progresso li {
+  border-top-width: 3px;
+}
+.progresso li a,
+.progresso li > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+.progresso li a:hover {
+  color: var(--verde);
+}
+.passo-marca {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font: 600 12px/1 var(--fonte);
+  flex-shrink: 0;
+}
+.progresso li.feito .passo-marca {
+  background: var(--verde);
+  border-color: var(--verde);
+  color: #fff;
+}
+.progresso li.atual .passo-marca {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: #fff;
+}
+.progresso li.feito {
+  color: var(--tinta);
+}
+
+/* ===================== Contexto fixo do pedido ===================== */
+.contexto-pedido {
+  position: sticky;
+  top: 60px;
+  z-index: 15;
+  background: rgba(244, 241, 234, 0.97);
+  margin: -8px -24px 16px;
+  padding: 8px 24px 12px;
+  border-bottom: 1px solid var(--linha);
+}
+@media (max-width: 900px) {
+  .contexto-pedido {
+    margin: -8px -16px 16px;
+    padding: 8px 16px 12px;
+  }
 }

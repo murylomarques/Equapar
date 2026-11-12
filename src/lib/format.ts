@@ -1,4 +1,7 @@
 import { brl, dec } from "./calculo/motor";
+import { plural, relativo } from "./mascaras";
+
+export { plural };
 
 export { brl };
 
@@ -72,12 +75,7 @@ export function addMeses(d: Date, n: number) {
 }
 
 export function emDias(n: number) {
-  if (n === 0) return "hoje";
-  if (n === 1) return "amanhã";
-  if (n < 0) return `há ${-n} ${-n === 1 ? "dia" : "dias"}`;
-  if (n < 60) return `em ${n} dias`;
-  const meses = Math.round(n / 30);
-  return `em ${meses} ${meses === 1 ? "mês" : "meses"}`;
+  return relativo(n);
 }
 
 /** "2026-03-15" (input type=date) -> Date UTC; vazio -> null */
