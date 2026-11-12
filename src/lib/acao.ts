@@ -1,4 +1,5 @@
 import { unstable_rethrow } from "next/navigation";
+import { ZodError } from "zod";
 
 /** Resultado padrão das ações de servidor: o erro chega ao usuário em texto (também em produção). */
 export interface Resultado {
@@ -23,16 +24,33 @@ export class ErroCampos extends Error {
   }
 }
 
+/** Erro com mensagem pensada para a pessoa (curta, em português, com o próximo passo). Chega à tela como está. */
+export class ErroUsuario extends Error {}
+
+/** Código curto para a pessoa citar ao suporte; o mesmo código vai no log do servidor. */
+function codigoErro() {
+  const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => a[b % a.length]).join("");
+}
+
+/**
+ * S9. Roda a ação e traduz erros para a tela. Só chegam como estão os erros pensados para a pessoa
+ * (ErroUsuario, ErroCampos). Validação (zod) vira mensagem clara; o resto vira mensagem genérica com
+ * um código, e o detalhe técnico fica só no log do servidor, com o mesmo código.
+ */
 export async function tentar(fn: () => Promise<Resultado | void>): Promise<Resultado> {
   try {
     return (await fn()) ?? {};
   } catch (e) {
     unstable_rethrow(e);
     if (e instanceof ErroCampos) return { erro: e.message, campos: e.campos };
-    console.error(e);
+    if (e instanceof ErroUsuario) return { erro: e.message };
+    const codigo = codigoErro();
+    console.error(`[erro ${codigo}]`, e);
+    if (e instanceof ZodError) return { erro: `Algum dado veio num formato que não esperávamos. Confira o que foi preenchido e tente de novo (código do erro: ${codigo}).` };
     const msg = (e as Error)?.message ?? "";
-    if (/prisma|database|ECONN|P\d{4}/i.test(msg)) return { erro: "Não foi possível salvar agora. Confira a conexão e tente de novo em instantes." };
-    return { erro: msg || "Não deu para concluir. Tente de novo; se continuar, fale com o suporte." };
+    if (/prisma|database|ECONN|P\d{4}/i.test(msg)) return { erro: `Não foi possível salvar agora. Confira a conexão e tente de novo em instantes (código do erro: ${codigo}).` };
+    return { erro: `Não deu para concluir. Tente de novo; se continuar, fale com o suporte (código do erro: ${codigo}).` };
   }
 }
 

@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { db } from "./db";
 import { LIMITE_ARQUIVO_DEMO } from "./demo";
 import { conferirTipo } from "./arquivo-tipo";
+import { ErroUsuario } from "./acao";
 
 const RAIZ = path.resolve(/*turbopackIgnore: true*/ process.env.STORAGE_DIR ?? path.join(process.cwd(), "storage"));
 
@@ -17,13 +18,13 @@ export function caminhoAbsoluto(relativo: string) {
 export const TAMANHO_MAX = 15 * 1024 * 1024;
 
 export async function salvarArquivo(contaId: string, arquivo: File) {
-  if (arquivo.size > TAMANHO_MAX) throw new Error("O arquivo passa de 15 MB.");
+  if (arquivo.size > TAMANHO_MAX) throw new ErroUsuario("O arquivo passa de 15 MB.");
   if (arquivo.size > LIMITE_ARQUIVO_DEMO && (await db.conta.findUnique({ where: { id: contaId }, select: { demo: true } }))?.demo)
-    throw new Error("Na demonstração, os arquivos podem ter até 2 MB.");
+    throw new ErroUsuario("Na demonstração, os arquivos podem ter até 2 MB.");
   const buf = Buffer.from(await arquivo.arrayBuffer());
   // S4: o conteúdo real precisa bater com a extensão; grava o tipo detectado, não o informado pelo navegador
   const tipo = conferirTipo(arquivo.name, buf);
-  if (!tipo) throw new Error("O conteúdo do arquivo não confere com o formato do nome. Envie PDF, Excel (.xlsx), Word (.docx), imagem (PNG ou JPG) ou CSV.");
+  if (!tipo) throw new ErroUsuario("O conteúdo do arquivo não confere com o formato do nome. Envie PDF, Excel (.xlsx), Word (.docx), imagem (PNG ou JPG) ou CSV.");
   const ext = tipo.ext;
   const rel = path.join(contaId, `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`);
   const abs = caminhoAbsoluto(rel);

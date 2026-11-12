@@ -15,15 +15,16 @@ import { COR, hexParaRgb, Pdf } from "./pdf";
 import type { ResultadoRaioX } from "./pncp";
 import { seloVigencia } from "./prazos";
 import { caminhoAbsoluto } from "./storage";
+import { ErroUsuario } from "./acao";
 
 async function carregar(pedidoId: string, contaId: string) {
   const p = await db.pedido.findFirst({
     where: { id: pedidoId, contrato: { empresa: { contaId } } },
     include: { contrato: { include: { empresa: { include: { conta: true } }, convencao: true } }, convencao: true, documentos: true },
   });
-  if (!p) throw new Error("Pedido não encontrado.");
+  if (!p) throw new ErroUsuario("Pedido não encontrado.");
   const calc = calcularPedido(p);
-  if (!calc.pronto || !calc.comparacao) throw new Error("O cálculo ainda tem pendências. Conclua o passo 3.");
+  if (!calc.pronto || !calc.comparacao) throw new ErroUsuario("O cálculo ainda tem pendências. Conclua o passo 3.");
   return { p, calc, comp: calc.comparacao };
 }
 

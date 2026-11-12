@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { contexto, pedidoDaConta } from "@/lib/auth";
 import { memoriaPdf, oficioDocx, oficioPdf, pacoteZip, planilhaXlsx } from "@/lib/documentos";
 import { cabecalhoAnexo } from "@/lib/arquivo-tipo";
+import { ErroUsuario } from "@/lib/acao";
 
 const TIPOS = {
   "oficio.docx": { fn: oficioDocx, mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", nome: "oficio" },
@@ -26,6 +27,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       headers: { "content-type": t.mime, "content-disposition": cabecalhoAnexo(`${t.nome}-contrato-${n}.${ext}`), "cache-control": "no-store" },
     });
   } catch (e) {
-    return new NextResponse((e as Error).message, { status: 409 });
+    // S9: só a mensagem pensada para a pessoa vai na resposta; o detalhe técnico fica no log
+    if (e instanceof ErroUsuario) return new NextResponse(e.message, { status: 409 });
+    console.error(e);
+    return new NextResponse("Não foi possível montar este arquivo agora. Tente de novo; se continuar, fale com o suporte.", { status: 500 });
   }
 }

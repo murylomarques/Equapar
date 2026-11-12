@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { contratoDaConta, exigir, pedidoDaConta, registrarHistorico } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ErroCampos, tentar, texto, type Resultado } from "@/lib/acao";
+import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/acao";
 import { registrarEvento } from "@/lib/eventos";
 import { hora, hojeUTC, lerData, lerDinheiro } from "@/lib/format";
 import { avisarDeferido, avisarProtocolo } from "@/lib/avisos";
@@ -80,7 +80,7 @@ export async function iniciarPedidosEmLote(_: Resultado, fd: FormData): Promise<
 async function pedidoEditavel(fd: FormData) {
   const ctx = await exigir("editar_pedidos");
   const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
-  if (!["EM_ANALISE", "CALCULO_VALIDADO"].includes(p.estado)) throw new Error("Este pedido já foi protocolado e não pode mais ser alterado.");
+  if (!["EM_ANALISE", "CALCULO_VALIDADO"].includes(p.estado)) throw new ErroUsuario("Este pedido já foi protocolado e não pode mais ser alterado.");
   return { ctx, p };
 }
 

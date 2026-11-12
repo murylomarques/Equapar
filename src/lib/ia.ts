@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { ErroUsuario } from "./acao";
 
 /**
  * Leitura de planilha de custos em PDF com Claude.
@@ -58,8 +59,8 @@ export async function lerPlanilhaPdf(pdf: Buffer): Promise<LeituraIa> {
       },
     ],
   });
-  if (resposta.stop_reason === "refusal") throw new Error("A leitura automática recusou este documento. Preencha as linhas à mão.");
-  if (resposta.stop_reason === "max_tokens") throw new Error("A planilha é longa demais para a leitura automática. Envie em Excel ou divida o PDF.");
-  if (!resposta.parsed_output) throw new Error("Não foi possível ler a planilha. Preencha as linhas à mão.");
+  if (resposta.stop_reason === "refusal") throw new ErroUsuario("A leitura automática recusou este documento. Preencha as linhas à mão.");
+  if (resposta.stop_reason === "max_tokens") throw new ErroUsuario("A planilha é longa demais para a leitura automática. Envie em Excel ou divida o PDF.");
+  if (!resposta.parsed_output) throw new ErroUsuario("Não foi possível ler a planilha. Preencha as linhas à mão.");
   return resposta.parsed_output;
 }

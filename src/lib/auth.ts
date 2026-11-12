@@ -9,6 +9,7 @@ import { db } from "./db";
 import { cifrar, decifrar, sha256, tokenAleatorio } from "./cripto";
 import { EMAIL_DEMO } from "./site";
 import { opcoesCookieSessao } from "./cookie-sessao";
+import { ErroUsuario } from "./acao";
 
 const { nome: COOKIE, secure: COOKIE_SEGURO } = opcoesCookieSessao(); // S8
 const DURACAO_DIAS = 30;
@@ -179,16 +180,16 @@ export async function exigir(acao: Acao) {
   const ctx = await contexto();
   // Demonstração compartilhada: só ver. Cópia do visitante: pode montar pedidos, mas não gerencia a conta
   // (convidar, exportar, plano, excluir).
-  if (acao !== "ver" && ctx.usuario.email === EMAIL_DEMO) throw new Error(SO_VER);
-  if (acao === "gerenciar_conta" && ehDemo(ctx)) throw new Error("Na demonstração, isso fica desligado. Crie sua conta para usar.");
-  if (!pode(ctx.papel, acao)) throw new Error("Seu papel nesta conta não permite esta ação.");
+  if (acao !== "ver" && ctx.usuario.email === EMAIL_DEMO) throw new ErroUsuario(SO_VER);
+  if (acao === "gerenciar_conta" && ehDemo(ctx)) throw new ErroUsuario("Na demonstração, isso fica desligado. Crie sua conta para usar.");
+  if (!pode(ctx.papel, acao)) throw new ErroUsuario("Seu papel nesta conta não permite esta ação.");
   return ctx;
 }
 
 /** Ações da própria pessoa (senha, duas etapas, sessões, avisos): qualquer papel, menos a demonstração. */
 export async function exigirUsuario() {
   const ctx = await contexto();
-  if (ehDemo(ctx)) throw new Error(SO_VER);
+  if (ehDemo(ctx)) throw new ErroUsuario(SO_VER);
   return ctx;
 }
 
@@ -203,7 +204,7 @@ export function escopoContratos(ctx: Contexto): Prisma.ContratoWhereInput {
 /** Garante que o contrato pertence à conta; devolve o contrato ou lança. */
 export async function contratoDaConta(ctx: Contexto, contratoId: string) {
   const c = await db.contrato.findFirst({ where: { id: contratoId, empresa: { contaId: ctx.conta.id } }, include: { empresa: true, convencao: true } });
-  if (!c) throw new Error("Contrato não encontrado nesta conta.");
+  if (!c) throw new ErroUsuario("Contrato não encontrado nesta conta.");
   return c;
 }
 
@@ -212,7 +213,7 @@ export async function pedidoDaConta(ctx: Contexto, pedidoId: string) {
     where: { id: pedidoId, contrato: { empresa: { contaId: ctx.conta.id } } },
     include: { contrato: { include: { empresa: true, convencao: true } }, convencao: true },
   });
-  if (!p) throw new Error("Pedido não encontrado nesta conta.");
+  if (!p) throw new ErroUsuario("Pedido não encontrado nesta conta.");
   return p;
 }
 

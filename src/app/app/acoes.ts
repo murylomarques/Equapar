@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { contexto, contratoDaConta, exigir, exigirUsuario, registrarHistorico } from "@/lib/auth";
 import { enviarConfirmacaoEmail } from "@/lib/confirmacao-envio";
 import { db } from "@/lib/db";
-import { ErroCampos, tentar, texto, type Resultado } from "@/lib/acao";
+import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/acao";
 import { cnpjValido, soDigitos } from "@/lib/cnpj";
 import { registrarEvento } from "@/lib/eventos";
 import { lerData, lerDinheiro } from "@/lib/format";
@@ -17,7 +17,7 @@ import { salvarArquivo } from "@/lib/storage";
 
 export async function selecionarEmpresa(empresaId: string | null) {
   const ctx = await contexto();
-  if (empresaId && !ctx.empresas.some((e) => e.id === empresaId)) throw new Error("Cliente não encontrado.");
+  if (empresaId && !ctx.empresas.some((e) => e.id === empresaId)) throw new ErroUsuario("Cliente não encontrado.");
   await db.sessao.update({ where: { id: ctx.sessaoId }, data: { empresaId } });
   revalidatePath("/app", "layout");
 }
@@ -38,12 +38,12 @@ export async function reenviarConfirmacao(): Promise<Resultado> {
 
 async function importar(empresaId: string, contaId: string) {
   const empresa = await db.empresa.findFirst({ where: { id: empresaId, contaId } });
-  if (!empresa) throw new Error("Empresa não encontrada.");
+  if (!empresa) throw new ErroUsuario("Empresa não encontrada.");
   let r;
   try {
     r = await consultarPncp(empresa.cnpj, { semCache: true, timeoutMs: 20_000 });
   } catch (e) {
-    if (e instanceof PncpIndisponivel) throw new Error("O PNCP não respondeu agora. Tente de novo em alguns minutos ou cadastre o contrato à mão.");
+    if (e instanceof PncpIndisponivel) throw new ErroUsuario("O PNCP não respondeu agora. Tente de novo em alguns minutos ou cadastre o contrato à mão.");
     throw e;
   }
   if (r.razaoSocial && empresa.razaoSocial.startsWith("CNPJ ")) await db.empresa.update({ where: { id: empresa.id }, data: { razaoSocial: r.razaoSocial } });
@@ -354,7 +354,7 @@ export async function adicionarCliente(_: Resultado, fd: FormData): Promise<Resu
         await importar(e.id, ctx.conta.id);
       } catch (err) {
         revalidatePath("/app", "layout");
-        return { ok: `Cliente adicionado. ${(err as Error).message}` };
+        return { ok: `Cliente adicionado. ${err instanceof ErroUsuario ? err.message : "A importação do PNCP não deu certo agora; tente de novo pela tela do cliente."}` };
       }
     }
     revalidatePath("/app", "layout");

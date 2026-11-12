@@ -7,6 +7,7 @@
 import type { CanalAviso, StatusAviso } from "@prisma/client";
 import { db } from "./db";
 import { normalizarTelefoneBR } from "./telefone";
+import { ErroUsuario } from "./acao";
 
 export function emailAtivo() {
   return !!process.env.SMTP_URL;
@@ -72,7 +73,7 @@ async function enviarEmail(para: string, assunto: string, texto: string, html?: 
 async function enviarWhatsapp(para: string, modelo: ModeloWhatsapp, params: Record<string, string>) {
   // C5: a Meta lê os primeiros dígitos como código do país; sem o 55, "27…" ia para outro país.
   const destino = normalizarTelefoneBR(para);
-  if (!destino) throw new Error("Número de WhatsApp inválido. Confira o DDD e o número.");
+  if (!destino) throw new ErroUsuario("Número de WhatsApp inválido. Confira o DDD e o número.");
   const r = await fetch(`https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
     method: "POST",
     headers: { authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, "content-type": "application/json" },
