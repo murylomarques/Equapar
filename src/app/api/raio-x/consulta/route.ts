@@ -2,11 +2,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { cnpjValido, soDigitos } from "@/lib/cnpj";
 import { registrarEvento } from "@/lib/eventos";
 import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
+import { consumirCotas } from "@/lib/cota";
+import { ipConfiavel } from "@/lib/limite";
 
 /** Consulta do Raio-X para a tela (JSON). Só dados públicos do PNCP; registros de pessoa física já vêm descartados. */
 export async function GET(req: NextRequest) {
   const cnpj = soDigitos(req.nextUrl.searchParams.get("cnpj") ?? "");
   if (!cnpjValido(cnpj)) return NextResponse.json({ erro: "cnpj" }, { status: 400 });
+  // S2: no máximo 60 consultas por dia por IP (do proxy de confiança)
+  const ip = ipConfiavel(req.headers);
+  if (ip && !(await consumirCotas([{ chave: `raiox-consulta:ip:${ip}`, limite: 60 }]))) return NextResponse.json({ erro: "limite" }, { status: 429 });
   await registrarEvento("raiox_consultado");
   try {
     const r = await consultarPncp(cnpj);

@@ -11,7 +11,7 @@ import { diasAte, data, plural } from "@/lib/format";
 import { formatarCnpj } from "@/lib/cnpj";
 import { FormAvisarDepois, FormRelatorio } from "./formularios";
 
-type Estado = { fase: "consultando"; segundos: number } | { fase: "lendo"; r: ResultadoRaioX; etapa: number } | { fase: "pronto"; r: ResultadoRaioX } | { fase: "erro" };
+type Estado = { fase: "consultando"; segundos: number } | { fase: "lendo"; r: ResultadoRaioX; etapa: number } | { fase: "pronto"; r: ResultadoRaioX } | { fase: "erro" } | { fase: "limite" };
 
 export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
   const [estado, setEstado] = useState<Estado>({ fase: "consultando", segundos: 0 });
@@ -21,6 +21,10 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
     const relogio = window.setInterval(() => setEstado((e) => (e.fase === "consultando" ? { ...e, segundos: e.segundos + 1 } : e)), 1000);
     fetch(`/api/raio-x/consulta?cnpj=${cnpj}`)
       .then(async (res) => {
+        if (res.status === 429) {
+          if (vivo) setEstado({ fase: "limite" }); // S2: cota diária por IP
+          return;
+        }
         if (!res.ok) throw new Error(String(res.status));
         const r = (await res.json()) as ResultadoRaioX;
         if (!vivo) return;
@@ -54,6 +58,14 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
       </div>
     );
   }
+
+  if (estado.fase === "limite")
+    return (
+      <div className="cartao" role="alert" style={{ maxWidth: 640 }}>
+        <h2>Muitas consultas hoje</h2>
+        <p className="secundario">Este endereço já fez o máximo de consultas do Raio-X por hoje. Tente amanhã, ou crie sua conta para acompanhar seus contratos sem limite.</p>
+      </div>
+    );
 
   if (estado.fase === "erro")
     return (

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { CheckCircle2, Download } from "lucide-react";
 import { BotaoEnvio } from "@/components/botao-envio";
+import { Captcha } from "@/components/captcha";
 import { FormAcao } from "@/components/form-acao";
 import { CampoTexto, Consentimento } from "@/components/ui/campos";
 import type { Resultado } from "@/lib/acao";
@@ -33,6 +34,7 @@ export function FormRelatorio({ cnpj }: { cnpj: string }) {
       <CampoTexto nome="email" rotulo="E-mail" tipo="email" autoComplete="email" />
       <CampoTexto nome="whatsapp" rotulo="WhatsApp" opcional tipo="tel" inputMode="tel" autoComplete="tel" ajuda="Só para os avisos de prazo. Nada de propaganda." />
       <Consentimento nome="consentimento">Autorizo a Equapar a me mandar avisos de prazo destes contratos. Posso parar quando quiser, respondendo SAIR.</Consentimento>
+      <Captcha />
       <BotaoEnvio>Enviar relatório</BotaoEnvio>
       <p className="legenda mt-16 mb-0">
         Veja a <Link href="/privacidade">política de privacidade</Link>.
@@ -50,6 +52,7 @@ export function FormAvisarDepois({ cnpj }: { cnpj: string }) {
       <div style={{ flex: "1 1 240px" }}>
         <CampoTexto nome="email" rotulo="Seu e-mail" tipo="email" autoComplete="email" className="mb-0" />
       </div>
+      <Captcha />
       <BotaoEnvio className="btn" style={{ marginBottom: 0 }}>
         Avisar por e-mail
       </BotaoEnvio>

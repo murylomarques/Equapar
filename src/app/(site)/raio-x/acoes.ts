@@ -7,6 +7,21 @@ import { registrarEvento } from "@/lib/eventos";
 import { appUrl, enviar } from "@/lib/mensagens";
 import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
 import { normalizarTelefoneBR } from "@/lib/telefone";
+import { headers } from "next/headers";
+import { consumirCotas } from "@/lib/cota";
+import { verificarCaptcha } from "@/lib/captcha";
+import { ipConfiavel } from "@/lib/limite";
+
+/**
+ * S2: cada e-mail recebe no máximo 3 mensagens do Raio-X por dia, e cada IP (do proxy de confiança)
+ * faz no máximo 10 pedidos por dia. Mais o captcha (simulado sem chave).
+ */
+async function liberarEnvio(email: string, fd: FormData): Promise<string | null> {
+  const ip = ipConfiavel(await headers());
+  if (!(await verificarCaptcha(String(fd.get("cf-turnstile-response") ?? ""), ip))) return "Não conseguimos confirmar que você não é um robô. Tente de novo.";
+  const ok = await consumirCotas([{ chave: `raiox-envio:email:${email}`, limite: 3 }, ...(ip ? [{ chave: `raiox-envio:ip:${ip}`, limite: 10 }] : [])]);
+  return ok ? null : "Este e-mail já recebeu o máximo de mensagens do Raio-X hoje. Tente de novo amanhã.";
+}
 
 import type { Resultado } from "@/lib/acao";
 
@@ -42,6 +57,8 @@ export async function pedirRelatorio(_: EstadoForm, fd: FormData): Promise<Estad
   }
   const { cnpj, email, whatsapp, consentimento } = p.data;
   if (whatsapp && !consentimento) return { campos: { consentimento: "Para receber avisos no WhatsApp, marque a autorização." } };
+  const barrado = await liberarEnvio(email, fd);
+  if (barrado) return { erro: barrado };
 
   await db.lead.create({ data: { cnpj, email, whatsapp: consentimento && whatsapp ? whatsapp : null, consentimentoAvisos: consentimento } });
   await registrarEvento("relatorio_pedido", { comWhatsapp: !!whatsapp });
@@ -65,6 +82,8 @@ export async function avisarDepois(_: EstadoForm, fd: FormData): Promise<EstadoF
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
   if (!cnpjValido(cnpj)) return { erro: "Esse CNPJ não existe. Confira os 14 números." };
   if (!z.string().email().safeParse(email).success) return { campos: { email: "Digite um e-mail válido, como nome@empresa.com.br." } };
+  const barrado = await liberarEnvio(email, fd);
+  if (barrado) return { erro: barrado };
   await db.lead.create({ data: { cnpj, email, consentimentoAvisos: false } });
   try {
     await consultarPncp(cnpj, { semCache: true, timeoutMs: 30_000 });
