@@ -68,7 +68,7 @@ async function importar(empresaId: string, contaId: string) {
 }
 
 export async function importarPncp(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
     const empresaId = texto(fd, "empresaId") || ctx.empresaId;
     if (!empresaId) return { erro: "Escolha um cliente no topo antes de importar." };
@@ -90,7 +90,7 @@ export async function onboardingImportar(_: Resultado, fd: FormData): Promise<Re
 }
 
 export async function onboardingMarcar(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
     const marcados = new Set(fd.getAll("maoDeObra").map(String));
     const contratos = await db.contrato.findMany({ where: { empresa: { contaId: ctx.conta.id } }, select: { id: true } });
@@ -101,7 +101,7 @@ export async function onboardingMarcar(_: Resultado, fd: FormData): Promise<Resu
 
 /** Passo 3: uma convenção por grupo de cidade. Campos: grupo[]=chave; conv_<chave>=id|nova|naosei; e campos da nova. */
 export async function onboardingConvencoes(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
     const grupos = fd.getAll("grupo").map(String);
     for (const g of grupos) {
@@ -192,7 +192,7 @@ function dadosContrato(fd: FormData) {
 
 export async function criarContrato(_: Resultado, fd: FormData): Promise<Resultado> {
   let id = "";
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
     const empresaId = texto(fd, "empresaId") || ctx.empresaId;
     if (!empresaId || !ctx.empresas.some((e) => e.id === empresaId)) return { campos: { empresaId: "Escolha a empresa do contrato." } };
@@ -207,7 +207,7 @@ export async function criarContrato(_: Resultado, fd: FormData): Promise<Resulta
 }
 
 export async function editarContrato(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
     const c = await contratoDaConta(ctx, texto(fd, "id"));
     const d = dadosContrato(fd);
@@ -221,7 +221,7 @@ export async function editarContrato(_: Resultado, fd: FormData): Promise<Result
 }
 
 export async function arquivarContrato(_: Resultado, fd: FormData): Promise<Resultado> {
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
     const c = await contratoDaConta(ctx, texto(fd, "id"));
     await db.contrato.update({ where: { id: c.id }, data: { arquivado: true } });
@@ -232,7 +232,7 @@ export async function arquivarContrato(_: Resultado, fd: FormData): Promise<Resu
 }
 
 export async function enviarDocumentoContrato(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_pedidos");
     const c = await contratoDaConta(ctx, texto(fd, "contratoId"));
     const arquivo = fd.get("arquivo");
@@ -252,15 +252,19 @@ export async function enviarDocumentoContrato(_: Resultado, fd: FormData): Promi
 // ---------------------------------------------------------------------------
 
 function dadosConvencao(fd: FormData) {
+  const campos: Record<string, string> = {};
   const nome = texto(fd, "nome");
   const uf = texto(fd, "uf").toUpperCase();
   const ano = Number(texto(fd, "ano"));
   const mes = Number(texto(fd, "mesDataBase"));
-  if (!nome) throw new Error("Dê um nome à convenção, como “CCT Asseio e Conservação ES 2026”.");
-  if (uf.length !== 2) throw new Error("Informe a UF com 2 letras.");
-  if (!(ano > 2000 && ano < 2100)) throw new Error("Ano inválido.");
-  if (!(mes >= 1 && mes <= 12)) throw new Error("Escolha o mês da data-base.");
+  if (!nome) campos.nome = "Dê um nome à convenção, como “CCT Asseio e Conservação ES 2026”.";
+  if (uf.length !== 2) campos.uf = "Escolha a UF da base territorial.";
+  if (!(mes >= 1 && mes <= 12)) campos.mesDataBase = "Escolha o mês da data-base.";
+  if (!(ano > 2000 && ano < 2100)) campos.ano = "Digite o ano da convenção, como 2026.";
+  const depTxt = texto(fd, "dataDeposito");
   const dataDeposito = lerData(fd.get("dataDeposito"));
+  if (depTxt && !dataDeposito) campos.dataDeposito = "Data do depósito inválida. Use dd/mm/aaaa.";
+  if (Object.keys(campos).length) throw new ErroCampos(campos);
   const registroMte = texto(fd, "registroMte") || null;
   return {
     nome,
@@ -278,7 +282,7 @@ function dadosConvencao(fd: FormData) {
 }
 
 export async function salvarConvencao(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_pedidos");
     const d = dadosConvencao(fd);
     const id = texto(fd, "id");
@@ -297,7 +301,7 @@ export async function salvarConvencao(_: Resultado, fd: FormData): Promise<Resul
     }
     await registrarHistorico(ctx, id ? `Editou a convenção ${d.nome}` : `Cadastrou a convenção ${d.nome}`);
     revalidatePath("/app/convencoes");
-    return { ok: "Convenção salva." };
+    return { ok: id ? "Convenção salva." : "Convenção cadastrada." };
   });
 }
 
@@ -306,7 +310,7 @@ export async function salvarConvencao(_: Resultado, fd: FormData): Promise<Resul
 // ---------------------------------------------------------------------------
 
 export async function concluirTarefa(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
     await db.tarefa.updateMany({ where: { id: texto(fd, "id"), contaId: ctx.conta.id }, data: { feitaEm: new Date() } });
     revalidatePath("/app/hoje");
@@ -318,7 +322,7 @@ export async function concluirTarefa(_: Resultado, fd: FormData): Promise<Result
 // ---------------------------------------------------------------------------
 
 export async function adicionarCliente(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
     if (ctx.conta.tipo !== "ASSESSORIA") return { erro: "Só contas de assessoria têm vários clientes." };
     const cnpj = soDigitos(texto(fd, "cnpj"));

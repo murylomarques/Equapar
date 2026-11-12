@@ -13,7 +13,7 @@ import { apagarPastaConta } from "@/lib/storage";
 import { EMAIL_DEMO } from "@/lib/site";
 
 export async function salvarConta(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("gerenciar_conta");
     const nome = texto(fd, "nome");
     if (!nome) return { erro: "Informe o nome da conta." };
@@ -30,7 +30,7 @@ export async function salvarConta(_: Resultado, fd: FormData): Promise<Resultado
 }
 
 export async function salvarAvisos(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await contexto();
     if (ctx.usuario.email === EMAIL_DEMO) return { erro: "A demonstração é só para leitura." };
     const canal = z.enum(["EMAIL", "WHATSAPP", "AMBOS"]);
@@ -42,9 +42,9 @@ export async function salvarAvisos(_: Resultado, fd: FormData): Promise<Resultad
       hora: Math.min(23, Math.max(0, Number(texto(fd, "hora")) || 7)),
     };
     const whats = texto(fd, "whatsapp").replace(/\D/g, "");
-    if (whats && (whats.length < 10 || whats.length > 13)) return { erro: "Confira o WhatsApp: use DDD e número." };
+    if (whats && (whats.length < 10 || whats.length > 13)) return { campos: { whatsapp: "Digite o WhatsApp com DDD, por exemplo (27) 99999-0000." } };
     const consent = fd.get("consentimento") === "on";
-    if (whats && !consent) return { erro: "Para receber avisos no WhatsApp, marque a autorização." };
+    if (whats && !consent) return { campos: { consentimento: "Para receber avisos no WhatsApp, marque a autorização." } };
     await db.usuario.update({
       where: { id: ctx.usuario.id },
       data: {
@@ -59,13 +59,15 @@ export async function salvarAvisos(_: Resultado, fd: FormData): Promise<Resultad
 }
 
 export async function convidarPessoa(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("gerenciar_conta");
     const email = texto(fd, "email").toLowerCase();
     const nome = texto(fd, "nome");
     const papel = z.enum(["DONO", "GERENTE", "CONTADOR", "LEITURA"]).parse(texto(fd, "papel")) as Papel;
-    if (!z.string().email().safeParse(email).success) return { erro: "Confira o e-mail." };
-    if (!nome) return { erro: "Informe o nome." };
+    const campos: Record<string, string> = {};
+    if (!nome) campos.nome = "Digite o nome da pessoa.";
+    if (!z.string().email().safeParse(email).success) campos.email = "Digite um e-mail válido, como nome@empresa.com.br.";
+    if (Object.keys(campos).length) return { campos };
     let u = await db.usuario.findUnique({ where: { email } });
     let senhaTemporaria: string | null = null;
     if (!u) {
@@ -91,7 +93,7 @@ export async function convidarPessoa(_: Resultado, fd: FormData): Promise<Result
 }
 
 export async function mudarPapel(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("gerenciar_conta");
     const membroId = texto(fd, "membroId");
     const papel = z.enum(["DONO", "GERENTE", "CONTADOR", "LEITURA"]).parse(texto(fd, "papel")) as Papel;
@@ -106,7 +108,7 @@ export async function mudarPapel(_: Resultado, fd: FormData): Promise<Resultado>
 }
 
 export async function removerPessoa(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("gerenciar_conta");
     const m = await db.membro.findFirst({ where: { id: texto(fd, "membroId"), contaId: ctx.conta.id } });
     if (!m) return { erro: "Pessoa não encontrada." };
@@ -120,7 +122,7 @@ export async function removerPessoa(_: Resultado, fd: FormData): Promise<Resulta
 }
 
 export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("gerenciar_conta");
     const plano = z.enum(["GRATIS", "PILOTO", "CARTEIRA", "ASSESSORIA"]).parse(texto(fd, "plano")) as Plano;
     await db.conta.update({ where: { id: ctx.conta.id }, data: { plano, pilotoInicio: plano === "PILOTO" ? new Date() : ctx.conta.pilotoInicio } });
@@ -131,7 +133,7 @@ export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado>
 }
 
 export async function trocarSenha(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await contexto();
     if (ctx.usuario.email === EMAIL_DEMO) return { erro: "A demonstração é só para leitura." };
     const atual = String(fd.get("atual") ?? "");
@@ -146,7 +148,7 @@ export async function trocarSenha(_: Resultado, fd: FormData): Promise<Resultado
 }
 
 export async function iniciar2fa(): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await contexto();
     if (ctx.usuario.email === EMAIL_DEMO) return { erro: "A demonstração é só para leitura." };
     const { segredoCifrado, uri } = novoTotp(ctx.usuario.email);
@@ -158,7 +160,7 @@ export async function iniciar2fa(): Promise<Resultado> {
 }
 
 export async function confirmar2faConfig(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await contexto();
     const u = await db.usuario.findUnique({ where: { id: ctx.usuario.id } });
     if (!u?.totpSegredoCifrado) return { erro: "Comece a configuração de novo." };
@@ -170,7 +172,7 @@ export async function confirmar2faConfig(_: Resultado, fd: FormData): Promise<Re
 }
 
 export async function desativar2fa(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await contexto();
     const u = await db.usuario.findUnique({ where: { id: ctx.usuario.id } });
     if (!u?.totpSegredoCifrado || !conferirTotp(u.totpSegredoCifrado, texto(fd, "codigo"))) return { erro: "Para desativar, digite o código atual do aplicativo." };
@@ -181,7 +183,7 @@ export async function desativar2fa(_: Resultado, fd: FormData): Promise<Resultad
 }
 
 export async function encerrarOutraSessao(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await contexto();
     await db.sessao.deleteMany({ where: { id: texto(fd, "sessaoId"), usuarioId: ctx.usuario.id } });
     revalidatePath("/app/configuracoes");
@@ -190,9 +192,9 @@ export async function encerrarOutraSessao(_: Resultado, fd: FormData): Promise<R
 }
 
 export async function excluirConta(_: Resultado, fd: FormData): Promise<Resultado> {
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("gerenciar_conta");
-    if (texto(fd, "confirmacao") !== "EXCLUIR") return { erro: "Digite EXCLUIR para confirmar." };
+    if (texto(fd, "confirmacao") !== "EXCLUIR") return { campos: { confirmacao: "Digite EXCLUIR, em maiúsculas, para confirmar." } };
     const membros = await db.membro.findMany({ where: { contaId: ctx.conta.id } });
     await apagarPastaConta(ctx.conta.id);
     await db.conta.delete({ where: { id: ctx.conta.id } });
@@ -207,10 +209,64 @@ export async function excluirConta(_: Resultado, fd: FormData): Promise<Resultad
 }
 
 export async function rodarAvisosAgora(): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     await exigir("gerenciar_conta");
     const r = await rodarAvisos();
     revalidatePath("/app/avisos");
     return { ok: `Verificação feita: ${r.prazos} contratos com prazo, ${r.semanais} resumos semanais, ${r.apostilamento} alertas de apostilamento.` };
+  });
+}
+
+export async function encerrarOutrasSessoes(): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await contexto();
+    const r = await db.sessao.deleteMany({ where: { usuarioId: ctx.usuario.id, id: { not: ctx.sessaoId } } });
+    revalidatePath("/app/configuracoes");
+    return { ok: r.count ? `${r.count === 1 ? "1 sessão encerrada" : `${r.count} sessões encerradas`}.` : "Não havia outras sessões abertas." };
+  });
+}
+
+/** "Exportar tudo" em segundo plano: avisa no sino quando terminar. */
+export async function exportarEmFundo(): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigir("gerenciar_conta");
+    const rodando = await db.trabalhoFundo.findFirst({ where: { contaId: ctx.conta.id, tipo: "EXPORTAR", status: "RODANDO" } });
+    if (rodando) return { ok: "A exportação já está em andamento. Avisamos no sino quando terminar." };
+    const t = await db.trabalhoFundo.create({ data: { contaId: ctx.conta.id, usuarioId: ctx.usuario.id, tipo: "EXPORTAR", status: "RODANDO" } });
+    const { executarExportacao } = await import("@/lib/exportacao");
+    void executarExportacao(t.id, ctx.conta.id);
+    revalidatePath("/app", "layout");
+    return { ok: "Exportação iniciada. Você pode continuar usando o sistema; avisamos no sino quando terminar." };
+  });
+}
+
+export async function salvarLogo(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigir("gerenciar_conta");
+    if (ctx.conta.tipo !== "ASSESSORIA") return { erro: "O logo nos PDFs é do plano para assessorias." };
+    const arquivo = fd.get("arquivo");
+    if (!(arquivo instanceof File) || arquivo.size === 0) return { campos: { arquivo: "Escolha o arquivo do logo (PNG ou JPG)." } };
+    if (!["image/png", "image/jpeg"].includes(arquivo.type)) return { campos: { arquivo: "Envie o logo em PNG ou JPG." } };
+    if (arquivo.size > 2 * 1024 * 1024) return { campos: { arquivo: "O logo precisa ter até 2 MB." } };
+    const { salvarArquivo, apagarArquivo } = await import("@/lib/storage");
+    const s = await salvarArquivo(ctx.conta.id, arquivo);
+    if (ctx.conta.marcaLogo) await apagarArquivo(ctx.conta.marcaLogo).catch(() => {});
+    await db.conta.update({ where: { id: ctx.conta.id }, data: { marcaLogo: s.caminho } });
+    await registrarHistorico(ctx, "Trocou o logo dos PDFs");
+    revalidatePath("/app/configuracoes");
+    return { ok: "Logo salvo. Ele aparece nos próximos PDFs gerados." };
+  });
+}
+
+export async function removerLogo(): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigir("gerenciar_conta");
+    if (ctx.conta.marcaLogo) {
+      const { apagarArquivo } = await import("@/lib/storage");
+      await apagarArquivo(ctx.conta.marcaLogo).catch(() => {});
+    }
+    await db.conta.update({ where: { id: ctx.conta.id }, data: { marcaLogo: null } });
+    revalidatePath("/app/configuracoes");
+    return { ok: "Logo removido." };
   });
 }

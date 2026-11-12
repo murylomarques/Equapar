@@ -42,15 +42,30 @@ export class Pdf {
   readonly altura = 841.89;
   rodape = "";
   acento: RGB = COR.verde;
+  logo: Awaited<ReturnType<PDFDocument["embedPng"]>> | null = null;
 
-  static async criar(rodape: string, acento?: RGB | null) {
+  /** `logo`: PNG ou JPG da assessoria, desenhado no canto superior direito da primeira página. */
+  static async criar(rodape: string, acento?: RGB | null, logo?: { bytes: Uint8Array; tipo: "png" | "jpg" } | null) {
     const p = new Pdf();
     p.doc = await PDFDocument.create();
     p.regular = await p.doc.embedFont(StandardFonts.Helvetica);
     p.negrito = await p.doc.embedFont(StandardFonts.HelveticaBold);
     p.rodape = limpar(rodape);
     if (acento) p.acento = acento;
+    if (logo) {
+      try {
+        p.logo = logo.tipo === "png" ? await p.doc.embedPng(logo.bytes) : await p.doc.embedJpg(logo.bytes);
+      } catch {
+        p.logo = null; // imagem inválida: segue sem logo
+      }
+    }
     p.novaPagina();
+    if (p.logo) {
+      const escala = Math.min(120 / p.logo.width, 40 / p.logo.height);
+      const w = p.logo.width * escala;
+      const h = p.logo.height * escala;
+      p.page.drawImage(p.logo, { x: p.largura - p.margem - w, y: p.altura - p.margem - h + 8, width: w, height: h });
+    }
     return p;
   }
 
@@ -123,7 +138,7 @@ export class Pdf {
     const w = this.negrito.widthOfTextAtSize(limpar(t), tam) + 16;
     this.garantir(26);
     const x = this.largura - this.margem - w;
-    const y = this.altura - this.margem - 22;
+    const y = this.altura - this.margem - 22 - (this.logo ? 48 : 0); // abaixo do logo, se houver
     this.page.drawRectangle({ x, y, width: w, height: 20, borderColor: cor, borderWidth: 1.5, rotate: degrees(-2) });
     this.page.drawText(limpar(t), { x: x + 8, y: y + 6, size: tam, font: this.negrito, color: cor, rotate: degrees(-2) });
   }

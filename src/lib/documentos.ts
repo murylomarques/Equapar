@@ -32,7 +32,19 @@ function marca(d: Dados) {
   return {
     nome: conta.tipo === "ASSESSORIA" && conta.marcaNome ? conta.marcaNome : "Equapar",
     cor: conta.tipo === "ASSESSORIA" ? hexParaRgb(conta.marcaCor) : null,
+    logo: conta.tipo === "ASSESSORIA" ? conta.marcaLogo : null,
   };
+}
+
+/** Logo da assessoria para os PDFs (PNG/JPG); sem logo ou com erro de leitura, segue sem ele. */
+async function logoDe(caminho: string | null) {
+  if (!caminho) return null;
+  try {
+    const bytes = new Uint8Array(await fs.readFile(/*turbopackIgnore: true*/ caminhoAbsoluto(caminho)));
+    return { bytes, tipo: caminho.toLowerCase().endsWith(".png") ? ("png" as const) : ("jpg" as const) };
+  } catch {
+    return null;
+  }
 }
 
 function nomeModulo(id: string) {
@@ -123,7 +135,7 @@ export async function oficioPdf(pedidoId: string, contaId: string) {
   const d = await carregar(pedidoId, contaId);
   const t = textoOficio(d);
   const m = marca(d);
-  const pdf = await Pdf.criar(`Ofício · Contrato ${d.p.contrato.numero} · minuta gerada por ${m.nome}`, m.cor);
+  const pdf = await Pdf.criar(`Ofício · Contrato ${d.p.contrato.numero} · minuta gerada por ${m.nome}`, m.cor, await logoDe(m.logo));
   pdf.texto("MINUTA — revise com seu jurídico antes de protocolar", { tam: 8, cor: COR.carimbo });
   for (const [i, l] of t.cabecalho.entries()) pdf.texto(l, { tam: i === 0 ? 12 : 10, negrito: i === 0, espaco: 0 });
   pdf.y -= 14;
@@ -147,7 +159,7 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
   const c = p.contrato;
   const conv = p.convencao ?? c.convencao;
   const m = marca(d);
-  const pdf = await Pdf.criar(`Memória de cálculo · Contrato ${c.numero} · ${m.nome} · regra ${calc.versaoRegra}`, m.cor);
+  const pdf = await Pdf.criar(`Memória de cálculo · Contrato ${c.numero} · ${m.nome} · regra ${calc.versaoRegra}`, m.cor, await logoDe(m.logo));
   if (p.memoriaAprovadaEm) pdf.selo("MEMÓRIA APROVADA", COR.verde);
   pdf.titulo("Memória de cálculo da repactuação");
   pdf.texto(`Contrato ${c.numero} · ${c.orgao}`, { tam: 11, negrito: true, espaco: 2 });

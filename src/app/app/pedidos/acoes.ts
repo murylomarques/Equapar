@@ -52,7 +52,7 @@ async function criarPedido(ctx: Awaited<ReturnType<typeof exigir>>, contratoId: 
 
 export async function iniciarPedido(_: Resultado, fd: FormData): Promise<Resultado> {
   let id = "";
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_pedidos");
     id = (await criarPedido(ctx, texto(fd, "contratoId"))).id;
   });
@@ -62,7 +62,7 @@ export async function iniciarPedido(_: Resultado, fd: FormData): Promise<Resulta
 
 /** "Montar pedidos para os {n} contratos desta convenção" */
 export async function iniciarPedidosEmLote(_: Resultado, fd: FormData): Promise<Resultado> {
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_pedidos");
     const ids = fd.getAll("contratoId").map(String);
     if (!ids.length) return { erro: "Nenhum contrato selecionado." };
@@ -84,7 +84,7 @@ async function pedidoEditavel(fd: FormData) {
 }
 
 export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultado> {
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
     const gatilho = z.enum(["NOVA_CONVENCAO", "ACORDO_DISSIDIO", "OUTRO_CUSTO"]).parse(texto(fd, "gatilho") || "NOVA_CONVENCAO");
     const convencaoId = texto(fd, "convencaoId") || null;
@@ -122,7 +122,7 @@ const planilhaSchema = z.object({
 
 /** Salvamento automático do editor (passos 2 e 3). */
 export async function salvarPlanilha(pedidoId: string, qual: "antes" | "agora", conteudo: string): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const fd = new FormData();
     fd.set("pedidoId", pedidoId);
     const { ctx, p } = await pedidoEditavel(fd);
@@ -139,7 +139,7 @@ export async function salvarPlanilha(pedidoId: string, qual: "antes" | "agora", 
 }
 
 export async function enviarPlanilha(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
     const arquivo = fd.get("arquivo");
     if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o arquivo da planilha." };
@@ -166,7 +166,7 @@ export async function enviarPlanilha(_: Resultado, fd: FormData): Promise<Result
 }
 
 export async function usarModelo(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const { p } = await pedidoEditavel(fd);
     await db.pedido.update({ where: { id: p.id }, data: { planilhaAntes: json(planilhaModelo()), linhasNaoLidas: json([]) } });
     revalidatePath(`/app/pedidos/${p.id}/passo/2`);
@@ -175,7 +175,7 @@ export async function usarModelo(_: Resultado, fd: FormData): Promise<Resultado>
 }
 
 export async function concluirPasso2(_: Resultado, fd: FormData): Promise<Resultado> {
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const { p } = await pedidoEditavel(fd);
     if (!p.planilhaAntes) return { erro: "Envie a planilha atual ou comece do modelo." };
     const erros = validarPlanilha(p.planilhaAntes as unknown as PlanilhaCustos);
@@ -195,7 +195,7 @@ export async function concluirPasso2(_: Resultado, fd: FormData): Promise<Result
 }
 
 export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Resultado> {
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const { p } = await pedidoEditavel(fd);
     const ref = lerData(fd.get("dataReferencia")) ?? hojeUTC();
     const calc = calcularPedido({ ...p, dataReferencia: ref });
@@ -227,7 +227,7 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
 }
 
 export async function anexarDocumentoPedido(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
     const arquivo = fd.get("arquivo");
     if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha um arquivo." };
@@ -246,7 +246,7 @@ export async function anexarDocumentoPedido(_: Resultado, fd: FormData): Promise
 }
 
 export async function marcarItem(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const { p } = await pedidoEditavel(fd);
     const item = texto(fd, "item");
     const valor = texto(fd, "valor") === "ANEXADO" ? "ANEXADO" : "FALTA";
@@ -257,7 +257,7 @@ export async function marcarItem(_: Resultado, fd: FormData): Promise<Resultado>
 }
 
 export async function concluirPasso4(_: Resultado, fd: FormData): Promise<Resultado> {
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const { p } = await pedidoEditavel(fd);
     const docs = await db.documento.findMany({ where: { pedidoId: p.id } });
     const faltam = situacaoChecklist(p, docs).filter((i) => i.situacao === "FALTA");
@@ -270,7 +270,7 @@ export async function concluirPasso4(_: Resultado, fd: FormData): Promise<Result
 }
 
 export async function gerarPedido(_: Resultado, fd: FormData): Promise<Resultado> {
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
     if (!p.memoriaAprovadaEm) return { erro: "A memória de cálculo precisa ser aprovada por Contador ou Dono antes de gerar o pedido." };
     const calc = calcularPedido(p);
@@ -298,7 +298,7 @@ export async function gerarPedido(_: Resultado, fd: FormData): Promise<Resultado
 // ---------------------------------------------------------------------------
 
 export async function aprovarMemoria(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("aprovar_memoria");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
     if (!["EM_ANALISE", "CALCULO_VALIDADO"].includes(p.estado)) return { erro: "Este pedido já foi protocolado." };
@@ -313,7 +313,7 @@ export async function aprovarMemoria(_: Resultado, fd: FormData): Promise<Result
 }
 
 export async function comentarLinha(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("ver");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
     const t = texto(fd, "texto");
@@ -330,7 +330,7 @@ export async function comentarLinha(_: Resultado, fd: FormData): Promise<Resulta
 // ---------------------------------------------------------------------------
 
 export async function registrarProtocolo(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("registrar_financeiro");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
     if (p.estado !== "CALCULO_VALIDADO") return { erro: "Gere o pedido antes de registrar o protocolo." };
@@ -348,7 +348,7 @@ export async function registrarProtocolo(_: Resultado, fd: FormData): Promise<Re
 }
 
 export async function registrarResposta(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("registrar_financeiro");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
     if (p.estado !== "PROTOCOLADO") return { erro: "Só pedidos protocolados recebem resposta." };
@@ -373,7 +373,7 @@ export async function registrarResposta(_: Resultado, fd: FormData): Promise<Res
 }
 
 export async function registrarApostilamento(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("registrar_financeiro");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
     if (p.estado !== "DEFERIDO") return { erro: "O apostilamento vem depois do deferimento." };
@@ -393,7 +393,7 @@ export async function registrarApostilamento(_: Resultado, fd: FormData): Promis
 
 /** "Gerar cobrança da diferença": registra a nota fiscal separada das diferenças retroativas. */
 export async function gerarCobranca(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("registrar_financeiro");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
     if (p.estado !== "DEFERIDO") return { erro: "Só valores deferidos podem ser faturados." };
@@ -409,7 +409,7 @@ export async function gerarCobranca(_: Resultado, fd: FormData): Promise<Resulta
 }
 
 export async function marcarRecebido(_: Resultado, fd: FormData): Promise<Resultado> {
-  return tentar(async () => {
+  return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("registrar_financeiro");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
     if (p.estado !== "FATURADO") return { erro: "Registre a fatura da diferença antes de marcar como recebido." };
@@ -425,7 +425,7 @@ export async function marcarRecebido(_: Resultado, fd: FormData): Promise<Result
 }
 
 export async function descartarPedido(_: Resultado, fd: FormData): Promise<Resultado> {
-  const r = await tentar(async () => {
+  const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
     await db.pedido.delete({ where: { id: p.id } });
     await registrarHistorico(ctx, "Descartou um pedido em análise", { contratoId: p.contratoId });
