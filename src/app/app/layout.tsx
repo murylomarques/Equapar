@@ -1,10 +1,12 @@
-import { Bell, CalendarClock, DollarSign, FileText, FolderOpen, LayoutList, Scale, Search, Users } from "lucide-react";
+import { Bell, CalendarClock, DollarSign, FileText, LayoutList, Scale, Search, Settings, Users, LogOut } from "lucide-react";
 import Link from "next/link";
-import { contexto } from "@/lib/auth";
+import { contexto, escopoContratos } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Logo } from "@/components/logo";
+import { MenuSuspenso } from "@/components/ui/estrutura";
 import { LinkNav } from "./link-nav";
 import { SeletorEmpresa } from "./seletor-empresa";
+import { AtalhoBusca } from "./atalho-busca";
 import { sair } from "../(auth)/acoes";
 import { EMAIL_DEMO } from "@/lib/site";
 import { diasAtras } from "@/lib/format";
@@ -12,10 +14,18 @@ import "./app.css";
 
 export const dynamic = "force-dynamic";
 
+const NOME_PLANO = { GRATIS: "grátis", PILOTO: "piloto", CARTEIRA: "carteira", ASSESSORIA: "assessoria" } as const;
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await contexto();
   const assessoria = ctx.conta.tipo === "ASSESSORIA";
-  const naoLidos = await db.aviso.count({ where: { contaId: ctx.conta.id, enviadoEm: { gte: diasAtras(7) } } });
+  const [avisosRecentes, trabalhosProntos, pedidosAbertos, aReceber] = await Promise.all([
+    db.aviso.count({ where: { contaId: ctx.conta.id, enviadoEm: { gte: diasAtras(7) } } }),
+    db.trabalhoFundo.count({ where: { usuarioId: ctx.usuario.id, status: { in: ["PRONTO", "ERRO"] }, vistoEm: null } }),
+    db.pedido.count({ where: { contrato: escopoContratos(ctx), estado: { in: ["EM_ANALISE", "CALCULO_VALIDADO"] } } }),
+    db.pedido.count({ where: { contrato: escopoContratos(ctx), estado: { in: ["DEFERIDO", "FATURADO"] } } }),
+  ]);
+  const sino = avisosRecentes + trabalhosProntos;
   const demo = ctx.usuario.email === EMAIL_DEMO;
   return (
     <div className="app">
@@ -30,10 +40,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <LinkNav href="/app/carteira" icone={<LayoutList size={20} strokeWidth={1.5} />}>
             Carteira
           </LinkNav>
-          <LinkNav href="/app/pedidos" icone={<FileText size={20} strokeWidth={1.5} />}>
+          <LinkNav href="/app/pedidos" icone={<FileText size={20} strokeWidth={1.5} />} contador={pedidosAbertos} rotuloContador="pedidos em andamento">
             Pedidos
           </LinkNav>
-          <LinkNav href="/app/a-receber" icone={<DollarSign size={20} strokeWidth={1.5} />}>
+          <LinkNav href="/app/a-receber" icone={<DollarSign size={20} strokeWidth={1.5} />} contador={aReceber} rotuloContador="valores a receber">
             A receber
           </LinkNav>
           <LinkNav href="/app/convencoes" icone={<Scale size={20} strokeWidth={1.5} />}>
@@ -48,12 +58,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="rodape-lateral">
           {ctx.conta.nome}
           <br />
-          Plano {({ GRATIS: "grátis", PILOTO: "piloto", CARTEIRA: "carteira", ASSESSORIA: "assessoria" } as const)[ctx.conta.plano]}
+          Plano {NOME_PLANO[ctx.conta.plano]}
         </div>
       </aside>
 
       <div className="app-principal">
-        {demo && <div className="faixa-demo">Demonstração com dados fictícios, só para leitura. Nada aqui é de uma empresa real.</div>}
+        {demo && (
+          <div className="faixa-demo">
+            Demonstração com dados fictícios, só para leitura. Nada aqui é de uma empresa real. <Link href="/criar-conta">Crie sua conta para usar</Link>.
+          </div>
+        )}
         <header className="app-topo">
           <span className="so-celular">
             <Logo href="/app/hoje" largura={96} />
@@ -63,35 +77,40 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <label htmlFor="busca" className="sr-only">
               Buscar contrato
             </label>
-            <input id="busca" name="q" type="search" placeholder="Número do contrato, órgão ou objeto" />
+            <input id="busca" name="q" type="search" placeholder="Buscar contrato, órgão ou objeto" aria-keyshortcuts="/" />
+            <kbd className="atalho-tecla" aria-hidden>
+              /
+            </kbd>
           </form>
+          <AtalhoBusca />
           <div className="fileira" style={{ marginLeft: "auto" }}>
             {assessoria && <SeletorEmpresa empresas={ctx.empresas.map((e) => ({ id: e.id, nome: e.razaoSocial }))} atual={ctx.empresaId} />}
             <Link href="/app/busca" className="icone-botao so-celular" aria-label="Buscar">
               <Search size={20} strokeWidth={1.5} />
             </Link>
-            <Link href="/app/avisos" className="icone-botao" aria-label={`Avisos${naoLidos ? `: ${naoLidos} nos últimos 7 dias` : ""}`}>
+            <Link href="/app/avisos" className="icone-botao" aria-label={sino ? `Avisos: ${sino} novos` : "Avisos"}>
               <Bell size={20} strokeWidth={1.5} />
-              {naoLidos > 0 && <span className="ponto" aria-hidden />}
+              {sino > 0 && <span className="ponto" aria-hidden />}
             </Link>
-            <details className="menu">
-              <summary className="btn btn-pequeno" aria-label="Conta">
-                {ctx.usuario.nome.split(" ")[0]}
-              </summary>
-              <div className="menu-painel">
-                <div className="legenda" style={{ padding: "6px 10px" }}>
-                  {ctx.usuario.email}
-                </div>
-                <Link href="/app/configuracoes">Configurações</Link>
-                <Link href="/app/configuracoes?aba=avisos">Avisos</Link>
-                <Link href="/app/pedidos">
-                  <FolderOpen size={16} strokeWidth={1.5} /> Todos os pedidos
-                </Link>
-                <form action={sair}>
-                  <button type="submit">Sair</button>
-                </form>
+            <MenuSuspenso rotulo="Conta" className="btn btn-pequeno" conteudoBotao={ctx.usuario.nome.split(" ")[0]}>
+              <div className="cab-menu">
+                <strong style={{ display: "block", color: "var(--tinta)", fontSize: 14 }}>{ctx.usuario.nome}</strong>
+                {ctx.usuario.email}
               </div>
-            </details>
+              <hr />
+              <Link href="/app/configuracoes" role="menuitem">
+                <Settings size={16} strokeWidth={1.5} aria-hidden /> Configurações
+              </Link>
+              <Link href="/app/avisos" role="menuitem">
+                <Bell size={16} strokeWidth={1.5} aria-hidden /> Avisos
+              </Link>
+              <hr />
+              <form action={sair}>
+                <button type="submit" role="menuitem">
+                  <LogOut size={16} strokeWidth={1.5} aria-hidden /> Sair
+                </button>
+              </form>
+            </MenuSuspenso>
           </div>
         </header>
         <main id="conteudo" className="app-conteudo">

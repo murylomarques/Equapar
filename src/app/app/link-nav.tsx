@@ -2,7 +2,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function LinkNav({ href, icone, children }: { href: string; icone: React.ReactNode; children: React.ReactNode }) {
+export function LinkNav({
+  href,
+  icone,
+  children,
+  contador,
+  rotuloContador,
+}: {
+  href: string;
+  icone: React.ReactNode;
+  children: React.ReactNode;
+  contador?: number;
+  rotuloContador?: string;
+}) {
   const p = usePathname();
   const ativo = p === href || p.startsWith(`${href}/`) || (href === "/app/carteira" && p.startsWith("/app/contratos"));
   return (
@@ -11,6 +23,12 @@ export function LinkNav({ href, icone, children }: { href: string; icone: React.
         {icone}
       </span>
       {children}
+      {!!contador && (
+        <span className="contador-nav">
+          {contador}
+          <span className="sr-only"> {rotuloContador}</span>
+        </span>
+      )}
     </Link>
   );
 }

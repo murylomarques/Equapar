@@ -1,135 +1,166 @@
-import type { Contrato, Convencao, Empresa } from "@prisma/client";
+"use client";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { FormAcao } from "@/components/form-acao";
-import type { Acao } from "@/lib/acao";
-import { paraInputData } from "@/lib/format";
+import {
+  CampoData,
+  CampoDinheiro,
+  CampoInteiro,
+  CampoSelect,
+  CampoTexto,
+  Combobox,
+  Interruptor,
+  RadiosCartao,
+  SelectUF,
+  TextoLongo,
+} from "@/components/ui/campos";
+import type { Acao, Resultado } from "@/lib/acao";
+
+/** Dados do contrato já serializados (sem Date/Decimal) para o formulário no cliente. */
+export interface ContratoForm {
+  id: string;
+  numero: string;
+  orgao: string;
+  objeto: string;
+  municipio: string | null;
+  uf: string | null;
+  esfera: string | null;
+  vigenciaInicio: string;
+  vigenciaFim: string;
+  dataProposta: string | null;
+  postos: number | null;
+  valorMensal: string | null;
+  ultimoApostilamento: string | null;
+  maoDeObraDedicada: boolean;
+  tipoReajuste: "REPACTUACAO" | "INDICE";
+  convencaoId: string | null;
+  clausulaReajuste: string | null;
+}
 
 export function FormContrato({
   action,
-  contrato,
+  contrato: c,
   convencoes,
   empresas,
   empresaId,
-  somenteLeitura,
+  idForm,
+  semBotao,
+  aoConcluir,
+  aoCancelar,
 }: {
   action: Acao;
-  contrato?: Contrato;
-  convencoes: Convencao[];
-  empresas: Empresa[];
+  contrato?: ContratoForm;
+  convencoes: { id: string; nome: string; detalhe: string }[];
+  empresas: { id: string; razaoSocial: string }[];
   empresaId?: string | null;
-  somenteLeitura?: boolean;
+  idForm?: string;
+  semBotao?: boolean;
+  aoConcluir?: (r: Resultado) => void;
+  aoCancelar?: () => void;
 }) {
-  const c = contrato;
   return (
-    <FormAcao action={action}>
+    <FormAcao action={action} id={idForm} aoConcluir={aoConcluir}>
       {c && <input type="hidden" name="id" value={c.id} />}
-      <fieldset disabled={somenteLeitura} style={{ border: 0, padding: 0, margin: 0 }}>
+
+      <fieldset className="grupo-form">
+        <legend>Identificação</legend>
         {!c && empresas.length > 1 && (
-          <div className="campo">
-            <label htmlFor="empresaId">Empresa</label>
-            <select id="empresaId" name="empresaId" defaultValue={empresaId ?? ""}>
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.razaoSocial}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CampoSelect
+            nome="empresaId"
+            rotulo="Empresa"
+            valorInicial={empresaId ?? ""}
+            vazio="Escolha a empresa"
+            opcoes={empresas.map((e) => ({ valor: e.id, rotulo: e.razaoSocial }))}
+          />
         )}
         {!c && empresas.length === 1 && <input type="hidden" name="empresaId" value={empresas[0].id} />}
-        <div className="linha-form">
-          <div className="campo">
-            <label htmlFor="numero">Número do contrato</label>
-            <input id="numero" name="numero" defaultValue={c?.numero} required placeholder="45/2025" />
-          </div>
-          <div className="campo" style={{ gridColumn: "span 2" }}>
-            <label htmlFor="orgao">Órgão</label>
-            <input id="orgao" name="orgao" defaultValue={c?.orgao} required />
-          </div>
+        <CampoTexto nome="numero" rotulo="Número do contrato" valorInicial={c?.numero} largura="curto" ajuda="Ex.: 45/2025" />
+        <CampoTexto nome="orgao" rotulo="Órgão contratante" valorInicial={c?.orgao} ajuda="Ex.: Prefeitura Municipal de Vitória" />
+        <TextoLongo nome="objeto" rotulo="Objeto" valorInicial={c?.objeto} limite={600} ajuda="Como está no contrato." />
+        <div className="linha-form" style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr)" }}>
+          <CampoTexto nome="municipio" rotulo="Cidade" opcional valorInicial={c?.municipio} />
+          <SelectUF nome="uf" rotulo="UF" opcional valorInicial={c?.uf} />
+          <CampoSelect
+            nome="esfera"
+            rotulo="Esfera"
+            opcional
+            valorInicial={c?.esfera ?? ""}
+            vazio="—"
+            opcoes={[
+              { valor: "F", rotulo: "Federal" },
+              { valor: "E", rotulo: "Estadual" },
+              { valor: "M", rotulo: "Municipal" },
+              { valor: "D", rotulo: "Distrital" },
+            ]}
+          />
         </div>
-        <div className="campo">
-          <label htmlFor="objeto">Objeto</label>
-          <textarea id="objeto" name="objeto" defaultValue={c?.objeto} required style={{ minHeight: 64 }} />
-        </div>
-        <div className="linha-form">
-          <div className="campo">
-            <label htmlFor="municipio">Cidade</label>
-            <input id="municipio" name="municipio" defaultValue={c?.municipio ?? ""} />
-          </div>
-          <div className="campo">
-            <label htmlFor="uf">UF</label>
-            <input id="uf" name="uf" maxLength={2} defaultValue={c?.uf ?? ""} />
-          </div>
-          <div className="campo">
-            <label htmlFor="esfera">Esfera</label>
-            <select id="esfera" name="esfera" defaultValue={c?.esfera ?? ""}>
-              <option value="">—</option>
-              <option value="F">Federal</option>
-              <option value="E">Estadual</option>
-              <option value="M">Municipal</option>
-              <option value="D">Distrital</option>
-            </select>
-          </div>
-        </div>
-        <div className="linha-form">
-          <div className="campo">
-            <label htmlFor="vigenciaInicio">Início da vigência</label>
-            <input id="vigenciaInicio" name="vigenciaInicio" type="date" defaultValue={paraInputData(c?.vigenciaInicio)} required />
-          </div>
-          <div className="campo">
-            <label htmlFor="vigenciaFim">Fim da vigência</label>
-            <input id="vigenciaFim" name="vigenciaFim" type="date" defaultValue={paraInputData(c?.vigenciaFim)} required />
-          </div>
-          <div className="campo">
-            <label htmlFor="dataProposta">Data da proposta</label>
-            <input id="dataProposta" name="dataProposta" type="date" defaultValue={paraInputData(c?.dataProposta)} />
-            <span className="ajuda">Define se a reforma tributária (LC 214/2025) alcança o contrato.</span>
-          </div>
-        </div>
-        <div className="linha-form">
-          <div className="campo">
-            <label htmlFor="postos">Postos</label>
-            <input id="postos" name="postos" type="number" min={0} defaultValue={c?.postos ?? ""} />
-          </div>
-          <div className="campo">
-            <label htmlFor="valorMensal">Valor mensal (R$)</label>
-            <input id="valorMensal" name="valorMensal" inputMode="decimal" defaultValue={c?.valorMensal ? String(c.valorMensal).replace(".", ",") : ""} />
-          </div>
-          <div className="campo">
-            <label htmlFor="ultimoApostilamento">Último apostilamento</label>
-            <input id="ultimoApostilamento" name="ultimoApostilamento" type="date" defaultValue={paraInputData(c?.ultimoApostilamento)} />
-          </div>
-        </div>
-        <label className="check" style={{ marginBottom: 16 }}>
-          <input type="checkbox" name="maoDeObraDedicada" defaultChecked={c?.maoDeObraDedicada ?? true} />
-          Tem funcionários da empresa trabalhando no órgão (mão de obra dedicada)
-        </label>
-        <div className="linha-form">
-          <div className="campo">
-            <label htmlFor="tipoReajuste">Como o preço é atualizado</label>
-            <select id="tipoReajuste" name="tipoReajuste" defaultValue={c?.tipoReajuste ?? "REPACTUACAO"}>
-              <option value="REPACTUACAO">Repactuação (convenção coletiva)</option>
-              <option value="INDICE">Reajuste por índice</option>
-            </select>
-          </div>
-          <div className="campo" style={{ gridColumn: "span 2" }}>
-            <label htmlFor="convencaoId">Convenção coletiva</label>
-            <select id="convencaoId" name="convencaoId" defaultValue={c?.convencaoId ?? ""}>
-              <option value="">Não informada</option>
-              {convencoes.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="campo">
-          <label htmlFor="clausulaReajuste">Cláusula de reajuste (texto)</label>
-          <textarea id="clausulaReajuste" name="clausulaReajuste" defaultValue={c?.clausulaReajuste ?? ""} style={{ minHeight: 64 }} />
-        </div>
-        {!somenteLeitura && <BotaoEnvio pendente="Salvando…">{c ? "Salvar alterações" : "Cadastrar contrato"}</BotaoEnvio>}
       </fieldset>
+
+      <fieldset className="grupo-form">
+        <legend>Vigência</legend>
+        <div className="linha-form">
+          <CampoData nome="vigenciaInicio" rotulo="Início da vigência" valorInicial={c?.vigenciaInicio} mostrarRelativo={false} />
+          <CampoData nome="vigenciaFim" rotulo="Fim da vigência" valorInicial={c?.vigenciaFim} />
+        </div>
+        <CampoData
+          nome="dataProposta"
+          rotulo="Data da proposta"
+          opcional
+          valorInicial={c?.dataProposta}
+          mostrarRelativo={false}
+          ajuda="Define se a reforma tributária (LC 214/2025) alcança o contrato."
+        />
+      </fieldset>
+
+      <fieldset className="grupo-form">
+        <legend>Valores</legend>
+        <div className="linha-form">
+          <CampoInteiro nome="postos" rotulo="Postos de trabalho" opcional valorInicial={c?.postos} sufixo="postos" />
+          <CampoDinheiro nome="valorMensal" rotulo="Valor mensal" opcional valorInicial={c?.valorMensal} />
+        </div>
+        <CampoData nome="ultimoApostilamento" rotulo="Último apostilamento" opcional valorInicial={c?.ultimoApostilamento} mostrarRelativo={false} />
+      </fieldset>
+
+      <fieldset className="grupo-form">
+        <legend>Reajuste e convenção</legend>
+        <Interruptor
+          nome="maoDeObraDedicada"
+          rotulo="Tem funcionários da empresa trabalhando no órgão"
+          descricao="Mão de obra dedicada. Só esses contratos têm repactuação pela convenção coletiva."
+          valorInicial={c?.maoDeObraDedicada ?? true}
+        />
+        <div className="mt-16" />
+        <RadiosCartao
+          nome="tipoReajuste"
+          legenda="Como o preço é atualizado"
+          valorInicial={c?.tipoReajuste ?? "REPACTUACAO"}
+          opcoes={[
+            { valor: "REPACTUACAO", titulo: "Repactuação", descricao: "Pela convenção coletiva da categoria, a cada data-base." },
+            { valor: "INDICE", titulo: "Reajuste por índice", descricao: "Por um índice (IPCA, IST…), conforme a cláusula do contrato." },
+          ]}
+        />
+        <Combobox
+          nome="convencaoId"
+          rotulo="Convenção coletiva"
+          opcional
+          valorInicial={c?.convencaoId}
+          semValor="Não informada"
+          opcoes={convencoes.map((v) => ({ valor: v.id, rotulo: v.nome, detalhe: v.detalhe }))}
+          vazio="Nenhuma convenção com esse nome. Cadastre em Convenções."
+          ajuda="Use a mesma da planilha de custos da proposta."
+        />
+        <TextoLongo nome="clausulaReajuste" rotulo="Cláusula de reajuste" opcional valorInicial={c?.clausulaReajuste} ajuda="Cole o texto da cláusula. Aparece na decisão de prorrogação." />
+      </fieldset>
+
+      {aoCancelar ? (
+        <div className="acoes-painel">
+          <button type="button" className="btn" onClick={aoCancelar}>
+            Cancelar
+          </button>
+          <BotaoEnvio>Salvar</BotaoEnvio>
+        </div>
+      ) : (
+        !semBotao && <BotaoEnvio>{c ? "Salvar contrato" : "Cadastrar contrato"}</BotaoEnvio>
+      )}
     </FormAcao>
   );
 }

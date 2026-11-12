@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { Copy } from "lucide-react";
+import { useToast } from "./ui/provedores";
 
-export function Copiar({ texto }: { texto: string }) {
-  const [ok, setOk] = useState(false);
+export function Copiar({ texto, rotulo = "Copiar texto" }: { texto: string; rotulo?: string }) {
+  const toast = useToast();
   return (
     <button
       type="button"
@@ -10,14 +11,13 @@ export function Copiar({ texto }: { texto: string }) {
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(texto);
-          setOk(true);
-          setTimeout(() => setOk(false), 2500);
+          toast("Texto copiado.");
         } catch {
-          setOk(false);
+          toast("Não deu para copiar automaticamente. Selecione o texto e copie com Ctrl+C.", { tipo: "erro" });
         }
       }}
     >
-      {ok ? "Copiado" : "Copiar texto"}
+      <Copy size={16} strokeWidth={1.5} aria-hidden /> {rotulo}
     </button>
   );
 }

@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { contexto, contratoDaConta, exigir, registrarHistorico } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { tentar, texto, type Resultado } from "@/lib/acao";
+import { ErroCampos, tentar, texto, type Resultado } from "@/lib/acao";
 import { cnpjValido, soDigitos } from "@/lib/cnpj";
 import { registrarEvento } from "@/lib/eventos";
 import { lerData, lerDinheiro } from "@/lib/format";
@@ -145,19 +145,31 @@ export async function onboardingConvencoes(_: Resultado, fd: FormData): Promise<
 // ---------------------------------------------------------------------------
 
 function dadosContrato(fd: FormData) {
-  const inicio = lerData(fd.get("vigenciaInicio"));
-  const fim = lerData(fd.get("vigenciaFim"));
+  const campos: Record<string, string> = {};
   const numero = texto(fd, "numero");
   const orgao = texto(fd, "orgao");
   const objeto = texto(fd, "objeto");
-  if (!numero || !orgao || !objeto) throw new Error("Preencha número, órgão e objeto.");
-  if (!inicio || !fim) throw new Error("Informe o início e o fim da vigência.");
-  if (fim <= inicio) throw new Error("O fim da vigência precisa ser depois do início.");
+  if (!numero) campos.numero = "Digite o número do contrato, como 45/2025.";
+  if (!orgao) campos.orgao = "Digite o nome do órgão contratante.";
+  if (!objeto) campos.objeto = "Descreva o objeto do contrato.";
+  const inicio = lerData(fd.get("vigenciaInicio"));
+  const fim = lerData(fd.get("vigenciaFim"));
+  if (!inicio) campos.vigenciaInicio = "Digite a data de início da vigência (dd/mm/aaaa).";
+  if (!fim) campos.vigenciaFim = "Digite a data de fim da vigência (dd/mm/aaaa).";
+  if (inicio && fim && fim <= inicio) campos.vigenciaFim = "O fim da vigência precisa ser depois do início.";
+  const valorTxt = texto(fd, "valorMensal");
   const valorMensal = lerDinheiro(fd.get("valorMensal"));
-  if (texto(fd, "valorMensal") && valorMensal === null) throw new Error("Valor mensal inválido. Use números, como 48.300,00.");
+  if (valorTxt && valorMensal === null) campos.valorMensal = "Digite o valor mensal em reais, como 48.300,00.";
   const postosTxt = texto(fd, "postos");
   const postos = postosTxt ? Number(postosTxt) : null;
-  if (postos !== null && (!Number.isInteger(postos) || postos < 0)) throw new Error("Postos precisa ser um número inteiro.");
+  if (postos !== null && (!Number.isInteger(postos) || postos < 0)) campos.postos = "Digite a quantidade de postos em número inteiro.";
+  const dataPropostaTxt = texto(fd, "dataProposta");
+  const dataProposta = lerData(fd.get("dataProposta"));
+  if (dataPropostaTxt && !dataProposta) campos.dataProposta = "Data da proposta inválida. Use dd/mm/aaaa.";
+  const apostTxt = texto(fd, "ultimoApostilamento");
+  const ultimoApostilamento = lerData(fd.get("ultimoApostilamento"));
+  if (apostTxt && !ultimoApostilamento) campos.ultimoApostilamento = "Data do apostilamento inválida. Use dd/mm/aaaa.";
+  if (Object.keys(campos).length) throw new ErroCampos(campos);
   return {
     numero,
     orgao,
@@ -165,16 +177,16 @@ function dadosContrato(fd: FormData) {
     uf: texto(fd, "uf").toUpperCase().slice(0, 2) || null,
     municipio: texto(fd, "municipio") || null,
     esfera: texto(fd, "esfera") || null,
-    vigenciaInicio: inicio,
-    vigenciaFim: fim,
+    vigenciaInicio: inicio!,
+    vigenciaFim: fim!,
     valorMensal,
     postos,
     maoDeObraDedicada: fd.get("maoDeObraDedicada") === "on",
     tipoReajuste: fd.get("tipoReajuste") === "INDICE" ? ("INDICE" as const) : ("REPACTUACAO" as const),
     clausulaReajuste: texto(fd, "clausulaReajuste") || null,
     convencaoId: texto(fd, "convencaoId") || null,
-    dataProposta: lerData(fd.get("dataProposta")),
-    ultimoApostilamento: lerData(fd.get("ultimoApostilamento")),
+    dataProposta,
+    ultimoApostilamento,
   };
 }
 
@@ -183,7 +195,7 @@ export async function criarContrato(_: Resultado, fd: FormData): Promise<Resulta
   const r = await tentar(async () => {
     const ctx = await exigir("editar_contratos");
     const empresaId = texto(fd, "empresaId") || ctx.empresaId;
-    if (!empresaId || !ctx.empresas.some((e) => e.id === empresaId)) return { erro: "Escolha a empresa do contrato." };
+    if (!empresaId || !ctx.empresas.some((e) => e.id === empresaId)) return { campos: { empresaId: "Escolha a empresa do contrato." } };
     const d = dadosContrato(fd);
     if (d.convencaoId && !(await db.convencao.findFirst({ where: { id: d.convencaoId, contaId: ctx.conta.id } }))) return { erro: "Convenção inválida." };
     const c = await db.contrato.create({ data: { ...d, empresaId } });
@@ -204,7 +216,7 @@ export async function editarContrato(_: Resultado, fd: FormData): Promise<Result
     if (d.convencaoId) await db.tarefa.updateMany({ where: { contratoId: c.id, titulo: "Descobrir a convenção", feitaEm: null }, data: { feitaEm: new Date() } });
     await registrarHistorico(ctx, "Editou os dados do contrato", { contratoId: c.id });
     revalidatePath(`/app/contratos/${c.id}`);
-    return { ok: "Salvo." };
+    return { ok: "Contrato salvo." };
   });
 }
 

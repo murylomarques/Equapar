@@ -1486,6 +1486,76 @@ dialog.painel-lateral::backdrop {
   }
 }
 
+/* =============================== Passos =============================== */
+.progresso {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  overflow-x: auto;
+}
+.progresso li {
+  flex: 1;
+  min-width: 110px;
+  font-size: 13px;
+  color: var(--grafite);
+  padding-top: 10px;
+  border-top: 3px solid var(--linha);
+  transition: border-color 200ms ease-in-out, color 200ms ease-in-out;
+}
+.progresso li.feito {
+  border-top-color: var(--verde-claro);
+}
+.progresso li.atual {
+  border-top-color: var(--verde);
+  color: var(--tinta);
+  font-weight: 600;
+}
+.progresso a {
+  color: inherit;
+  text-decoration: none;
+}
+/* ===================== Passos ===================== */
+.progresso li {
+  border-top-width: 3px;
+}
+.progresso li a,
+.progresso li > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+.progresso li a:hover {
+  color: var(--verde);
+}
+.passo-marca {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font: 600 12px/1 var(--fonte);
+  flex-shrink: 0;
+}
+.progresso li.feito .passo-marca {
+  background: var(--verde);
+  border-color: var(--verde);
+  color: #fff;
+}
+.progresso li.atual .passo-marca {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: #fff;
+}
+.progresso li.feito {
+  color: var(--tinta);
+}
+
+
 /* =============================== Utilidades =============================== */
 .pilha {
   display: grid;
@@ -1673,4 +1743,53 @@ mark {
     box-shadow: none;
     break-inside: avoid;
   }
+}
+.mb-16 {
+  margin-bottom: 16px;
+}
+.barra-selecao {
+  position: sticky;
+  top: 68px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  background: var(--tinta);
+  color: #fff;
+  border-radius: var(--raio);
+  box-shadow: var(--e2);
+  font: var(--t-tabela);
+}
+.barra-selecao .ajuda-texto {
+  color: #d6d3cc;
+}
+.barra-selecao .btn-discreto {
+  color: #fff;
+}
+.barra-selecao .btn-discreto:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.acoes-painel {
+  position: sticky;
+  bottom: -24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 24px -24px -24px;
+  padding: 16px 24px;
+  background: var(--superficie);
+  border-top: 1px solid var(--linha);
+}
+.documento {
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  padding: 16px 20px;
+  font: var(--t-tabela);
+  line-height: 1.6;
+  box-shadow: 4px 4px 0 -1px var(--papel), 4px 4px 0 0 var(--linha);
 }

@@ -19,11 +19,9 @@ import { cnpjValido, soDigitos } from "@/lib/cnpj";
 import { registrarEvento } from "@/lib/eventos";
 import { consultarPncp } from "@/lib/pncp";
 
-export interface Estado {
-  erro?: string;
-  erros?: Record<string, string>;
-  valores?: Record<string, string>;
-}
+import type { Resultado } from "@/lib/acao";
+
+export type Estado = Resultado;
 
 async function ip() {
   const h = await headers();
@@ -35,14 +33,15 @@ export async function entrar(_: Estado, fd: FormData): Promise<Estado> {
   const senha = String(fd.get("senha") ?? "");
   const destino = String(fd.get("destino") ?? "");
   const chave = `${email}|${await ip()}`;
-  if (bloqueado(chave)) return { erro: "Muitas tentativas. Espere 15 minutos e tente de novo.", valores: { email } };
+  if (!email || !senha) return { erro: "Digite o e-mail e a senha." };
+  if (bloqueado(chave)) return { erro: "Muitas tentativas seguidas. Por segurança, espere 15 minutos e tente de novo." };
   const u = await db.usuario.findUnique({ where: { email } });
   if (!u || !(await conferirSenha(senha, u.senhaHash))) {
     falhou(chave);
-    return { erro: "E-mail ou senha não conferem.", valores: { email } };
+    return { erro: "E-mail ou senha não conferem. Confira e tente de novo." };
   }
   limparFalhas(chave);
-  await criarSessao(u.id, { pendente2fa: u.totpAtivo });
+  await criarSessao(u.id, { pendente2fa: u.totpAtivo, lembrar: fd.get("lembrar") === "on" });
   if (u.totpAtivo) redirect(`/entrar/2fa${destino.startsWith("/app") ? `?destino=${encodeURIComponent(destino)}` : ""}`);
   redirect(destino.startsWith("/app") ? destino : "/app/hoje");
 }
@@ -55,7 +54,7 @@ export async function confirmar2fa(_: Estado, fd: FormData): Promise<Estado> {
   if (bloqueado(chave)) return { erro: "Muitas tentativas. Espere 15 minutos." };
   if (!s.usuario.totpSegredoCifrado || !conferirTotp(s.usuario.totpSegredoCifrado, codigo)) {
     falhou(chave);
-    return { erro: "Código não confere. Use o código de 6 números do aplicativo, que muda a cada 30 segundos." };
+    return { campos: { codigo: "Código não confere. Use os 6 números que o aplicativo mostra agora (o código muda a cada 30 segundos)." } };
   }
   limparFalhas(chave);
   await db.sessao.update({ where: { id: s.id }, data: { pendente2fa: false } });
@@ -64,8 +63,8 @@ export async function confirmar2fa(_: Estado, fd: FormData): Promise<Estado> {
 }
 
 const esquemaConta = z.object({
-  nome: z.string().trim().min(2, "Informe seu nome."),
-  email: z.string().trim().toLowerCase().email("Confira o e-mail: falta o @ ou o domínio."),
+  nome: z.string().trim().min(2, "Digite seu nome."),
+  email: z.string().trim().toLowerCase().email("Digite um e-mail válido, como nome@empresa.com.br."),
   senha: z.string(),
   tipo: z.enum(["EMPRESA", "ASSESSORIA"]),
   cnpj: z.string().transform(soDigitos),
@@ -75,7 +74,6 @@ const esquemaConta = z.object({
 
 export async function criarConta(_: Estado, fd: FormData): Promise<Estado> {
   const bruto = Object.fromEntries(["nome", "email", "senha", "tipo", "cnpj", "razaoSocial", "termos"].map((k) => [k, String(fd.get(k) ?? "")]));
-  const valores = { ...bruto, senha: "" };
   const p = esquemaConta.safeParse(bruto);
   const erros: Record<string, string> = {};
   if (!p.success) for (const i of p.error.issues) erros[String(i.path[0])] ??= i.message;
@@ -85,9 +83,9 @@ export async function criarConta(_: Estado, fd: FormData): Promise<Estado> {
   if (bruto.tipo !== "ASSESSORIA" || cnpj) {
     if (!cnpjValido(cnpj)) erros.cnpj = "Esse CNPJ não existe. Confira os 14 números.";
   }
-  if (Object.keys(erros).length || !p.success) return { erros, valores };
+  if (Object.keys(erros).length || !p.success) return { campos: erros };
   const d = p.data;
-  if (await db.usuario.findUnique({ where: { email: d.email } })) return { erros: { email: "Já existe uma conta com este e-mail. Entre ou recupere o acesso." }, valores };
+  if (await db.usuario.findUnique({ where: { email: d.email } })) return { campos: { email: "Já existe uma conta com este e-mail. Use a tela Entrar." } };
 
   let razao = d.razaoSocial;
   if (cnpj && !razao) {
@@ -131,7 +129,7 @@ export async function completarEmpresa(_: Estado, fd: FormData): Promise<Estado>
   const tipo: "ASSESSORIA" | "EMPRESA" = fd.get("tipo") === "ASSESSORIA" ? "ASSESSORIA" : "EMPRESA";
   const cnpj = soDigitos(String(fd.get("cnpj") ?? ""));
   const razao = String(fd.get("razaoSocial") ?? "").trim();
-  if (!(tipo === "ASSESSORIA" && !cnpj) && !cnpjValido(cnpj)) return { erros: { cnpj: "Esse CNPJ não existe. Confira os 14 números." } };
+  if (!(tipo === "ASSESSORIA" && !cnpj) && !cnpjValido(cnpj)) return { campos: { cnpj: "Esse CNPJ não existe. Confira os 14 números." } };
   const m = await db.membro.create({
     data: {
       usuario: { connect: { id: s.usuarioId } },
