@@ -25,6 +25,7 @@ import { idDoToken, lerTokenRedefinicao, tokenRedefinicao } from "@/lib/redefini
 import { consumirCotas } from "@/lib/cota";
 import { ipConfiavel } from "@/lib/limite";
 import { appUrl, enviar } from "@/lib/mensagens";
+import { conviteValido, lerTokenConvite } from "@/lib/convite";
 
 export type Estado = Resultado;
 
@@ -204,4 +205,22 @@ export async function redefinirSenha(_: Estado, fd: FormData): Promise<Estado> {
   await db.sessao.deleteMany({ where: { usuarioId: u.id } });
   await limparTentativas(u.email);
   redirect("/entrar?redefinida=1");
+}
+
+// ---------------------------------------------------------------------------
+// S12. Aceitar convite: a pessoa convidada define a própria senha
+// ---------------------------------------------------------------------------
+
+export async function aceitarConvite(_: Estado, fd: FormData): Promise<Estado> {
+  const t = lerTokenConvite(String(fd.get("t") ?? ""));
+  const u = t ? await db.usuario.findUnique({ where: { id: t.usuarioId } }) : null;
+  if (!t || !u || conviteValido(t, u) !== "ok") return { erro: "Este convite não vale mais (vence em 7 dias e serve uma vez só). Peça um novo a quem convidou." };
+  const membro = await db.membro.findUnique({ where: { usuarioId_contaId: { usuarioId: u.id, contaId: t.contaId } } });
+  if (!membro) return { erro: "Você não faz mais parte desta conta. Fale com quem convidou." };
+  const senha = String(fd.get("senha") ?? "");
+  const fraca = senhaFraca(senha, { email: u.email });
+  if (fraca) return { campos: { senha: fraca } };
+  await db.usuario.update({ where: { id: u.id }, data: { senhaHash: await hashSenha(senha), emailVerificadoEm: u.emailVerificadoEm ?? new Date() } });
+  await criarSessao(u.id, { contaId: t.contaId });
+  redirect("/app/hoje");
 }

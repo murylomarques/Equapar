@@ -6,13 +6,13 @@ import type { Papel, Plano } from "@prisma/client";
 import { conferirSenha, conferirTotp, exigirUsuario, encerrarSessao, exigir, hashSenha, novoTotp, registrarHistorico, senhaFraca } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { tentar, texto, type Resultado } from "@/lib/acao";
-import { tokenAleatorio } from "@/lib/cripto";
 import { appUrl, enviar } from "@/lib/mensagens";
 import { rodarAvisos } from "@/lib/avisos";
 import { apagarPastaConta } from "@/lib/storage";
 import { EMAIL_DEMO } from "@/lib/site";
 import { normalizarTelefoneBR } from "@/lib/telefone";
 import { gerarCodigosRecuperacao } from "@/lib/recuperacao";
+import { tokenConvite } from "@/lib/convite";
 
 export async function salvarConta(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
@@ -72,27 +72,29 @@ export async function convidarPessoa(_: Resultado, fd: FormData): Promise<Result
     if (!nome) campos.nome = "Digite o nome da pessoa.";
     if (!z.string().email().safeParse(email).success) campos.email = "Digite um e-mail válido, como nome@empresa.com.br.";
     if (Object.keys(campos).length) return { campos };
+    // S12: quem não tem conta é criado SEM senha e recebe um link (7 dias) para definir a própria
     let u = await db.usuario.findUnique({ where: { email } });
-    let senhaTemporaria: string | null = null;
-    if (!u) {
-      senhaTemporaria = `${tokenAleatorio(6)}9a`;
-      u = await db.usuario.create({ data: { nome, email, senhaHash: await hashSenha(senhaTemporaria) } });
-    }
+    const nova = !u;
+    if (!u) u = await db.usuario.create({ data: { nome, email } });
     const ja = await db.membro.findUnique({ where: { usuarioId_contaId: { usuarioId: u.id, contaId: ctx.conta.id } } });
     if (ja) return { erro: "Esta pessoa já está na conta." };
     await db.membro.create({ data: { usuarioId: u.id, contaId: ctx.conta.id, papel } });
+    const precisaSenha = nova || !u.senhaHash;
+    const link = precisaSenha ? appUrl(`/convite?t=${encodeURIComponent(tokenConvite(u, ctx.conta.id))}`) : appUrl("/entrar");
     await enviar({
       contaId: ctx.conta.id,
-      chave: `CONVITE:${ctx.conta.id}:${u.id}`,
+      chave: `CONVITE:${ctx.conta.id}:${u.id}:${Date.now()}`,
       tipo: "CONVITE",
       canal: "EMAIL",
       destino: email,
       assunto: `${ctx.usuario.nome} convidou você para a Equapar`,
-      corpo: `${ctx.usuario.nome} adicionou você à conta ${ctx.conta.nome} na Equapar. Entre em ${appUrl("/entrar")}${senhaTemporaria ? " com a senha temporária que você vai receber de quem convidou, e troque-a em Configurações > Segurança." : "."}`,
+      corpo: precisaSenha
+        ? `${ctx.usuario.nome} convidou você para a conta ${ctx.conta.nome} na Equapar. Para entrar, crie a sua senha neste link, que vale por 7 dias: ${link}`
+        : `${ctx.usuario.nome} adicionou você à conta ${ctx.conta.nome} na Equapar. Entre com o seu e-mail e a sua senha em ${link}.`,
     });
-    await registrarHistorico(ctx, `Adicionou ${nome} (${papel.toLowerCase()})`);
+    await registrarHistorico(ctx, `Convidou ${nome} (${papel.toLowerCase()})`);
     revalidatePath("/app/configuracoes");
-    return { ok: senhaTemporaria ? `Pessoa adicionada. Senha temporária (mostrada só agora): ${senhaTemporaria}` : "Pessoa adicionada." };
+    return { ok: precisaSenha ? `Convite enviado para ${email}. O link vale por 7 dias.` : `${nome} foi adicionada à conta e recebeu um aviso por e-mail.` };
   });
 }
 

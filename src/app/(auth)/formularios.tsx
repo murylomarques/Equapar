@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { FormAcao } from "@/components/form-acao";
 import { CampoCnpj, CampoSenha, CampoTexto, Consentimento, RadiosCartao } from "@/components/ui/campos";
-import { completarEmpresa, confirmar2fa, criarConta, entrar, pedirRedefinicao, redefinirSenha } from "./acoes";
+import { aceitarConvite, completarEmpresa, confirmar2fa, criarConta, entrar, pedirRedefinicao, redefinirSenha } from "./acoes";
 
 export function FormEntrar({ destino, google }: { destino?: string; google: boolean }) {
   return (
@@ -130,6 +130,17 @@ export function FormRedefinirSenha({ token }: { token: string }) {
       <input type="hidden" name="t" value={token} />
       <CampoSenha nome="senha" rotulo="Senha nova" nova autoComplete="new-password" />
       <BotaoEnvio>Salvar a senha nova</BotaoEnvio>
+    </FormAcao>
+  );
+}
+
+/** S12: a pessoa convidada cria a própria senha. */
+export function FormAceitarConvite({ token }: { token: string }) {
+  return (
+    <FormAcao action={aceitarConvite} semToast>
+      <input type="hidden" name="t" value={token} />
+      <CampoSenha nome="senha" rotulo="Crie sua senha" nova autoComplete="new-password" />
+      <BotaoEnvio>Entrar na Equapar</BotaoEnvio>
     </FormAcao>
   );
 }
