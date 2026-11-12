@@ -11,12 +11,13 @@
     "typecheck": "tsc --noEmit",
     "db:up": "docker compose up -d",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx --env-file=.env prisma/seed-dev.ts",
     "avisos": "tsx scripts/avisos.ts",
     "setup": "npm run db:up && prisma migrate deploy && prisma generate && npm run db:seed",
     "e2e": "node e2e/fluxo.mjs desktop && node e2e/fluxo.mjs celular && node e2e/assessoria-2fa.mjs",
     "e2e:a11y": "node e2e/acessibilidade.mjs",
-    "e2e:teclado": "node e2e/teclado.mjs"
+    "e2e:teclado": "node e2e/teclado.mjs",
+    "db:seed:demo": "tsx --env-file=.env prisma/seed-demo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
@@ -54,6 +55,6 @@
     "vitest": "^5.1.0"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx --env-file=.env prisma/seed-dev.ts"
   }
 }

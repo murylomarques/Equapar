@@ -1,9 +1,11 @@
 /**
- * Dados de DEMONSTRAÇÃO, 100% fictícios (empresa, órgãos, números e pessoas).
- * Cria:
- *  - a conta de demonstração (papel Leitura), usada por /demonstracao;
- *  - um usuário Dono para você testar localmente, com senha aleatória impressa no fim.
- * Pode rodar de novo: apaga e recria só a conta de exemplo.
+ * S7. Dados fictícios da DEMONSTRAÇÃO (pode rodar em produção): a conta modelo que cada visitante copia
+ * (C6.2) e a demonstração compartilhada só leitura. NÃO cria usuário Dono e não imprime senha.
+ *
+ *   npm run db:seed:demo        (tsx --env-file=.env prisma/seed-demo.ts)
+ *
+ * Para desenvolvimento, use `npm run db:seed` (seed-dev), que chama este e cria o Dono de teste.
+ * Empresas, órgãos, CNPJs e pessoas daqui são fictícios.
  */
 import { PrismaClient, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -11,9 +13,8 @@ import crypto from "node:crypto";
 import { compararPlanilhas, calcularRetroativo } from "../src/lib/calculo/motor";
 import type { LinhaPlanilha, PlanilhaCustos } from "../src/lib/calculo/tipos";
 
-const db = new PrismaClient();
+const dbPadrao = new PrismaClient();
 const EMAIL_DEMO = "demonstracao@equapar.local";
-const EMAIL_DONO = "dono@exemplo.local";
 
 function cnpjFicticio() {
   const base = Array.from({ length: 12 }, (_, i) => (i < 8 ? Math.floor(Math.random() * 10) : [0, 0, 0, 1][i - 8]));
@@ -73,22 +74,15 @@ const antes: PlanilhaCustos = { tipos: [posto("srv", "Servente 44h", 10, "1740.0
 const agora: PlanilhaCustos = { tipos: [posto("srv", "Servente 44h", 10, "1820.00", "240.00", "480.00", "324.20"), posto("enc", "Encarregado 44h", 1, "2510.00", "240.00", "480.00", "324.20")] };
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
-async function main() {
-  // limpa a conta de exemplo anterior
-  const antigos = await db.usuario.findMany({ where: { email: { in: [EMAIL_DEMO, EMAIL_DONO] } }, include: { membros: true } });
-  for (const u of antigos) for (const m of u.membros) await db.conta.deleteMany({ where: { id: m.contaId } });
-  await db.usuario.deleteMany({ where: { email: { in: [EMAIL_DEMO, EMAIL_DONO] } } });
+/** Recria a conta modelo fictícia (apaga só a conta modelo anterior, a do usuário da demonstração). */
+export async function criarModeloDemo(db: PrismaClient = dbPadrao) {
+  const antigos = await db.usuario.findMany({ where: { email: EMAIL_DEMO }, include: { membros: true } });
+  for (const u of antigos) for (const m of u.membros) await db.conta.deleteMany({ where: { id: m.contaId, demo: false } });
+  await db.usuario.deleteMany({ where: { email: EMAIL_DEMO } });
 
-  const senhaDono = `${crypto.randomBytes(6).toString("base64url")}7x`;
   const conta = await db.conta.create({ data: { nome: "Empresa Exemplo Limpeza e Conservação (fictícia)", tipo: "EMPRESA", plano: "CARTEIRA" } });
   const demo = await db.usuario.create({ data: { nome: "Juliana (exemplo)", email: EMAIL_DEMO, senhaHash: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 12) } });
-  const dono = await db.usuario.create({ data: { nome: "Marcos (exemplo)", email: EMAIL_DONO, senhaHash: await bcrypt.hash(senhaDono, 12), emailVerificadoEm: new Date() } });
-  await db.membro.createMany({
-    data: [
-      { usuarioId: demo.id, contaId: conta.id, papel: "LEITURA" },
-      { usuarioId: dono.id, contaId: conta.id, papel: "DONO" },
-    ],
-  });
+  await db.membro.create({ data: { usuarioId: demo.id, contaId: conta.id, papel: "LEITURA" } });
   const empresa = await db.empresa.create({ data: { contaId: conta.id, cnpj: cnpjFicticio(), razaoSocial: "Empresa Exemplo Limpeza e Conservação Ltda. (fictícia)", exemplo: true } });
   const ano = new Date().getUTCFullYear();
   const conv = await db.convencao.create({
@@ -144,15 +138,16 @@ async function main() {
 
   await db.historico.create({ data: { contaId: conta.id, acao: "Dados de exemplo criados (fictícios)" } });
 
-  console.log("\nDados de demonstração criados (todos fictícios).");
-  console.log("Demonstração somente leitura: http://localhost:3000/demonstracao");
-  console.log(`Usuário Dono para testes locais: ${EMAIL_DONO}  senha: ${senhaDono}`);
-  console.log("(guarde a senha; ela não é mostrada de novo. Rode o seed outra vez para gerar outra.)\n");
+  console.log("Dados fictícios da demonstração criados (conta modelo, sem usuário Dono).");
+  return { contaId: conta.id };
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exitCode = 1;
-  })
-  .finally(() => db.$disconnect());
+// Rodando direto (npm run db:seed:demo)
+if (process.argv[1]?.replaceAll("\\", "/").endsWith("prisma/seed-demo.ts")) {
+  criarModeloDemo()
+    .catch((e) => {
+      console.error(e);
+      process.exitCode = 1;
+    })
+    .finally(() => dbPadrao.$disconnect());
+}
