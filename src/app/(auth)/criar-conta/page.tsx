@@ -27,17 +27,18 @@ function Etapas({ atual }: { atual: number }) {
   );
 }
 
-export default async function CriarConta({ searchParams }: { searchParams: Promise<{ cnpj?: string; tipo?: string; etapa?: string }> }) {
+export default async function CriarConta({ searchParams }: { searchParams: Promise<{ cnpj?: string; tipo?: string; etapa?: string; nova?: string }> }) {
   const sp = await searchParams;
   const s = await sessaoAtual();
   if (s && !s.pendente2fa) {
     const temConta = await db.membro.findFirst({ where: { usuarioId: s.usuarioId } });
-    if (temConta) redirect("/app/hoje");
+    const nova = sp.nova === "1"; // S6: "Criar outra conta", pedido explícito de quem já tem conta
+    if (temConta && !nova) redirect("/app/hoje");
     return (
       <div className="cartao">
-        <h1>Sua empresa</h1>
-        <p className="secundario">Falta só dizer de qual empresa são os contratos.</p>
-        <FormEmpresa />
+        <h1>{nova ? "Criar outra conta" : "Sua empresa"}</h1>
+        <p className="secundario">{nova ? "Uma conta nova, separada da atual, com os contratos de outra empresa." : "Falta só dizer de qual empresa são os contratos."}</p>
+        <FormEmpresa novaConta={nova} />
       </div>
     );
   }

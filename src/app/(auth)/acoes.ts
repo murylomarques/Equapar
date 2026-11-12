@@ -127,6 +127,10 @@ export async function criarConta(_: Estado, fd: FormData): Promise<Estado> {
 export async function completarEmpresa(_: Estado, fd: FormData): Promise<Estado> {
   const s = await sessaoAtual();
   if (!s) redirect("/entrar");
+  // S6: só com a sessão completa (duas etapas confirmadas)
+  if (s.pendente2fa) redirect("/entrar/2fa");
+  // S6: quem já participa de uma conta só cria outra pelo fluxo explícito ("Criar outra conta")
+  if (fd.get("novaConta") !== "1" && (await db.membro.count({ where: { usuarioId: s.usuarioId } })) > 0) redirect("/app/hoje");
   const tipo: "ASSESSORIA" | "EMPRESA" = fd.get("tipo") === "ASSESSORIA" ? "ASSESSORIA" : "EMPRESA";
   const cnpj = soDigitos(String(fd.get("cnpj") ?? ""));
   const razao = String(fd.get("razaoSocial") ?? "").trim();

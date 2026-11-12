@@ -91,10 +91,11 @@ export function FormCriarConta({ cnpj, tipoInicial, google }: { cnpj?: string; t
   );
 }
 
-export function FormEmpresa() {
+export function FormEmpresa({ novaConta = false }: { novaConta?: boolean }) {
   const [tipo, setTipo] = useState("EMPRESA");
   return (
     <FormAcao action={completarEmpresa} semToast>
+      {novaConta && <input type="hidden" name="novaConta" value="1" />}
       <RadiosCartao
         nome="tipo"
         legenda="A conta é de"
