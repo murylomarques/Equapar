@@ -7,10 +7,11 @@ import { db } from "@/lib/db";
 import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/acao";
 import { cnpjValido, soDigitos } from "@/lib/cnpj";
 import { registrarEvento } from "@/lib/eventos";
-import { lerData, lerDinheiro } from "@/lib/format";
+import { data, lerData, lerDinheiro } from "@/lib/format";
 import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
 import { salvarArquivo } from "@/lib/storage";
 import { vigenciaAoImportar } from "@/lib/pncp-vigencia";
+import { riscoPreclusao } from "@/lib/prorrogacao";
 
 // ---------------------------------------------------------------------------
 // Sessão
@@ -260,6 +261,35 @@ export async function usarVigenciaPncp(_: Resultado, fd: FormData): Promise<Resu
     await registrarHistorico(ctx, "Trocou o fim da vigência pela data do PNCP", { contratoId: c.id });
     revalidatePath(`/app/contratos/${c.id}`);
     return { ok: "Fim da vigência atualizado com a data do PNCP." };
+  });
+}
+
+/**
+ * L17. Registra a prorrogação (termo aditivo): novo fim da vigência, com ou sem ressalva do direito à
+ * repactuação. Entra no histórico e nos prazos (o fim da vigência muda). Devolve o alerta de preclusão.
+ */
+export async function registrarProrrogacao(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigir("editar_contratos");
+    const c = await contratoDaConta(ctx, texto(fd, "contratoId"));
+    const dataTermo = lerData(fd.get("dataTermo"));
+    const novoFim = lerData(fd.get("novoFim"));
+    const comRessalva = fd.get("comRessalva") === "on";
+    const textoRessalva = texto(fd, "textoRessalva") || null;
+    const campos: Record<string, string> = {};
+    if (!dataTermo) campos.dataTermo = "Digite a data de assinatura do termo aditivo.";
+    if (!novoFim) campos.novoFim = "Digite o novo fim da vigência.";
+    if (dataTermo && novoFim && novoFim <= c.vigenciaFim) campos.novoFim = "O novo fim precisa ser depois do fim atual da vigência.";
+    if (comRessalva && !textoRessalva) campos.textoRessalva = "Cole o texto da ressalva como ficou no termo aditivo.";
+    if (Object.keys(campos).length) throw new ErroCampos(campos);
+    await db.prorrogacao.create({ data: { contratoId: c.id, dataTermo: dataTermo!, novoFim: novoFim!, comRessalva, textoRessalva, registradoPor: ctx.usuario.nome } });
+    await db.contrato.update({ where: { id: c.id }, data: { vigenciaFim: novoFim! } });
+    await registrarHistorico(ctx, `Registrou a prorrogação até ${data(novoFim)} (termo de ${data(dataTermo)}, ${comRessalva ? "com" : "sem"} ressalva)`, { contratoId: c.id });
+    const completo = await db.contrato.findUnique({ where: { id: c.id }, include: { convencao: true, pedidos: true } });
+    revalidatePath(`/app/contratos/${c.id}`);
+    if (completo && riscoPreclusao({ dataTermo: dataTermo!, comRessalva }, completo))
+      return { ok: "Prorrogação registrada.", dados: { preclusao: true } };
+    return { ok: "Prorrogação registrada." };
   });
 }
 

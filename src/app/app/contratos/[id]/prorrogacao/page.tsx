@@ -7,6 +7,7 @@ import { FONTES } from "@/lib/prazos";
 import { FonteRegra } from "@/components/fonte-regra";
 import { CabecalhoPagina } from "@/components/ui/estrutura";
 import { Decisao } from "./decisao";
+import { RegistrarProrrogacao } from "./registrar";
 
 export const metadata: Metadata = { title: "Decisão de prorrogação | Equapar" };
 
@@ -32,6 +33,7 @@ export default async function Prorrogacao({ params }: { params: Promise<{ id: st
         subtitulo={c.orgao}
       />
       <Decisao contratoId={c.id} ressalva={ressalva} clausula={c.clausulaReajuste} inicial={inicial} podePedir={pode(ctx.papel, "editar_pedidos")} />
+      {pode(ctx.papel, "editar_contratos") && <RegistrarProrrogacao contratoId={c.id} ressalvaSugerida={ressalva} fonte={FONTES.preclusao} />}
       <footer className="pilha-8 mt-32">
         <FonteRegra regra={FONTES.preclusao} />
         <FonteRegra regra={FONTES.ressalva} />

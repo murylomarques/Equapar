@@ -80,6 +80,7 @@ export default async function ContratoPagina({ params, searchParams }: { params:
       pedidos: { orderBy: { criadoEm: "desc" } },
       documentos: { orderBy: { criadoEm: "desc" } },
       historicos: { orderBy: { criadoEm: "desc" }, include: { usuario: true }, take: 100 },
+      prorrogacoes: { orderBy: { dataTermo: "asc" } },
     },
   });
   if (!c) notFound();
@@ -184,6 +185,20 @@ export default async function ContratoPagina({ params, searchParams }: { params:
                 </span>
               )}
             </dd>
+            {c.prorrogacoes.length > 0 && (
+              <>
+                <dt>Prorrogações</dt>
+                <dd>
+                  <ul className="lista-limpa">
+                    {c.prorrogacoes.map((pr) => (
+                      <li key={pr.id}>
+                        Até {data(pr.novoFim)} (termo de {data(pr.dataTermo)}) · {pr.comRessalva ? "com ressalva do direito à repactuação" : "sem ressalva"}
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </>
+            )}
             <dt>Postos</dt>
             <dd>{c.postos != null ? plural(c.postos, "posto", "postos") : <span className="secundario">Não informado</span>}</dd>
             <dt>Valor mensal</dt>

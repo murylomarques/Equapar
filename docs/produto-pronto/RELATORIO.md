@@ -66,7 +66,8 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | L14 Trocar de conta | feito | `src/app/app/trocar-conta.test.ts`: `trocarConta` troca a conta da sessão (e limpa o cliente selecionado) só se a pessoa é membro; outra conta é recusada. Tela `/app/trocar-conta` com as contas, papel e "Criar outra conta" (fluxo do S6); item no menu da conta ("Trocar de conta" quando há mais de uma). Commit "L14" | Conferir na tela |
 | L15 Exportação | parcial | O download já recusa exportações com mais de 7 dias (410). `scripts/limpar-exportacoes.ts` apaga os arquivos vencidos em simulação (hoje: 0). Commit "L15" | Mover para a fila e gravar por partes no armazenamento depende da fila e da interface `Armazenamento` da fase 1. `--aplicar` depende do "ok" do dono (trava 2) |
 | L16 "Mostrar valores em dinheiro no WhatsApp" | feito | `src/lib/avisos-valores.test.ts` (os dois casos): antes, ligada, o WhatsApp de deferido seguia sem valor; depois, ligada usa o modelo `equapar_deferido_valor` com o valor; desligada, nunca leva valor; o e-mail continua com o valor. Commit "L16" | O modelo `equapar_deferido_valor` precisa ser aprovado na Meta (item 7 da seção 8). O resumo semanal hoje só sai por e-mail |
-| L17 Registrar prorrogação | bloqueado | — | Migração (trava 1): proposta no fim da fase 0 |
+| L17 Registrar prorrogação | feito | Migração aprovada (tabela `Prorrogacao`). `src/lib/prorrogacao.test.ts`: alerta de preclusão quando a prorrogação é registrada sem pedido protocolado e sem ressalva, com convenção nova já depositada (5 casos). Formulário na tela de decisão de prorrogação (data do termo, novo fim, ressalva com texto); atualiza o fim da vigência (prazos e avisos), registra no histórico e lista as prorrogações no resumo do contrato, com a fonte do TCU no alerta. Commit "L17" | Conferir na tela |
+
 
 ## Fase 0: o que falta e depende do dono
 
