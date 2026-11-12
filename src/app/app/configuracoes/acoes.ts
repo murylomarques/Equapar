@@ -217,8 +217,9 @@ export async function excluirConta(_: Resultado, fd: FormData): Promise<Resultad
     const ctx = await exigir("gerenciar_conta");
     if (texto(fd, "confirmacao") !== "EXCLUIR") return { campos: { confirmacao: "Digite EXCLUIR, em maiúsculas, para confirmar." } };
     const membros = await db.membro.findMany({ where: { contaId: ctx.conta.id } });
-    await apagarPastaConta(ctx.conta.id);
+    // L6: banco primeiro; se falhar, os arquivos continuam lá e nada fica órfão no banco
     await db.conta.delete({ where: { id: ctx.conta.id } });
+    await apagarPastaConta(ctx.conta.id).catch((e) => console.error("[excluir conta] pasta não apagada", ctx.conta.id, e));
     for (const m of membros) {
       const outras = await db.membro.count({ where: { usuarioId: m.usuarioId } });
       if (outras === 0) await db.usuario.delete({ where: { id: m.usuarioId } });

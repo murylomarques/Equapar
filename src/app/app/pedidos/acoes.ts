@@ -7,7 +7,7 @@ import { contratoDaConta, exigir, pedidoDaConta, registrarHistorico } from "@/li
 import { db } from "@/lib/db";
 import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/acao";
 import { registrarEvento } from "@/lib/eventos";
-import { hora, hojeUTC, lerData, lerDinheiro } from "@/lib/format";
+import { hora, hojeUTC, lerData, lerDinheiro, dataLocal } from "@/lib/format";
 import { avisarDeferido, avisarProtocolo } from "@/lib/avisos";
 import { calcularPedido } from "@/lib/pedido";
 import { validarPlanilha } from "@/lib/calculo/motor";
@@ -15,7 +15,7 @@ import { clonarPlanilha, planilhaModelo } from "@/lib/calculo/modelo";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
 import { iaAtiva, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
-import { salvarArquivo } from "@/lib/storage";
+import { apagarArquivo, salvarArquivo } from "@/lib/storage";
 import { oportunidade } from "@/lib/prazos";
 import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendenciasParaGerar, totaisGravados, type DadosAprovacaoDesfeita, type Pendencia } from "@/lib/pedido-regras";
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
@@ -487,8 +487,11 @@ export async function marcarRecebido(_: Resultado, fd: FormData): Promise<Result
 export async function descartarPedido(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
+    // L6: banco primeiro (documentos do pedido saem em cascata), depois só os arquivos deste pedido
+    const docs = await db.documento.findMany({ where: { pedidoId: p.id }, select: { caminho: true } });
     await db.pedido.delete({ where: { id: p.id } });
-    await registrarHistorico(ctx, "Descartou um pedido em análise", { contratoId: p.contratoId });
+    for (const d of docs) await apagarArquivo(d.caminho).catch((e) => console.error("[descartar] arquivo não apagado", d.caminho, e));
+    await registrarHistorico(ctx, `Descartou o pedido de repactuação iniciado em ${dataLocal(p.criadoEm)}${docs.length ? ` (${docs.length} anexo${docs.length > 1 ? "s" : ""} apagado${docs.length > 1 ? "s" : ""})` : ""}`, { contratoId: p.contratoId });
   });
   if (r.erro) return r;
   redirect("/app/pedidos");

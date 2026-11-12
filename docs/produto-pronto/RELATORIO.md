@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L5 feitos; próximo: L6. Testes de navegador pendentes (servidor parado por falta de memória): S4, S11, S12. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L6 feitos; próximo: L7. Testes de navegador pendentes (servidor parado por falta de memória): S4, S11, S12. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -55,3 +55,4 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | L3 Primeiros passos alteravam todos os contratos | feito | `src/app/app/onboarding.test.ts`: antes, desmarcar na tela tirava a mão de obra dedicada também do contrato arquivado que a tela não mostrou; depois, a ação só altera os ids enviados em `exibido`, da conta e não arquivados (teste falha no código antigo e passa no novo). Commit "L3" | — |
 | L4 "Atualizar do PNCP" sobrescrevia a vigência | feito | `src/lib/pncp-vigencia.test.ts`: antes, a importação gravava o fim do PNCP por cima do editado à mão; depois, só acompanha o PNCP se o fim ainda é o último valor lido (`vigenciaFimPncp`); editado, guarda o do PNCP e a tela do contrato mostra "PNCP: … · você registrou: …" com "Usar a data do PNCP". Contratos novos já gravam `vigenciaFimPncp`. Commit "L4" | Conferir na tela (PNCP inacessível daqui; testar com dado de cache) |
 | L5 Passo 1 mudava a convenção compartilhada | feito | `src/app/app/pedidos/passo1-convencao.test.ts`: antes, uma data de depósito diferente sobrescrevia a convenção sem perguntar; depois, convenção vazia é preenchida, diferente só muda com a caixa "atualizar também a convenção para os N contratos que a usam" (registra no histórico). Commit "L5" | — |
+| L6 Arquivos órfãos | feito | `src/app/app/pedidos/descartar.test.ts`: antes, descartar apagava o pedido e deixava os arquivos; depois, banco primeiro e em seguida só os arquivos daquele pedido, com o descarte no histórico do contrato (data, quem e quantos anexos). `excluirConta` passou a apagar o banco antes da pasta. Commit "L6" | Limpeza dos órfãos antigos: `scripts/limpar-orfaos.ts` em simulação (hoje: 0 com mais de 24 h). `--aplicar` depende do "ok" do dono (trava 2) |
