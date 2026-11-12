@@ -17,7 +17,7 @@ import { iaAtiva, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
 import { salvarArquivo } from "@/lib/storage";
 import { oportunidade } from "@/lib/prazos";
-import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, pendenciasParaGerar, totaisGravados, type DadosAprovacaoDesfeita, type Pendencia } from "@/lib/pedido-regras";
+import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendenciasParaGerar, totaisGravados, type DadosAprovacaoDesfeita, type Pendencia } from "@/lib/pedido-regras";
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
@@ -355,7 +355,7 @@ export async function aprovarMemoria(_: Resultado, fd: FormData): Promise<Result
     if (!["EM_ANALISE", "CALCULO_VALIDADO"].includes(p.estado)) return { erro: "Este pedido já foi protocolado." };
     const pend = pendenciasParaGerar(p, [], 3);
     if (pend.length) return recusarPorPendencias(p.id, pend, "A memória ainda não pode ser aprovada:");
-    await db.pedido.update({ where: { id: p.id }, data: { memoriaAprovadaEm: new Date(), memoriaAprovadaPor: ctx.usuario.nome } });
+    await db.pedido.update({ where: { id: p.id }, data: { memoriaAprovadaEm: new Date(), memoriaAprovadaPor: ctx.usuario.nome, hashCalculo: hashCalculo(p) } });
     await registrarHistorico(ctx, "Aprovou a memória de cálculo", { pedidoId: p.id, contratoId: p.contratoId });
     await registrarEvento("memoria_aprovada");
     revalidatePath(`/app/pedidos/${p.id}`, "layout");

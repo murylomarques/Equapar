@@ -76,3 +76,27 @@ describe("C3: pendências para gerar", () => {
     expect(pendenciasParaGerar(p, [], 3).map((x) => x.passo)).toEqual([3]);
   });
 });
+
+import { aprovacaoValida, hashCalculo } from "./pedido-regras";
+
+describe("C2.3: assinatura da base do cálculo", () => {
+  const p = {
+    planilhaAntes: pl("1740") as never,
+    planilhaAgora: pl("1800", "cl. 4ª") as never,
+    dataBase: new Date(Date.UTC(2026, 0, 1)),
+    dataReferencia: new Date(Date.UTC(2026, 10, 12)),
+    gatilho: "NOVA_CONVENCAO" as const,
+  };
+  it("é estável e não depende da ordem das chaves", () => {
+    const reordenado = { gatilho: p.gatilho, dataReferencia: p.dataReferencia, dataBase: p.dataBase, planilhaAgora: p.planilhaAgora, planilhaAntes: p.planilhaAntes };
+    expect(hashCalculo(reordenado)).toBe(hashCalculo(p));
+  });
+  it("aprovação vale só enquanto a base é a mesma", () => {
+    const aprovado = { ...p, memoriaAprovadaEm: new Date(), hashCalculo: hashCalculo(p) };
+    expect(aprovacaoValida(aprovado)).toBe(true);
+    expect(aprovacaoValida({ ...aprovado, dataBase: new Date(Date.UTC(2026, 5, 1)) })).toBe(false);
+    expect(aprovacaoValida({ ...aprovado, planilhaAgora: pl("1900", "cl. 4ª") as never })).toBe(false);
+    expect(aprovacaoValida({ ...aprovado, memoriaAprovadaEm: null })).toBe(false);
+    expect(aprovacaoValida({ ...aprovado, hashCalculo: null })).toBe(true); // aprovação anterior à assinatura
+  });
+});

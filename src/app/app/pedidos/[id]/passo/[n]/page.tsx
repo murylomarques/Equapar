@@ -18,6 +18,7 @@ import { SeloSimples } from "@/components/selo";
 import { AreaArquivo } from "@/components/ui/arquivo";
 import { CampoData, Combobox, RadiosCartao, TextoLongo } from "@/components/ui/campos";
 import { Alerta, Termo } from "@/components/ui/estrutura";
+import { aprovacaoValida } from "@/lib/pedido-regras";
 import { CabecalhoPedido } from "../../cabecalho";
 import { EditorPlanilha } from "../../../editor-planilha";
 import { anexarDocumentoPedido, concluirPasso2, concluirPasso3, concluirPasso4, enviarPlanilha, gerarPedido, marcarItem, salvarPasso1, usarModelo } from "../../../acoes";
@@ -309,6 +310,7 @@ async function Passo4({ p, leitura }: { p: P; leitura: boolean }) {
 
 function Passo5({ p, leitura, podeAprovar }: { p: P; leitura: boolean; podeAprovar: boolean }) {
   const calc = calcularPedido(p);
+  const aprovada = aprovacaoValida(p);
   const c = calc.comparacao;
   const ok = c && !c.erros.length;
   return (
@@ -336,7 +338,7 @@ function Passo5({ p, leitura, podeAprovar }: { p: P; leitura: boolean; podeAprov
           <div className="cartao cartao-numero">
             <span className="rotulo-n">Memória de cálculo</span>
             <span className="valor-n" style={{ display: "block", fontSize: 20, lineHeight: "28px" }}>
-              {p.memoriaAprovadaEm ? (
+              {aprovada ? (
                 <span className="fileira" style={{ color: "var(--verde)" }}>
                   <CheckCircle2 size={22} strokeWidth={1.5} aria-hidden /> Aprovada
                 </span>
@@ -344,7 +346,7 @@ function Passo5({ p, leitura, podeAprovar }: { p: P; leitura: boolean; podeAprov
                 "Aguardando aprovação"
               )}
             </span>
-            <span className="det-n">{p.memoriaAprovadaEm ? `por ${p.memoriaAprovadaPor}` : "Contador ou Dono aprova"}</span>
+            <span className="det-n">{aprovada ? `por ${p.memoriaAprovadaPor}` : "Contador ou Dono aprova"}</span>
           </div>
         </div>
       ) : (
@@ -371,13 +373,13 @@ function Passo5({ p, leitura, podeAprovar }: { p: P; leitura: boolean; podeAprov
           </dl>
           <Link href={`/app/pedidos/${p.id}/memoria`} className="btn mt-16">
             <FileSpreadsheet size={16} strokeWidth={1.5} aria-hidden />
-            {podeAprovar && !p.memoriaAprovadaEm ? "Revisar e aprovar a memória" : "Ver a memória de cálculo"}
+            {podeAprovar && !aprovada ? "Revisar e aprovar a memória" : "Ver a memória de cálculo"}
           </Link>
         </div>
         <div className="cartao">
           <h2>Gerar o pedido</h2>
           <p className="secundario">A Equapar monta o ofício (Word e PDF), a planilha (Excel), a memória de cálculo (PDF) e um ZIP com os anexos, prontos para protocolar.</p>
-          {!p.memoriaAprovadaEm && <Alerta tipo="atencao">A memória precisa ser aprovada por Contador ou Dono antes de gerar.</Alerta>}
+          {!aprovada && <Alerta tipo="atencao">A memória precisa ser aprovada por Contador ou Dono antes de gerar.</Alerta>}
           <FormAcao action={gerarPedido} semToast>
             <input type="hidden" name="pedidoId" value={p.id} />
             <label className="check mt-16" style={{ marginBottom: 8 }}>

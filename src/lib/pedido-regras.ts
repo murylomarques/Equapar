@@ -4,7 +4,8 @@
  */
 import { Prisma, type Pedido } from "@prisma/client";
 import type { PlanilhaCustos, LinhaPlanilha } from "./calculo/tipos";
-import { validarPlanilha } from "./calculo/motor";
+import crypto from "node:crypto";
+import { validarPlanilha, VERSAO_REGRA } from "./calculo/motor";
 import { calcularPedido, situacaoChecklist } from "./pedido";
 
 type PedidoBase = {
@@ -67,7 +68,7 @@ export function linhasSemFonte(antes: PlanilhaCustos, agora: PlanilhaCustos): Li
 type PedidoPend = Pick<
   Pedido,
   "gatilho" | "convencaoId" | "dataBase" | "dataDeposito" | "descricaoGatilho" | "planilhaAntes" | "planilhaAgora" | "dataReferencia" | "checklist" | "memoriaAprovadaEm"
->;
+> & { hashCalculo?: string | null };
 
 /**
  * Tudo o que impede gerar o pedido, em ordem de passo. `ate` limita aos passos já percorridos
@@ -108,7 +109,8 @@ export function pendenciasParaGerar(p: PedidoPend, documentos: { tipo: string }[
     const faltam = situacaoChecklist(p, documentos).filter((i) => i.situacao === "FALTA");
     if (faltam.length) r.push({ passo: 4, mensagem: `Falta: ${faltam.map((f) => f.nome.toLowerCase()).join("; ")}.` });
   }
-  if (ate >= 5 && !p.memoriaAprovadaEm) r.push({ passo: 5, mensagem: "A memória de cálculo precisa ser aprovada por Contador ou Dono." });
+  if (ate >= 5 && !aprovacaoValida({ ...p, hashCalculo: p.hashCalculo ?? null }))
+    r.push({ passo: 5, mensagem: p.memoriaAprovadaEm ? "A base do cálculo mudou depois da aprovação. A memória precisa ser aprovada de novo." : "A memória de cálculo precisa ser aprovada por Contador ou Dono." });
   return r.filter((x) => x.passo <= ate);
 }
 
@@ -120,4 +122,37 @@ export function totaisGravados(p: Pick<Pedido, "planilhaAntes" | "planilhaAgora"
     diferencaMensal: ok ? calc.comparacao!.diferencaMensal : null,
     diferencaRetroativa: ok ? (calc.retroativo?.total ?? null) : null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// C2.3. Assinatura da base do cálculo aprovada
+// ---------------------------------------------------------------------------
+
+/** JSON com chaves em ordem: o mesmo conteúdo gera sempre o mesmo texto. */
+function jsonCanonico(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v ?? null);
+  if (v instanceof Date) return JSON.stringify(v.toISOString());
+  if (Array.isArray(v)) return `[${v.map(jsonCanonico).join(",")}]`;
+  const o = v as Record<string, unknown>;
+  return `{${Object.keys(o)
+    .filter((k) => o[k] !== undefined)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${jsonCanonico(o[k])}`)
+    .join(",")}}`;
+}
+
+type BaseCalculo = Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase" | "dataReferencia" | "gatilho">;
+
+/** SHA-256 de {planilhas, data-base, data de referência, gatilho, versão da regra}. */
+export function hashCalculo(p: BaseCalculo): string {
+  const base = { planilhaAntes: p.planilhaAntes, planilhaAgora: p.planilhaAgora, dataBase: p.dataBase, dataReferencia: p.dataReferencia, gatilho: p.gatilho, versaoRegra: VERSAO_REGRA };
+  return crypto.createHash("sha256").update(jsonCanonico(base)).digest("hex");
+}
+
+/**
+ * A memória conta como aprovada só se a base do cálculo é a mesma da aprovação.
+ * Aprovações anteriores à assinatura (hashCalculo vazio) continuam valendo.
+ */
+export function aprovacaoValida(p: BaseCalculo & Pick<Pedido, "memoriaAprovadaEm" | "hashCalculo">): boolean {
+  return !!p.memoriaAprovadaEm && (!p.hashCalculo || p.hashCalculo === hashCalculo(p));
 }

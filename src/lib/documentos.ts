@@ -1,6 +1,7 @@
 import "server-only";
 import ExcelJS from "exceljs";
 import { nomeAbaUnico } from "./excel-nomes";
+import { aprovacaoValida } from "./pedido-regras";
 import JSZip from "jszip";
 import { AlignmentType, Document, Packer, Paragraph, TextRun } from "docx";
 import fs from "node:fs/promises";
@@ -161,7 +162,7 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
   const conv = p.convencao ?? c.convencao;
   const m = marca(d);
   const pdf = await Pdf.criar(`Memória de cálculo · Contrato ${c.numero} · ${m.nome} · regra ${calc.versaoRegra}`, m.cor, await logoDe(m.logo));
-  if (p.memoriaAprovadaEm) pdf.selo("MEMÓRIA APROVADA", COR.verde);
+  if (aprovacaoValida(p)) pdf.selo("MEMÓRIA APROVADA", COR.verde);
   pdf.titulo("Memória de cálculo da repactuação");
   pdf.texto(`Contrato ${c.numero} · ${c.orgao}`, { tam: 11, negrito: true, espaco: 2 });
   pdf.texto(`${c.empresa.razaoSocial} · CNPJ ${formatarCnpj(c.empresa.cnpj)}`, { cor: COR.grafite, espaco: 2 });
@@ -215,8 +216,8 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
 
   pdf.regua();
   pdf.texto(
-    p.memoriaAprovadaEm ? `Memória aprovada por ${p.memoriaAprovadaPor} em ${dataLocal(p.memoriaAprovadaEm)}.` : "Memória ainda não aprovada por Contador ou Dono.",
-    { tam: 9, cor: p.memoriaAprovadaEm ? COR.verde : COR.carimbo },
+    aprovacaoValida(p) ? `Memória aprovada por ${p.memoriaAprovadaPor} em ${dataLocal(p.memoriaAprovadaEm!)}.` : "Memória ainda não aprovada por Contador ou Dono.",
+    { tam: 9, cor: aprovacaoValida(p) ? COR.verde : COR.carimbo },
   );
   pdf.texto(
     "Os números vêm da planilha da proposta e da convenção informadas pelo usuário. A Equapar aplica a estrutura de cálculo; a revisão por profissional habilitado é recomendada antes do protocolo.",

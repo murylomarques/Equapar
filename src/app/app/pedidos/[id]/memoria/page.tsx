@@ -11,6 +11,7 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { Alerta, CabecalhoPagina } from "@/components/ui/estrutura";
 import { aprovarMemoria } from "../../acoes";
 import { MemoriaView } from "./memoria-view";
+import { aprovacaoValida } from "@/lib/pedido-regras";
 
 export const metadata: Metadata = { title: "Memória de cálculo | Equapar" };
 
@@ -37,9 +38,9 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
         titulo="Memória de cálculo"
         subtitulo={`Contrato ${p.contrato.numero} · ${p.contrato.orgao} · estrutura da IN SEGES/MP 05/2017, Anexo VII-D · regra ${calc.versaoRegra} · cada linha arredondada a 2 casas · tributos por dentro`}
         acao={
-          p.memoriaAprovadaEm ? (
+          aprovacaoValida(p) ? (
             <span className="selo selo-verde">
-              <CheckCircle2 size={14} strokeWidth={1.5} aria-hidden /> Aprovada por {p.memoriaAprovadaPor} em {dataLocal(p.memoriaAprovadaEm)}
+              <CheckCircle2 size={14} strokeWidth={1.5} aria-hidden /> Aprovada por {p.memoriaAprovadaPor} em {dataLocal(p.memoriaAprovadaEm!)}
             </span>
           ) : podeAprovar && editavel && calc.pronto ? (
             <FormAcao
