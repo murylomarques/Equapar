@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L10 e L12 feitos (L7 sem o teste de navegador); L11 bloqueado (decisão do dono); próximo: L13. Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L10 e L12 feitos (L7 sem o teste de navegador); L11 bloqueado (decisão do dono); L13 parcial; próximo: L14. Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -62,3 +62,4 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | L10 Totais em dinheiro | feito | `src/lib/somar.test.ts`: somar com Number acumulava erro de ponto flutuante; `somarReais()` usa o Decimal do motor. Aplicado em A receber (total e recebido em 12 meses), Hoje, Clientes e resumo semanal. Commit "L10" | — |
 | L11 Regra do retroativo | bloqueado | — | Regra de cálculo (trava 3) e migração (trava 1): decisão do dono, pedida no fim da fase 0. Padrão continua o atual |
 | L12 "Pedir revisão de especialista" | parcial | `src/lib/revisao.test.ts`: escondido atrás de `REVISAO_ESPECIALISTA_ATIVA` (padrão desligado) na tela, na gravação e no histórico; a pergunta frequente da landing deixa de prometer a revisão quando desligada. Commit "L12" | O fluxo ligado (e-mail ao revisor, situação "Em revisão", protocolo bloqueado) precisa de migração e de especialistas parceiros (item 8 da seção 8): aguarda o dono |
+| L13 Raio-X | parcial | `src/app/(site)/raio-x/sem-etapas-encenadas.test.ts` (falha no código antigo, com `setTimeout` de 350/700 ms): a tela mostra só "Consultando o PNCP" com os segundos reais e o resultado. O texto de "avisar depois" passou a dizer o que acontece hoje (uma nova tentativa com mais tempo e o link por e-mail se der certo). Commit "L13" | Nova tentativa a cada 30 minutos por 24 horas entra com a fila da fase 1 |

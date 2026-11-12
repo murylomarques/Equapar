@@ -3,7 +3,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SearchX, WifiOff } from "lucide-react";
 import { Selo } from "@/components/selo";
-import { EtapasProgresso } from "@/components/ui/espera";
 import { EstadoVazio } from "@/components/ui/apresentacao";
 import type { ResultadoRaioX } from "@/lib/pncp";
 import { seloVigencia } from "@/lib/prazos";
@@ -11,7 +10,7 @@ import { diasAte, data, plural } from "@/lib/format";
 import { formatarCnpj } from "@/lib/cnpj";
 import { FormAvisarDepois, FormRelatorio } from "./formularios";
 
-type Estado = { fase: "consultando"; segundos: number } | { fase: "lendo"; r: ResultadoRaioX; etapa: number } | { fase: "pronto"; r: ResultadoRaioX } | { fase: "erro" } | { fase: "limite" };
+type Estado = { fase: "consultando"; segundos: number } | { fase: "pronto"; r: ResultadoRaioX } | { fase: "erro" } | { fase: "limite" };
 
 export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
   const [estado, setEstado] = useState<Estado>({ fase: "consultando", segundos: 0 });
@@ -28,10 +27,8 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
         if (!res.ok) throw new Error(String(res.status));
         const r = (await res.json()) as ResultadoRaioX;
         if (!vivo) return;
-        // Etapas reais depois da resposta: ler os contratos e calcular o prazo de cada um.
-        setEstado({ fase: "lendo", r, etapa: 1 });
-        window.setTimeout(() => vivo && setEstado({ fase: "lendo", r, etapa: 2 }), 350);
-        window.setTimeout(() => vivo && setEstado({ fase: "pronto", r }), 700);
+        // L13: só estados reais (a resposta já vem com os contratos e os prazos calculados no servidor)
+        setEstado({ fase: "pronto", r });
       })
       .catch(() => vivo && setEstado({ fase: "erro" }))
       .finally(() => window.clearInterval(relogio));
@@ -41,17 +38,17 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
     };
   }, [cnpj]);
 
-  if (estado.fase === "consultando" || estado.fase === "lendo") {
-    const n = estado.fase === "lendo" ? estado.r.contratos.length : null;
-    const etapa = estado.fase === "lendo" ? estado.etapa : 0;
+  if (estado.fase === "consultando") {
     return (
-      <div className="cartao" role="status" aria-live="polite" style={{ maxWidth: 640 }}>
+      <div className="cartao" role="status" aria-live="polite" aria-busy="true" style={{ maxWidth: 640 }}>
         <h2>Consultando os contratos públicos</h2>
-        <EtapasProgresso etapas={["Consultando o PNCP", n === null ? "Lendo os contratos" : `Lendo ${plural(n, "contrato", "contratos")}`, "Calculando prazos"]} atual={etapa} />
-        {estado.fase === "consultando" && estado.segundos >= 10 && estado.segundos < 30 && <p className="ajuda-texto mt-16 mb-0">O PNCP está demorando mais que o normal. Seguimos tentando.</p>}
-        {estado.fase === "consultando" && estado.segundos >= 30 && (
+        <p className="secundario mb-0">
+          <span className="spinner" aria-hidden /> Consultando o PNCP{estado.segundos >= 3 ? ` (${estado.segundos} s)` : ""}…
+        </p>
+        {estado.segundos >= 10 && estado.segundos < 30 && <p className="ajuda-texto mt-16 mb-0">O PNCP está demorando mais que o normal. Seguimos esperando a resposta.</p>}
+        {estado.segundos >= 30 && (
           <div className="mt-16">
-            <p className="mb-8">Isso está levando mais que o normal. Quer que a gente avise por e-mail quando terminar?</p>
+            <p className="mb-8">Isso está levando mais que o normal. Se preferir, deixe seu e-mail: tentamos de novo, com mais tempo, e mandamos o link se der certo.</p>
             <FormAvisarDepois cnpj={cnpj} />
           </div>
         )}
@@ -72,7 +69,7 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
       <div className="cartao" role="alert" style={{ maxWidth: 640 }}>
         <WifiOff size={28} strokeWidth={1.5} aria-hidden style={{ color: "var(--grafite)" }} />
         <h2 className="mt-8">O PNCP não respondeu agora</h2>
-        <p className="secundario">Tente de novo em alguns minutos ou deixe seu e-mail que avisamos quando a consulta terminar.</p>
+        <p className="secundario">Tente de novo em alguns minutos, ou deixe seu e-mail: tentamos de novo, com mais tempo, e mandamos o link se der certo.</p>
         <FormAvisarDepois cnpj={cnpj} />
         <button type="button" className="btn btn-discreto mt-16" onClick={() => window.location.reload()}>
           Tentar de novo agora
