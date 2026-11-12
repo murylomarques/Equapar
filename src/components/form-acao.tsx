@@ -1,9 +1,10 @@
 "use client";
-import { createContext, startTransition, useActionState, useContext, useEffect, useRef } from "react";
+import { createContext, startTransition, useActionState, useContext, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle } from "lucide-react";
 import type { Acao, Resultado } from "@/lib/acao";
 import { useConfirmar, useToast } from "./ui/provedores";
+import { salvarPendente } from "./salvamento-pendente";
 
 interface CtxForm {
   pendente: boolean;
@@ -29,6 +30,7 @@ export function useErroCampo(nome?: string) {
  * - Erro geral e resumo de erros por campo no topo, com link para cada campo (foco vai para o resumo).
  * - Confirmação ("ok") vira toast; com `okNaPagina` aparece também abaixo do formulário.
  * - `confirmar`: pede confirmação numa janela antes de enviar.
+ * - `esperarSalvamento`: antes de enviar, termina o salvamento automático pendente (L7).
  */
 export function FormAcao({
   action,
@@ -41,6 +43,7 @@ export function FormAcao({
   okNaPagina,
   semToast,
   aoConcluir,
+  esperarSalvamento,
 }: {
   action: Acao;
   children: React.ReactNode;
@@ -52,8 +55,11 @@ export function FormAcao({
   okNaPagina?: boolean;
   semToast?: boolean;
   aoConcluir?: (r: Resultado) => void;
+  esperarSalvamento?: boolean;
 }) {
-  const [estado, despachar, pendente] = useActionState<Resultado, FormData>(action, {});
+  const [estado, despachar, pendenteAcao] = useActionState<Resultado, FormData>(action, {});
+  const [salvando, setSalvando] = useState(false);
+  const pendente = pendenteAcao || salvando;
   const ref = useRef<HTMLFormElement>(null);
   const resumo = useRef<HTMLDivElement>(null);
   const toast = useToast();
@@ -92,6 +98,14 @@ export function FormAcao({
           if (confirmar) {
             const p = typeof confirmar === "string" ? { titulo: confirmar } : confirmar;
             if (!(await pedirConfirmacao(p))) return;
+          }
+          if (esperarSalvamento) {
+            setSalvando(true);
+            try {
+              await salvarPendente();
+            } finally {
+              setSalvando(false);
+            }
           }
           startTransition(() => despachar(fd));
         }}

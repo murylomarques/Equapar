@@ -57,7 +57,7 @@ export default async function Passo({ params }: { params: Promise<{ id: string; 
 
 type P = Awaited<ReturnType<typeof pedidoDaConta>>;
 
-function Rodape({ voltar, continuar = "Continuar", leitura }: { voltar?: string; continuar?: string; leitura: boolean }) {
+function Rodape({ voltar, continuar = "Continuar", leitura, salvandoAntes }: { voltar?: string; continuar?: string; leitura: boolean; salvandoAntes?: boolean }) {
   return (
     <div className="rodape-assistente">
       {voltar ? (
@@ -67,7 +67,7 @@ function Rodape({ voltar, continuar = "Continuar", leitura }: { voltar?: string;
       ) : (
         <span />
       )}
-      {!leitura && <BotaoEnvio>{continuar}</BotaoEnvio>}
+      {!leitura && <BotaoEnvio pendente={salvandoAntes ? "Salvando…" : undefined}>{continuar}</BotaoEnvio>}
     </div>
   );
 }
@@ -206,9 +206,9 @@ function Passo2({ p, leitura }: { p: P; leitura: boolean }) {
       ) : (
         <p className="secundario">Envie a planilha ou comece do modelo para continuar.</p>
       )}
-      <FormAcao action={concluirPasso2} semToast>
+      <FormAcao action={concluirPasso2} semToast esperarSalvamento>
         <input type="hidden" name="pedidoId" value={p.id} />
-        <Rodape voltar={`/app/pedidos/${p.id}/passo/1`} leitura={leitura} />
+        <Rodape voltar={`/app/pedidos/${p.id}/passo/1`} leitura={leitura} salvandoAntes />
       </FormAcao>
     </div>
   );
@@ -232,9 +232,9 @@ function Passo3({ p, leitura }: { p: P; leitura: boolean }) {
         somenteLeitura={leitura}
         formReferencia="form-passo3"
       />
-      <FormAcao action={concluirPasso3} id="form-passo3" semToast>
+      <FormAcao action={concluirPasso3} id="form-passo3" semToast esperarSalvamento>
         <input type="hidden" name="pedidoId" value={p.id} />
-        <Rodape voltar={`/app/pedidos/${p.id}/passo/2`} leitura={leitura} />
+        <Rodape voltar={`/app/pedidos/${p.id}/passo/2`} leitura={leitura} salvandoAntes />
       </FormAcao>
     </div>
   );

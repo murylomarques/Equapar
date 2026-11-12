@@ -1,6 +1,6 @@
 "use client";
 import { AlertTriangle, ChevronDown, Monitor, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { brl, calcularPlanilha, calcularRetroativo, compararPlanilhas, pct, validarPlanilha } from "@/lib/calculo/motor";
 import { BASES_PERMITIDAS, MODULOS, NOME_BASE, type BaseId, type LinhaPlanilha, type ModuloId, type PlanilhaCustos } from "@/lib/calculo/tipos";
 import { novoId, postoModelo } from "@/lib/calculo/modelo";
@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/espera";
 import { CampoData } from "@/components/ui/campos";
 import { useConfirmar } from "@/components/ui/provedores";
 import { salvarPlanilha } from "./acoes";
+import { registrarSalvarAgora } from "@/components/salvamento-pendente";
 
 /** "1.820,00" -> "1820.00"; "8,33" -> "8.33"; "1.820" -> "1820" (percentuais aceitam até 4 casas para não perder precisão da planilha). */
 function normalizar(v: string) {
@@ -44,7 +45,6 @@ export function EditorPlanilha({
 }) {
   const [planilha, setPlanilha] = useState<PlanilhaCustos>(inicial);
   const [salvo, setSalvo] = useState<EstadoSalvo>({ tipo: "ocioso" });
-  const [, iniciar] = useTransition();
   const [alterada, setAlterada] = useState<string | null>(null);
   const [aba, setAba] = useState(inicial.tipos[0]?.id ?? "");
   const [dataRef, setDataRef] = useState<string | null>(dataReferenciaInicial ?? null);
@@ -59,22 +59,49 @@ export function EditorPlanilha({
 
   // ----- salvamento automático
   const salvar = useCallback(
-    (p: PlanilhaCustos) => {
+    async (p: PlanilhaCustos) => {
       const conteudo = JSON.stringify(p);
       setSalvo({ tipo: "salvando" });
-      iniciar(async () => {
-        const r = await salvarPlanilha(pedidoId, qual, conteudo);
-        if (!r.erro) ultimoSalvo.current = conteudo;
-        setSalvo(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "salvo", texto: r.ok ?? "Salvo" });
-      });
+      const r = await salvarPlanilha(pedidoId, qual, conteudo);
+      if (!r.erro) ultimoSalvo.current = conteudo;
+      setSalvo(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "salvo", texto: r.ok ?? "Salvo" });
     },
     [pedidoId, qual],
   );
+  // L7: guarda a planilha mais recente e o timer, para salvarAgora() e o aviso ao fechar a aba
+  const atual = useRef(planilha);
+  useEffect(() => {
+    atual.current = planilha;
+  }, [planilha]);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (somenteLeitura || JSON.stringify(planilha) === ultimoSalvo.current) return;
-    const t = setTimeout(() => salvar(planilha), 800);
-    return () => clearTimeout(t);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      void salvar(planilha);
+    }, 800);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
   }, [planilha, somenteLeitura, salvar]);
+  // L7: o botão Continuar espera o salvamento; fechar a aba com alteração não salva pede confirmação
+  useEffect(() => {
+    if (somenteLeitura) return;
+    const salvarAgora = async () => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+      if (JSON.stringify(atual.current) !== ultimoSalvo.current) await salvar(atual.current);
+    };
+    const tirar = registrarSalvarAgora(salvarAgora);
+    const aoSair = (e: BeforeUnloadEvent) => {
+      if (JSON.stringify(atual.current) !== ultimoSalvo.current) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", aoSair);
+    return () => {
+      tirar();
+      window.removeEventListener("beforeunload", aoSair);
+    };
+  }, [somenteLeitura, salvar]);
 
   // ----- cálculos (o mesmo motor determinístico do servidor)
   const erros = useMemo(() => validarPlanilha(planilha), [planilha]);
