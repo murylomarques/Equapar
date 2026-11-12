@@ -11,6 +11,7 @@ import {
   hashSenha,
   senhaFraca,
   sessaoAtual,
+  ehDemo,
 } from "@/lib/auth";
 import { cnpjValido, soDigitos } from "@/lib/cnpj";
 import { registrarEvento } from "@/lib/eventos";
@@ -20,6 +21,10 @@ import type { Resultado } from "@/lib/acao";
 import { enviarConfirmacaoEmail } from "@/lib/confirmacao-envio";
 import { usarCodigoRecuperacao } from "@/lib/recuperacao";
 import { chavesDeAcesso, estaBloqueado, limparChave, limparTentativas, registrarFalha } from "@/lib/limite";
+import { idDoToken, lerTokenRedefinicao, tokenRedefinicao } from "@/lib/redefinir-senha";
+import { consumirCotas } from "@/lib/cota";
+import { ipConfiavel } from "@/lib/limite";
+import { appUrl, enviar } from "@/lib/mensagens";
 
 export type Estado = Resultado;
 
@@ -156,4 +161,47 @@ export async function completarEmpresa(_: Estado, fd: FormData): Promise<Estado>
 export async function sair() {
   await encerrarSessao();
   redirect("/");
+}
+
+// ---------------------------------------------------------------------------
+// S11. Esqueci minha senha
+// ---------------------------------------------------------------------------
+
+/** Pede o link. A resposta é sempre a mesma: não revela se o e-mail tem conta. */
+export async function pedirRedefinicao(_: Estado, fd: FormData): Promise<Estado> {
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  if (!z.string().email().safeParse(email).success) return { campos: { email: "Digite o e-mail da sua conta, como nome@empresa.com.br." } };
+  const resposta = { ok: "Se houver uma conta com esse e-mail, enviamos um link para criar uma senha nova. Ele vale por 1 hora." };
+  const ip = ipConfiavel(await headers());
+  if (!(await consumirCotas([{ chave: `redefinir:email:${email}`, limite: 3 }, ...(ip ? [{ chave: `redefinir:ip:${ip}`, limite: 10 }] : [])]))) return resposta;
+  const u = await db.usuario.findUnique({ where: { email } });
+  if (u && !ehDemo({ usuario: u })) {
+    const link = appUrl(`/redefinir-senha?t=${encodeURIComponent(tokenRedefinicao(u))}`);
+    await enviar({
+      contaId: null,
+      chave: `redefinir:${u.id}:${Date.now()}`,
+      tipo: "REDEFINIR_SENHA",
+      canal: "EMAIL",
+      destino: u.email,
+      assunto: "Criar uma senha nova na Equapar",
+      corpo: `Recebemos um pedido para criar uma senha nova na sua conta. Use este link, que vale por 1 hora e serve uma vez só: ${link}\n\nSe não foi você, ignore esta mensagem; sua senha continua a mesma.`,
+    });
+  }
+  return resposta;
+}
+
+/** Grava a senha nova, confirma o e-mail (o link chegou nele) e encerra todas as sessões. */
+export async function redefinirSenha(_: Estado, fd: FormData): Promise<Estado> {
+  const token = String(fd.get("t") ?? "");
+  const nova = String(fd.get("senha") ?? "");
+  const id = idDoToken(token);
+  const u = id ? await db.usuario.findUnique({ where: { id } }) : null;
+  const leitura = u ? lerTokenRedefinicao(token, u) : ({ erro: "invalido" } as const);
+  if (!u || "erro" in leitura) return { erro: "Este link não vale mais (vence em 1 hora e serve uma vez só). Peça outro em Esqueci minha senha." };
+  const fraca = senhaFraca(nova, { duasEtapas: u.totpAtivo, email: u.email });
+  if (fraca) return { campos: { senha: fraca } };
+  await db.usuario.update({ where: { id: u.id }, data: { senhaHash: await hashSenha(nova), emailVerificadoEm: u.emailVerificadoEm ?? new Date() } });
+  await db.sessao.deleteMany({ where: { usuarioId: u.id } });
+  await limparTentativas(u.email);
+  redirect("/entrar?redefinida=1");
 }

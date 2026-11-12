@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { FormAcao } from "@/components/form-acao";
 import { CampoCnpj, CampoSenha, CampoTexto, Consentimento, RadiosCartao } from "@/components/ui/campos";
-import { completarEmpresa, confirmar2fa, criarConta, entrar } from "./acoes";
+import { completarEmpresa, confirmar2fa, criarConta, entrar, pedirRedefinicao, redefinirSenha } from "./acoes";
 
 export function FormEntrar({ destino, google }: { destino?: string; google: boolean }) {
   return (
@@ -109,6 +109,27 @@ export function FormEmpresa({ novaConta = false }: { novaConta?: boolean }) {
       <CampoCnpj nome="cnpj" rotulo={tipo === "ASSESSORIA" ? "CNPJ do primeiro cliente" : "CNPJ da empresa"} opcional={tipo === "ASSESSORIA"} />
       <CampoTexto nome="razaoSocial" rotulo={tipo === "ASSESSORIA" ? "Nome da assessoria" : "Razão social"} opcional />
       <BotaoEnvio>Continuar</BotaoEnvio>
+    </FormAcao>
+  );
+}
+
+/** S11: pede o link para criar uma senha nova. */
+export function FormEsqueciSenha() {
+  return (
+    <FormAcao action={pedirRedefinicao} semToast okNaPagina>
+      <CampoTexto nome="email" rotulo="E-mail da conta" tipo="email" autoComplete="email" />
+      <BotaoEnvio>Enviar o link</BotaoEnvio>
+    </FormAcao>
+  );
+}
+
+/** S11: grava a senha nova a partir do link. */
+export function FormRedefinirSenha({ token }: { token: string }) {
+  return (
+    <FormAcao action={redefinirSenha} semToast>
+      <input type="hidden" name="t" value={token} />
+      <CampoSenha nome="senha" rotulo="Senha nova" nova autoComplete="new-password" />
+      <BotaoEnvio>Salvar a senha nova</BotaoEnvio>
     </FormAcao>
   );
 }
