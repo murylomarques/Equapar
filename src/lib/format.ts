@@ -107,3 +107,9 @@ export function saudacao(agora = new Date()) {
   if (h < 18) return "Boa tarde";
   return "Boa noite";
 }
+
+/** L8. "12 de novembro de 2026" no fuso de Brasília (o servidor pode estar em UTC). */
+export function dataPorExtenso(agora = new Date()) {
+  const d = hojeUTC(agora);
+  return `${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+}

@@ -10,7 +10,7 @@ import { brl, calcularPlanilha, pct, dec } from "./calculo/motor";
 import { MODULOS, type PlanilhaCustos } from "./calculo/tipos";
 import { calcularPedido, situacaoChecklist, NOME_GATILHO } from "./pedido";
 import { formatarCnpj } from "./cnpj";
-import { data, MESES, dataLocal } from "./format";
+import { data, dataLocal, dataPorExtenso, hojeUTC } from "./format";
 import { COR, hexParaRgb, Pdf } from "./pdf";
 import type { ResultadoRaioX } from "./pncp";
 import { seloVigencia } from "./prazos";
@@ -63,14 +63,15 @@ function textoOficio(d: Dados) {
   const c = p.contrato;
   const e = c.empresa;
   const conv = p.convencao ?? c.convencao;
-  const hoje = new Date();
-  const dataExtenso = `${hoje.getDate()} de ${MESES[hoje.getMonth()]} de ${hoje.getFullYear()}`;
+  // L8: data no fuso de Brasília (o servidor pode estar em UTC; entre 21h e 0h sairia o dia seguinte)
+  const hoje = hojeUTC();
+  const dataExtenso = dataPorExtenso();
   const anexos = situacaoChecklist(p, p.documentos).filter((i) => i.situacao === "ANEXADO").map((i) => i.nome);
   const retro = calc.retroativo;
   return {
     cabecalho: [e.razaoSocial, `CNPJ ${formatarCnpj(e.cnpj)}`],
     linhas: [
-      `Ofício nº ____/${hoje.getFullYear()}`,
+      `Ofício nº ____/${hoje.getUTCFullYear()}`,
       `${c.municipio ?? "________"}, ${dataExtenso}.`,
       "",
       `Ao(À) ${c.orgao}`,
