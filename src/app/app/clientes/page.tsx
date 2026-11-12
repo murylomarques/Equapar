@@ -4,7 +4,7 @@ import { Users } from "lucide-react";
 import { contexto, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatarCnpj } from "@/lib/cnpj";
-import { diasAte, plural, reais } from "@/lib/format";
+import { diasAte, plural, reais, somarReais } from "@/lib/format";
 import { acoesDoContrato } from "@/lib/prazos";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
@@ -57,10 +57,12 @@ export default async function Clientes() {
               {empresas.map((e) => {
                 const prazos = e.contratos.flatMap((c) => acoesDoContrato(c)).filter((a) => a.limite && diasAte(a.limite) <= 60).length;
                 const abertos = e.contratos.flatMap((c) => c.pedidos).filter((p) => ["EM_ANALISE", "CALCULO_VALIDADO", "PROTOCOLADO"].includes(p.estado)).length;
-                const receber = e.contratos
-                  .flatMap((c) => c.pedidos)
-                  .filter((p) => ["DEFERIDO", "FATURADO"].includes(p.estado))
-                  .reduce((s, p) => s + Number(p.valorDeferido ?? 0), 0);
+                const receber = somarReais(
+                  e.contratos
+                    .flatMap((c) => c.pedidos)
+                    .filter((p) => ["DEFERIDO", "FATURADO"].includes(p.estado))
+                    .map((p) => p.valorDeferido),
+                ); // L10
                 return (
                   <tr key={e.id}>
                     <td>

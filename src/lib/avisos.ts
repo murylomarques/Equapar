@@ -6,7 +6,7 @@ import type { Conta, Contrato, Convencao, Pedido, Usuario } from "@prisma/client
 import { db } from "./db";
 import { appUrl, enviar, MODELOS, type ModeloWhatsapp } from "./mensagens";
 import { acoesDoContrato, contratosComPrazoEm, prazoResposta } from "./prazos";
-import { data, diasAte, hojeUTC, plural, reais, reaisResumo } from "./format";
+import { data, diasAte, hojeUTC, plural, reais, reaisResumo, somarReais } from "./format";
 
 type Prefs = { prazo?: "EMAIL" | "WHATSAPP" | "AMBOS"; resposta?: "EMAIL" | "WHATSAPP" | "AMBOS"; deferido?: "EMAIL" | "WHATSAPP" | "AMBOS"; semanal?: boolean; hora?: number };
 
@@ -183,7 +183,7 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
       const comPrazo = contratosComPrazoEm(contratos, 7, hoje).length; // L1: mesma regra do cartão de Hoje e do filtro
       const aguardando = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "PROTOCOLADO").map((p) => ({ c, p })));
       const receber = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "DEFERIDO" || p.estado === "FATURADO").map((p) => ({ c, p })));
-      const totalReceber = receber.reduce((s, { p }) => s + Number(p.valorDeferido ?? p.diferencaRetroativa ?? 0), 0);
+      const totalReceber = somarReais(receber.map(({ p }) => p.valorDeferido ?? p.diferencaRetroativa)); // L10
       for (const u of usuarios) {
         const pr = prefsDe(u);
         if (!pr.semanal || horaBr < pr.hora) continue;

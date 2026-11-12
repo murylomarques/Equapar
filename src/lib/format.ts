@@ -113,3 +113,8 @@ export function dataPorExtenso(agora = new Date()) {
   const d = hojeUTC(agora);
   return `${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
 }
+
+/** L10. Soma de valores em dinheiro com o Decimal do motor (sem erro de ponto flutuante). */
+export function somarReais(valores: Num[]) {
+  return valores.reduce<ReturnType<typeof dec>>((s, v) => s.plus(dec(v == null ? "0" : v.toString())), dec("0"));
+}

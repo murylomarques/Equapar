@@ -5,7 +5,7 @@ import { contexto, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { contratosDoContexto } from "@/lib/consultas";
 import { acoesDoContrato, contratosComPrazoEm, prazoResposta, prazosDoContrato } from "@/lib/prazos";
-import { addDias, data, diasAte, emDias, hojeUTC, plural, reais, reaisResumo, saudacao } from "@/lib/format";
+import { addDias, data, diasAte, emDias, hojeUTC, plural, reais, reaisResumo, saudacao, somarReais } from "@/lib/format";
 import { SeloSimples } from "@/components/selo";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
@@ -57,7 +57,7 @@ export default async function Hoje() {
 
   const aguardando = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "PROTOCOLADO").map((p) => ({ c, p })));
   const receber = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "DEFERIDO" || p.estado === "FATURADO").map((p) => ({ c, p })));
-  const totalReceber = receber.reduce((s, { p }) => s + Number(p.valorDeferido ?? 0), 0);
+  const totalReceber = somarReais(receber.map(({ p }) => p.valorDeferido)); // L10
   // L1: mesmo conjunto do filtro "Prazo em 30 dias" da Carteira e do resumo semanal
   const prazos30 = contratosComPrazoEm(contratos, 30, hoje).length;
 

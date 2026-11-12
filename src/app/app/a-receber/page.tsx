@@ -4,7 +4,7 @@ import { DollarSign } from "lucide-react";
 import { contexto } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { escopoPedidos } from "@/lib/consultas";
-import { data, diasAte, diasAtras, plural, reais, reaisResumo } from "@/lib/format";
+import { data, diasAte, diasAtras, plural, reais, reaisResumo, somarReais } from "@/lib/format";
 import { SeloSimples } from "@/components/selo";
 import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
 import { EstadoVazio } from "@/components/ui/apresentacao";
@@ -23,8 +23,8 @@ export default async function AReceber() {
     include: { contrato: true },
     orderBy: { recebidoEm: "desc" },
   });
-  const total = pedidos.reduce((s, p) => s + Number(p.valorDeferido ?? 0), 0);
-  const recebido12 = recebidos.reduce((s, p) => s + Number(p.valorRecebido ?? 0), 0);
+  const total = somarReais(pedidos.map((p) => p.valorDeferido)); // L10
+  const recebido12 = somarReais(recebidos.map((p) => p.valorRecebido));
   const atrasados = pedidos.filter((p) => !p.apostiladoEm && p.deferidoEm && diasAte(p.deferidoEm) <= -30);
   const acao = (p: (typeof pedidos)[number]) => (p.estado === "FATURADO" ? "Marcar como recebido" : p.apostiladoEm ? "Gerar cobrança da diferença" : "Registrar apostilamento");
 
