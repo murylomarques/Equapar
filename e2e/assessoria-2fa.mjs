@@ -17,7 +17,7 @@ function cnpj() {
   return [...b, d1, dv([...b, d1])].join("");
 }
 
-const browser = await chromium.launch({ channel: process.env.NAVEGADOR ?? "msedge", headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.NAVEGADOR ? { channel: process.env.NAVEGADOR } : {}) });
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 } });
 const page = await ctx.newPage();
 try {

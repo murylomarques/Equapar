@@ -78,7 +78,7 @@ const CNPJ_RAIOX = "12345678000195"; // fictício, com dígitos válidos
 const email = `e2e-${TAM}-${Date.now()}@exemplo.local`;
 const senha = "SenhaTeste12345";
 
-const browser = await chromium.launch({ channel: process.env.NAVEGADOR ?? "msedge", headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.NAVEGADOR ? { channel: process.env.NAVEGADOR } : {}) });
 const ctx = await browser.newContext(
   CELULAR
     ? { viewport: { width: 390, height: 844 }, locale: "pt-BR", isMobile: true, hasTouch: true, deviceScaleFactor: 2 }

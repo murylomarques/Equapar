@@ -106,7 +106,7 @@ const ROTAS_APP = [
   ["48", "Config dados", "/app/configuracoes?aba=dados"],
 ];
 
-const browser = await chromium.launch({ channel: process.env.NAVEGADOR ?? "msedge", headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.NAVEGADOR ? { channel: process.env.NAVEGADOR } : {}) });
 const TAMANHOS = [
   { nome: "desktop", viewport: { width: 1440, height: 900 } },
   { nome: "celular", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },

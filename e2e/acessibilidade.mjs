@@ -34,7 +34,7 @@ const APP = [
   ...["empresa", "pessoas", "avisos", "cobranca", "seguranca", "dados"].map((a) => `/app/configuracoes?aba=${a}`),
 ];
 
-const browser = await chromium.launch({ channel: process.env.NAVEGADOR ?? "msedge", headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.NAVEGADOR ? { channel: process.env.NAVEGADOR } : {}) });
 const relatorio = [];
 let graves = 0;
 
