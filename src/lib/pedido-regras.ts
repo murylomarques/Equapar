@@ -32,9 +32,12 @@ export function aoTrocarPlanilhaAtual(p: PedidoBase): { precisaConfirmar: boolea
   };
 }
 
+/** Campos gravados ao desfazer a aprovação (servem tanto no update "checked" quanto no "unchecked" do Prisma). */
+export type DadosAprovacaoDesfeita = { memoriaAprovadaEm?: null; memoriaAprovadaPor?: null; estado?: "EM_ANALISE"; geradoEm?: null };
+
 /** C2. Campos que desfazem a aprovação da memória (vazio se não havia aprovação nem pedido gerado). */
-export function dadosInvalidarAprovacao(p: Pick<PedidoBase, "memoriaAprovadaEm" | "estado">): Prisma.PedidoUpdateInput {
-  const data: Prisma.PedidoUpdateInput = {};
+export function dadosInvalidarAprovacao(p: Pick<PedidoBase, "memoriaAprovadaEm" | "estado">): DadosAprovacaoDesfeita {
+  const data: DadosAprovacaoDesfeita = {};
   if (p.memoriaAprovadaEm) Object.assign(data, { memoriaAprovadaEm: null, memoriaAprovadaPor: null });
   if (p.estado === "CALCULO_VALIDADO") Object.assign(data, { estado: "EM_ANALISE", geradoEm: null });
   return data;

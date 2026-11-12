@@ -17,7 +17,7 @@ import { iaAtiva, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
 import { salvarArquivo } from "@/lib/storage";
 import { oportunidade } from "@/lib/prazos";
-import { aoTrocarPlanilhaAtual } from "@/lib/pedido-regras";
+import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, type DadosAprovacaoDesfeita } from "@/lib/pedido-regras";
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
@@ -84,6 +84,20 @@ async function pedidoEditavel(fd: FormData) {
   return { ctx, p };
 }
 
+type Ctx = Awaited<ReturnType<typeof exigir>>;
+type PedidoAprov = { id: string; contratoId: string; memoriaAprovadaEm: Date | null; estado: string };
+
+/**
+ * C2. Ponto único para desfazer a aprovação da memória quando muda um número ou o fundamento do
+ * cálculo (planilhas, data-base, data de referência, gatilho, convenção). Devolve os campos a gravar
+ * junto com a mudança e registra o motivo no histórico. Sem aprovação nem pedido gerado, não faz nada.
+ */
+async function invalidarAprovacao(ctx: Ctx, p: PedidoAprov, motivo: string): Promise<DadosAprovacaoDesfeita> {
+  const data = dadosInvalidarAprovacao(p);
+  if (Object.keys(data).length) await registrarHistorico(ctx, `${motivo}: a aprovação da memória foi desfeita`, { pedidoId: p.id, contratoId: p.contratoId });
+  return data;
+}
+
 export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
@@ -99,7 +113,15 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
     if (gatilho !== "OUTRO_CUSTO" && !dataDeposito) campos.dataDeposito = "Falta a data do depósito da convenção. Sem ela, o órgão pode devolver o pedido.";
     if (gatilho === "OUTRO_CUSTO" && !descricao) campos.descricaoGatilho = "Descreva qual custo mudou.";
     if (Object.keys(campos).length) throw new ErroCampos(campos);
-    await db.pedido.update({ where: { id: p.id }, data: { gatilho, convencaoId, dataBase, dataDeposito, descricaoGatilho: descricao, passoAtual: Math.max(p.passoAtual, 2) } });
+    const mudou: string[] = [];
+    if (p.gatilho !== gatilho) mudou.push("o motivo");
+    if ((p.convencaoId ?? null) !== convencaoId) mudou.push("a convenção");
+    if (p.dataBase?.getTime() !== dataBase?.getTime()) mudou.push("a data-base");
+    const invalidar = mudou.length ? await invalidarAprovacao(ctx, p, `Alterou ${mudou.join(", ")}`) : {};
+    await db.pedido.update({
+      where: { id: p.id },
+      data: { ...invalidar, gatilho, convencaoId, dataBase, dataDeposito, descricaoGatilho: descricao, passoAtual: Math.max(p.passoAtual, 2) },
+    });
     if (convencaoId && dataDeposito) await db.convencao.update({ where: { id: convencaoId }, data: { dataDeposito, situacao: "REGISTRADA" } });
     await registrarEvento("passo_concluido", { passo: 1 });
   });
@@ -130,10 +152,7 @@ export async function salvarPlanilha(pedidoId: string, qual: "antes" | "agora", 
     const planilha = planilhaSchema.parse(JSON.parse(conteudo)) as PlanilhaCustos;
     const data: Prisma.PedidoUpdateInput = qual === "antes" ? { planilhaAntes: json(planilha) } : { planilhaAgora: json(planilha) };
     // qualquer mudança na conta desfaz a aprovação da memória
-    if (p.memoriaAprovadaEm) {
-      Object.assign(data, { memoriaAprovadaEm: null, memoriaAprovadaPor: null, estado: "EM_ANALISE" });
-      await registrarHistorico(ctx, "Alterou a planilha: a aprovação da memória foi desfeita", { pedidoId: p.id, contratoId: p.contratoId });
-    }
+    Object.assign(data, await invalidarAprovacao(ctx, p, "Alterou a planilha"));
     await db.pedido.update({ where: { id: p.id }, data });
     return { ok: `Salvo às ${hora(new Date())}` };
   });
@@ -213,7 +232,7 @@ export async function concluirPasso2(_: Resultado, fd: FormData): Promise<Result
 
 export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
-    const { p } = await pedidoEditavel(fd);
+    const { ctx, p } = await pedidoEditavel(fd);
     const ref = lerData(fd.get("dataReferencia")) ?? hojeUTC();
     const calc = calcularPedido({ ...p, dataReferencia: ref });
     if (!calc.comparacao) return { erro: "Falta a planilha nova." };
@@ -239,9 +258,11 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
           .map((l) => l.descricao)
           .join(", ")}${semFonte.length > 5 ? ` e mais ${semFonte.length - 5}` : ""}. O órgão pede a origem de cada valor.`,
       };
+    const invalidar = p.dataReferencia?.getTime() !== ref.getTime() ? await invalidarAprovacao(ctx, p, "Alterou a data até onde a diferença é contada") : {};
     await db.pedido.update({
       where: { id: p.id },
       data: {
+        ...invalidar,
         dataReferencia: ref,
         diferencaMensal: calc.comparacao.diferencaMensal,
         diferencaRetroativa: calc.retroativo?.total ?? null,
