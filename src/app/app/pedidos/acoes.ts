@@ -9,7 +9,7 @@ import { ErroCampos, tentar, texto, type Resultado } from "@/lib/acao";
 import { registrarEvento } from "@/lib/eventos";
 import { hora, hojeUTC, lerData, lerDinheiro } from "@/lib/format";
 import { avisarDeferido, avisarProtocolo } from "@/lib/avisos";
-import { calcularPedido, situacaoChecklist } from "@/lib/pedido";
+import { calcularPedido } from "@/lib/pedido";
 import { validarPlanilha } from "@/lib/calculo/motor";
 import { clonarPlanilha, planilhaModelo } from "@/lib/calculo/modelo";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
@@ -17,7 +17,7 @@ import { iaAtiva, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
 import { salvarArquivo } from "@/lib/storage";
 import { oportunidade } from "@/lib/prazos";
-import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, type DadosAprovacaoDesfeita } from "@/lib/pedido-regras";
+import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, pendenciasParaGerar, totaisGravados, type DadosAprovacaoDesfeita, type Pendencia } from "@/lib/pedido-regras";
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
@@ -98,6 +98,18 @@ async function invalidarAprovacao(ctx: Ctx, p: PedidoAprov, motivo: string): Pro
   return data;
 }
 
+/** Resposta padrão quando há pendências: mensagem + link para o passo de cada uma. */
+function recusarPorPendencias(pedidoId: string, pend: Pendencia[], titulo: string): Resultado {
+  return {
+    erro: titulo,
+    pendencias: pend.map((x) => ({
+      mensagem: x.mensagem,
+      href: x.passo === 5 ? `/app/pedidos/${pedidoId}/memoria` : `/app/pedidos/${pedidoId}/passo/${x.passo}`,
+      rotulo: x.passo === 5 ? "Revisar a memória" : `Ir ao passo ${x.passo}`,
+    })),
+  };
+}
+
 export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
@@ -120,7 +132,7 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
     const invalidar = mudou.length ? await invalidarAprovacao(ctx, p, `Alterou ${mudou.join(", ")}`) : {};
     await db.pedido.update({
       where: { id: p.id },
-      data: { ...invalidar, gatilho, convencaoId, dataBase, dataDeposito, descricaoGatilho: descricao, passoAtual: Math.max(p.passoAtual, 2) },
+      data: { ...invalidar, ...totaisGravados({ ...p, dataBase }), gatilho, convencaoId, dataBase, dataDeposito, descricaoGatilho: descricao, passoAtual: Math.max(p.passoAtual, 2) },
     });
     if (convencaoId && dataDeposito) await db.convencao.update({ where: { id: convencaoId }, data: { dataDeposito, situacao: "REGISTRADA" } });
     await registrarEvento("passo_concluido", { passo: 1 });
@@ -151,6 +163,8 @@ export async function salvarPlanilha(pedidoId: string, qual: "antes" | "agora", 
     const { ctx, p } = await pedidoEditavel(fd);
     const planilha = planilhaSchema.parse(JSON.parse(conteudo)) as PlanilhaCustos;
     const data: Prisma.PedidoUpdateInput = qual === "antes" ? { planilhaAntes: json(planilha) } : { planilhaAgora: json(planilha) };
+    // C3: a diferença gravada (listas, Hoje, A receber) acompanha cada salvamento
+    Object.assign(data, totaisGravados(qual === "antes" ? { ...p, planilhaAntes: json(planilha) as Prisma.JsonValue } : { ...p, planilhaAgora: json(planilha) as Prisma.JsonValue }));
     // qualquer mudança na conta desfaz a aprovação da memória
     Object.assign(data, await invalidarAprovacao(ctx, p, "Alterou a planilha"));
     await db.pedido.update({ where: { id: p.id }, data });
@@ -234,37 +248,16 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
     const ref = lerData(fd.get("dataReferencia")) ?? hojeUTC();
+    const pend = pendenciasParaGerar({ ...p, dataReferencia: ref }, [], 3);
+    if (pend.length) return recusarPorPendencias(p.id, pend, "Antes de continuar, resolva:");
     const calc = calcularPedido({ ...p, dataReferencia: ref });
-    if (!calc.comparacao) return { erro: "Falta a planilha nova." };
-    if (calc.comparacao.erros.length) return { erro: calc.comparacao.erros[0] };
-    if (Number(calc.comparacao.diferencaMensal) <= 0) return { erro: "A planilha nova não aumenta o valor mensal. Confira os novos custos antes de continuar." };
-    // Toda linha alterada precisa dizer de onde veio o número (cláusula da convenção)
-    // Mesma regra do editor: só pede fonte da linha cujo valor, tipo ou base foi mudado à mão.
-    // Linhas que variam só por consequência (ex.: 13º sobre o novo salário) não precisam.
-    const antes = p.planilhaAntes as unknown as PlanilhaCustos;
-    const agora = p.planilhaAgora as unknown as PlanilhaCustos;
-    const semFonte = agora.tipos.flatMap((t) => {
-      const ta = antes.tipos.find((x) => x.id === t.id);
-      return t.linhas.filter((l) => {
-        const la = ta?.linhas.find((x) => x.id === l.id);
-        const mudou = !la || la.valor !== l.valor || la.tipo !== l.tipo || la.base !== l.base;
-        return mudou && !l.fonte?.trim();
-      });
-    });
-    if (semFonte.length)
-      return {
-        erro: `Informe a fonte (cláusula da convenção) das linhas alteradas: ${semFonte
-          .slice(0, 5)
-          .map((l) => l.descricao)
-          .join(", ")}${semFonte.length > 5 ? ` e mais ${semFonte.length - 5}` : ""}. O órgão pede a origem de cada valor.`,
-      };
     const invalidar = p.dataReferencia?.getTime() !== ref.getTime() ? await invalidarAprovacao(ctx, p, "Alterou a data até onde a diferença é contada") : {};
     await db.pedido.update({
       where: { id: p.id },
       data: {
         ...invalidar,
         dataReferencia: ref,
-        diferencaMensal: calc.comparacao.diferencaMensal,
+        diferencaMensal: calc.comparacao!.diferencaMensal,
         diferencaRetroativa: calc.retroativo?.total ?? null,
         passoAtual: Math.max(p.passoAtual, 4),
       },
@@ -309,8 +302,8 @@ export async function concluirPasso4(_: Resultado, fd: FormData): Promise<Result
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { p } = await pedidoEditavel(fd);
     const docs = await db.documento.findMany({ where: { pedidoId: p.id } });
-    const faltam = situacaoChecklist(p, docs).filter((i) => i.situacao === "FALTA");
-    if (faltam.length) return { erro: `Falta: ${faltam.map((f) => f.nome.toLowerCase()).join("; ")}. Sem isso, o órgão pode devolver o pedido.` };
+    const pend = pendenciasParaGerar(p, docs, 4);
+    if (pend.length) return recusarPorPendencias(p.id, pend, "Sem isso, o órgão pode devolver o pedido:");
     await db.pedido.update({ where: { id: p.id }, data: { passoAtual: Math.max(p.passoAtual, 5) } });
     await registrarEvento("passo_concluido", { passo: 4 });
   });
@@ -321,9 +314,9 @@ export async function concluirPasso4(_: Resultado, fd: FormData): Promise<Result
 export async function gerarPedido(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
-    if (!p.memoriaAprovadaEm) return { erro: "A memória de cálculo precisa ser aprovada por Contador ou Dono antes de gerar o pedido." };
-    const calc = calcularPedido(p);
-    if (!calc.pronto) return { erro: "O cálculo tem pendências. Volte ao passo 3." };
+    const docs = await db.documento.findMany({ where: { pedidoId: p.id } });
+    const pend = pendenciasParaGerar(p, docs, 5);
+    if (pend.length) return recusarPorPendencias(p.id, pend, "O pedido ainda não pode ser gerado:");
     // Monta os arquivos de verdade antes de marcar como pronto: nenhum documento quebrado chega à tela final.
     try {
       await Promise.all([oficioPdf(p.id, ctx.conta.id), planilhaXlsx(p.id, ctx.conta.id), memoriaPdf(p.id, ctx.conta.id)]);
@@ -351,8 +344,8 @@ export async function aprovarMemoria(_: Resultado, fd: FormData): Promise<Result
     const ctx = await exigir("aprovar_memoria");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
     if (!["EM_ANALISE", "CALCULO_VALIDADO"].includes(p.estado)) return { erro: "Este pedido já foi protocolado." };
-    const calc = calcularPedido(p);
-    if (!calc.pronto) return { erro: "O cálculo ainda tem pendências e não pode ser aprovado." };
+    const pend = pendenciasParaGerar(p, [], 3);
+    if (pend.length) return recusarPorPendencias(p.id, pend, "A memória ainda não pode ser aprovada:");
     await db.pedido.update({ where: { id: p.id }, data: { memoriaAprovadaEm: new Date(), memoriaAprovadaPor: ctx.usuario.nome } });
     await registrarHistorico(ctx, "Aprovou a memória de cálculo", { pedidoId: p.id, contratoId: p.contratoId });
     await registrarEvento("memoria_aprovada");

@@ -122,7 +122,18 @@ export function FormAcao({
         {estado.erro && !listaCampos.length && (
           <p className="erro-texto" role="alert" style={{ marginTop: 12, marginBottom: 0 }}>
             <AlertCircle size={16} strokeWidth={1.5} aria-hidden style={{ marginTop: 1, flexShrink: 0 }} />
-            {estado.erro}
+            <span>
+              {estado.erro}
+              {estado.pendencias?.length ? (
+                <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                  {estado.pendencias.map((x, i) => (
+                    <li key={i}>
+                      {x.mensagem} <a href={x.href}>{x.rotulo}</a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </span>
           </p>
         )}
         {okNaPagina && estado.ok && (

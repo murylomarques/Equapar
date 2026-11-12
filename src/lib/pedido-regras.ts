@@ -2,7 +2,10 @@
  * Regras do pedido que não dependem de banco nem de sessão (testáveis em unidade).
  * As ações de servidor em app/app/pedidos/acoes.ts usam estas funções.
  */
-import { Prisma } from "@prisma/client";
+import { Prisma, type Pedido } from "@prisma/client";
+import type { PlanilhaCustos, LinhaPlanilha } from "./calculo/tipos";
+import { validarPlanilha } from "./calculo/motor";
+import { calcularPedido, situacaoChecklist } from "./pedido";
 
 type PedidoBase = {
   planilhaAgora: unknown;
@@ -41,4 +44,80 @@ export function dadosInvalidarAprovacao(p: Pick<PedidoBase, "memoriaAprovadaEm" 
   if (p.memoriaAprovadaEm) Object.assign(data, { memoriaAprovadaEm: null, memoriaAprovadaPor: null });
   if (p.estado === "CALCULO_VALIDADO") Object.assign(data, { estado: "EM_ANALISE", geradoEm: null });
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// C3. Pendências para gerar o pedido (uma regra só para todos os passos)
+// ---------------------------------------------------------------------------
+
+export type Pendencia = { passo: 1 | 2 | 3 | 4 | 5; mensagem: string };
+
+/** Linhas da planilha nova mudadas à mão (valor, tipo ou base) sem a fonte (cláusula). */
+export function linhasSemFonte(antes: PlanilhaCustos, agora: PlanilhaCustos): LinhaPlanilha[] {
+  return agora.tipos.flatMap((t) => {
+    const ta = antes.tipos.find((x) => x.id === t.id);
+    return t.linhas.filter((l) => {
+      const la = ta?.linhas.find((x) => x.id === l.id);
+      const mudou = !la || la.valor !== l.valor || la.tipo !== l.tipo || la.base !== l.base;
+      return mudou && !l.fonte?.trim();
+    });
+  });
+}
+
+type PedidoPend = Pick<
+  Pedido,
+  "gatilho" | "convencaoId" | "dataBase" | "dataDeposito" | "descricaoGatilho" | "planilhaAntes" | "planilhaAgora" | "dataReferencia" | "checklist" | "memoriaAprovadaEm"
+>;
+
+/**
+ * Tudo o que impede gerar o pedido, em ordem de passo. `ate` limita aos passos já percorridos
+ * (o passo 3 só confere 1 a 3; gerar confere tudo, inclusive a aprovação da memória).
+ */
+export function pendenciasParaGerar(p: PedidoPend, documentos: { tipo: string }[], ate: 3 | 4 | 5 = 5): Pendencia[] {
+  const r: Pendencia[] = [];
+  const conv = p.gatilho !== "OUTRO_CUSTO";
+  if (!p.dataBase) r.push({ passo: 1, mensagem: "Falta a data-base." });
+  if (conv && !p.convencaoId) r.push({ passo: 1, mensagem: "Falta escolher a convenção." });
+  if (conv && !p.dataDeposito) r.push({ passo: 1, mensagem: "Falta a data do depósito da convenção." });
+  if (!conv && !p.descricaoGatilho) r.push({ passo: 1, mensagem: "Falta descrever qual custo mudou." });
+
+  const antes = p.planilhaAntes as unknown as PlanilhaCustos | null;
+  const agora = p.planilhaAgora as unknown as PlanilhaCustos | null;
+  if (!antes) r.push({ passo: 2, mensagem: "Falta a planilha atual." });
+  else {
+    const e = validarPlanilha(antes);
+    if (e.length) r.push({ passo: 2, mensagem: `Planilha atual: ${e[0]}` });
+  }
+  if (antes && !agora) r.push({ passo: 3, mensagem: "Falta a planilha nova." });
+  if (antes && agora) {
+    const calc = calcularPedido(p);
+    const c = calc.comparacao;
+    if (c?.erros.length) r.push({ passo: 3, mensagem: c.erros[0] });
+    else if (c && Number(c.diferencaMensal) <= 0) r.push({ passo: 3, mensagem: "A planilha nova não aumenta o valor mensal." });
+    const sem = linhasSemFonte(antes, agora);
+    if (sem.length)
+      r.push({
+        passo: 3,
+        mensagem: `Falta a fonte (cláusula da convenção) de: ${sem
+          .slice(0, 5)
+          .map((l) => l.descricao || "linha sem nome")
+          .join(", ")}${sem.length > 5 ? ` e mais ${sem.length - 5}` : ""}.`,
+      });
+  }
+  if (ate >= 4) {
+    const faltam = situacaoChecklist(p, documentos).filter((i) => i.situacao === "FALTA");
+    if (faltam.length) r.push({ passo: 4, mensagem: `Falta: ${faltam.map((f) => f.nome.toLowerCase()).join("; ")}.` });
+  }
+  if (ate >= 5 && !p.memoriaAprovadaEm) r.push({ passo: 5, mensagem: "A memória de cálculo precisa ser aprovada por Contador ou Dono." });
+  return r.filter((x) => x.passo <= ate);
+}
+
+/** C3. Totais gravados no pedido (listas e painéis) sempre iguais aos do documento. */
+export function totaisGravados(p: Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase" | "dataReferencia">) {
+  const calc = calcularPedido(p);
+  const ok = calc.comparacao && !calc.comparacao.erros.length;
+  return {
+    diferencaMensal: ok ? calc.comparacao!.diferencaMensal : null,
+    diferencaRetroativa: ok ? (calc.retroativo?.total ?? null) : null,
+  };
 }

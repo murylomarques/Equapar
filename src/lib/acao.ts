@@ -7,6 +7,8 @@ export interface Resultado {
   campos?: Record<string, string>;
   ok?: string;
   dados?: Record<string, unknown>;
+  /** Pendências que impedem a ação, cada uma com link para onde se resolve. */
+  pendencias?: { mensagem: string; href: string; rotulo: string }[];
 }
 
 export type Acao = (anterior: Resultado, fd: FormData) => Promise<Resultado>;
