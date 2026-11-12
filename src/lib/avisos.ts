@@ -137,9 +137,13 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
   const horaBr = Number(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo", hour: "numeric", hour12: false }));
   const segunda = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getDay() === 1;
 
-  const contas = await db.conta.findMany({ ...(contaId ? { where: { id: contaId } } : {}), include: { membros: { include: { usuario: true } } } });
+  const contas = await db.conta.findMany({
+    ...(contaId ? { where: { id: contaId } } : {}),
+    include: { membros: { include: { usuario: true } }, empresas: { select: { exemplo: true } } },
+  });
   for (const conta of contas) {
-    if (conta.demo) continue; // C6/L9: demonstração não recebe avisos
+    // C6/L9: demonstração e contas só com empresas de exemplo (fictícias) não recebem avisos
+    if (conta.demo || (conta.empresas.length > 0 && conta.empresas.every((e) => e.exemplo))) continue;
     const usuarios = conta.membros.map((m) => m.usuario);
     const contratos = await db.contrato.findMany({
       where: { arquivado: false, empresa: { contaId: conta.id } },
@@ -197,7 +201,7 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
         ];
         const r = await enviar({
           contaId: conta.id,
-          chave: `SEMANAL:${u.id}:${semanaIso(hoje)}`,
+          chave: `SEMANAL:${u.id}:${conta.id}:${semanaIso(hoje)}`, // L9: um resumo por conta
           tipo: "SEMANAL",
           canal: "EMAIL",
           destino: u.email,

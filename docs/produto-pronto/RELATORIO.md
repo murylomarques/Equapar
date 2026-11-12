@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L8 feitos (L7 sem o teste de navegador); próximo: L9. Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L9 feitos (L7 sem o teste de navegador); próximo: L10. Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -58,3 +58,4 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | L6 Arquivos órfãos | feito | `src/app/app/pedidos/descartar.test.ts`: antes, descartar apagava o pedido e deixava os arquivos; depois, banco primeiro e em seguida só os arquivos daquele pedido, com o descarte no histórico do contrato (data, quem e quantos anexos). `excluirConta` passou a apagar o banco antes da pasta. Commit "L6" | Limpeza dos órfãos antigos: `scripts/limpar-orfaos.ts` em simulação (hoje: 0 com mais de 24 h). `--aplicar` depende do "ok" do dono (trava 2) |
 | L7 Salvamento automático perdia a última edição | parcial | O editor registra `salvarAgora()`; os formulários dos passos 2 e 3 (`esperarSalvamento`) terminam o salvamento antes de enviar, com "Salvando…" no botão; fechar a aba com alteração não salva pede confirmação. Commit "L7" | Rodar `e2e/bloqueadoras/l7-salvar-antes.mjs` (digita e clica em Continuar antes dos 800 ms) quando houver servidor |
 | L8 Data do ofício | feito | `src/lib/data-oficio.test.ts`: às 22h30 de Brasília (01h30 UTC) um servidor em UTC datava o ofício no dia seguinte; `dataPorExtenso()` usa o fuso de Brasília (12/11/2026) também na virada do ano. Commit "L8" | — |
+| L9 Resumo semanal | feito | `src/lib/avisos-semanal.test.ts`: antes, a chave era usuário + semana (quem está em duas contas recebia um só) e a conta de exemplo também enviava; depois, chave usuário + conta + semana e contas de demonstração ou só com empresas de exemplo não enviam nenhum aviso. Commit "L9" | — |

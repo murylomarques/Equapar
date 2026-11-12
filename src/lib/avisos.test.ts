@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 // S5: "Verificar prazos agora" de uma conta não pode rodar nem contar as outras contas.
 const contas = [
-  { id: "a", demo: false, membros: [] },
-  { id: "b", demo: false, membros: [] },
+  { id: "a", demo: false, membros: [], empresas: [] },
+  { id: "b", demo: false, membros: [], empresas: [] },
 ];
 const contratosPedidos: string[] = [];
 vi.mock("./db", () => ({
