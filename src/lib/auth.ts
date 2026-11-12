@@ -8,8 +8,9 @@ import type { Papel, Prisma } from "@prisma/client";
 import { db } from "./db";
 import { cifrar, decifrar, sha256, tokenAleatorio } from "./cripto";
 import { EMAIL_DEMO } from "./site";
+import { opcoesCookieSessao } from "./cookie-sessao";
 
-const COOKIE = "eq_sessao";
+const { nome: COOKIE, secure: COOKIE_SEGURO } = opcoesCookieSessao(); // S8
 const DURACAO_DIAS = 30;
 
 // ---------------------------------------------------------------------------
@@ -80,7 +81,7 @@ export async function criarSessao(usuarioId: string, opts: { pendente2fa?: boole
   c.set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: COOKIE_SEGURO,
     path: "/",
     ...(lembrar ? { maxAge: DURACAO_DIAS * 86_400 } : {}),
   });

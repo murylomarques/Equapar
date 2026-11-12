@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S7 feito; próximo: S8. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S8 feito; próximo: S9. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -40,3 +40,4 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | S5 "Verificar prazos agora" só da conta | feito | `src/lib/avisos.test.ts`: antes, `rodarAvisos` não aceitava conta (rodava todas e devolvia as contagens de todos os clientes); depois, `rodarAvisos({ contaId })` verifica só a conta pedida e a mensagem diz "nesta conta". A rotina de hora em hora continua cobrindo todas. Commit "S5" | — |
 | S6 completarEmpresa sem checar sessão | feito | `src/app/(auth)/completar-empresa.test.ts`: antes, com as duas etapas pendentes ou já tendo conta, criava uma conta nova (2 falhas); depois, manda para `/entrar/2fa` ou para `/app/hoje`; segunda conta só pelo fluxo explícito `/criar-conta?etapa=empresa&nova=1`. Commit "S6" | O link "Criar outra conta" no menu entra com o L14 (trocar de conta) |
 | S7 Dados de exemplo separados | feito | `prisma/seed-demo.ts` (pode rodar em produção: só a conta modelo fictícia e a demonstração só leitura, sem Dono, sem senha impressa; conferido com `NODE_ENV=production`) e `prisma/seed-dev.ts` (recusa `NODE_ENV=production`; cria o Dono de teste e imprime a senha). Scripts `db:seed` e `db:seed:demo` leem o `.env` sozinhos (`tsx --env-file=.env`). Commit "S7" | — |
+| S8 Cookie com prefixo `__Host-` | feito | `src/lib/cookie-sessao.test.ts`: produção com `APP_URL` em HTTPS usa `__Host-eq_sessao` com Secure, path `/` e sem Domain; desenvolvimento e HTTP local mantêm `eq_sessao` (o navegador recusaria `__Host-` sem HTTPS). Commit "S8" | Ao publicar, quem estiver logado entra de novo uma vez (o nome do cookie muda) |
