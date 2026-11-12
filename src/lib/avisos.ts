@@ -130,13 +130,14 @@ function semanaIso(d: Date) {
   return `${t.getUTCFullYear()}-S${Math.ceil(((t.getTime() - ini.getTime()) / 86_400_000 + 1) / 7)}`;
 }
 
-export async function rodarAvisos(agora = new Date()) {
+/** Roda os avisos. Com `contaId`, só daquela conta (S5: "Verificar prazos agora" não toca nas outras). */
+export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: string; agora?: Date } = {}) {
   const hoje = hojeUTC(agora);
   const resumo = { prazos: 0, semanais: 0, apostilamento: 0 };
   const horaBr = Number(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo", hour: "numeric", hour12: false }));
   const segunda = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getDay() === 1;
 
-  const contas = await db.conta.findMany({ include: { membros: { include: { usuario: true } } } });
+  const contas = await db.conta.findMany({ ...(contaId ? { where: { id: contaId } } : {}), include: { membros: { include: { usuario: true } } } });
   for (const conta of contas) {
     if (conta.demo) continue; // C6/L9: demonstração não recebe avisos
     const usuarios = conta.membros.map((m) => m.usuario);

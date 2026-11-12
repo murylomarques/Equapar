@@ -229,10 +229,10 @@ export async function excluirConta(_: Resultado, fd: FormData): Promise<Resultad
 
 export async function rodarAvisosAgora(): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
-    await exigir("gerenciar_conta");
-    const r = await rodarAvisos();
+    const ctx = await exigir("gerenciar_conta");
+    const r = await rodarAvisos({ contaId: ctx.conta.id });
     revalidatePath("/app/avisos");
-    return { ok: `Verificação feita: ${r.prazos} contratos com prazo, ${r.semanais} resumos semanais, ${r.apostilamento} alertas de apostilamento.` };
+    return { ok: `Verificação feita nesta conta: ${r.prazos} contratos com prazo, ${r.semanais} resumos semanais, ${r.apostilamento} alertas de apostilamento.` };
   });
 }
 
