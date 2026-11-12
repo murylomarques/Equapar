@@ -92,7 +92,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <Bell size={20} strokeWidth={1.5} />
               {sino > 0 && <span className="ponto" aria-hidden />}
             </Link>
-            <MenuSuspenso rotulo="Conta" className="btn btn-pequeno" conteudoBotao={ctx.usuario.nome.split(" ")[0]}>
+            <MenuSuspenso rotulo={`Conta de ${ctx.usuario.nome.split(" ")[0]}`} className="btn btn-pequeno" conteudoBotao={ctx.usuario.nome.split(" ")[0]}>
               <div className="cab-menu">
                 <strong style={{ display: "block", color: "var(--tinta)", fontSize: 14 }}>{ctx.usuario.nome}</strong>
                 {ctx.usuario.email}

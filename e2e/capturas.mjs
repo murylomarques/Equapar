@@ -138,7 +138,7 @@ try {
     const app = await (await browser.newContext(ctxOpts)).newPage();
     await entrar(app, "dono@exemplo.local", SENHA_DONO);
     for (const [n, t, u] of ROTAS_APP) await foto(app, n, t, u, tam);
-    await foto(app, "42", "Menu da conta", "/app/hoje", tam, (p) => p.locator('[aria-label="Conta"]').first().click());
+    await foto(app, "42", "Menu da conta", "/app/hoje", tam, (p) => p.locator('[aria-label^="Conta"]').first().click());
     // assessoria temporária
     const ass = await (await browser.newContext(ctxOpts)).newPage();
     await ass.goto(BASE + "/criar-conta?tipo=assessoria");

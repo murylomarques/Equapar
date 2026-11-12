@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["exceljs", "pdf-lib", "docx", "nodemailer", "@prisma/client", "bcryptjs"],
   experimental: {
     serverActions: { bodySizeLimit: "15mb" },
+    // CSS pequeno (~9 KB comprimido): vai junto do HTML e evita uma ida e volta antes da primeira pintura.
+    inlineCss: true,
   },
 };
 

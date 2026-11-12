@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { SITE } from "@/lib/site";
-import { sessaoAtual } from "@/lib/auth";
+import { LinkEntrar } from "@/components/link-entrar";
 import { MenuSite } from "@/components/menu-site";
 import "./site.css";
 
-export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const s = await sessaoAtual();
+export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <header className="site-topo">
@@ -19,15 +18,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             <Link href="/guias">Guias</Link>
           </nav>
           <div className="fileira">
-            {s && !s.pendente2fa ? (
-              <Link href="/app/hoje" className="btn btn-texto">
-                Abrir a Equapar
-              </Link>
-            ) : (
-              <Link href="/entrar" className="btn btn-texto">
-                Entrar
-              </Link>
-            )}
+            <LinkEntrar />
             <Link href="/raio-x" className="btn btn-primario so-desktop">
               Fazer o Raio-X grátis
             </Link>

@@ -61,7 +61,7 @@ try {
   ok("2FA ativada");
 
   // sair e entrar de novo: pede código
-  await page.locator('[aria-label="Conta"]').first().click();
+  await page.locator('[aria-label^="Conta"]').first().click();
   await page.getByRole("menuitem", { name: "Sair" }).or(page.getByRole("button", { name: "Sair" })).first().click();
   await page.waitForURL(BASE + "/");
   await page.goto(`${BASE}/entrar`);

@@ -1,0 +1,466 @@
+[
+  {
+    "rota": "/",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/raio-x",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/raio-x?cnpj=11111111111111",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/precos",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/assessorias",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/guias",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/guias/prorrogacao-sem-perder-a-repactuacao",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/privacidade",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/termos",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/entrar",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/criar-conta",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/pagina-que-nao-existe",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/hoje",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/boas-vindas",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/boas-vindas?passo=contratos",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/boas-vindas?passo=convencoes",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/boas-vindas?passo=pronto",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/carteira",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/carteira?filtro=prazo60",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/novo",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=resumo",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=prazos",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=pedidos",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=documentos",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=historico",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a/prorrogacao",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/novo?contrato=cmwcrcfjz000m6ftwibm36ac7",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/1",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/2",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/3",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/4",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/5",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/memoria",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/pronto",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfiw000i6ftwikfc5y8f/pronto",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/a-receber",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/convencoes",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/avisos",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/busca?q=Exemplo",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=empresa",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=pessoas",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=avisos",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=cobranca",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=seguranca",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=dados",
+    "tamanho": "desktop",
+    "violacoes": []
+  },
+  {
+    "rota": "/",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/raio-x",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/raio-x?cnpj=11111111111111",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/precos",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/assessorias",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/guias",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/guias/prorrogacao-sem-perder-a-repactuacao",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/privacidade",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/termos",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/entrar",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/criar-conta",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/pagina-que-nao-existe",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/hoje",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/boas-vindas",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/boas-vindas?passo=contratos",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/boas-vindas?passo=convencoes",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/boas-vindas?passo=pronto",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/carteira",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/carteira?filtro=prazo60",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/novo",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=resumo",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=prazos",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=pedidos",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=documentos",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a?aba=historico",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/contratos/cmwcrcfh2000a6ftwuchuq98a/prorrogacao",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/novo?contrato=cmwcrcfjz000m6ftwibm36ac7",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/1",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/2",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/3",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/4",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/passo/5",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/memoria",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfhu000e6ftw6np3nf6m/pronto",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/pedidos/cmwcrcfiw000i6ftwikfc5y8f/pronto",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/a-receber",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/convencoes",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/avisos",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/busca?q=Exemplo",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=empresa",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=pessoas",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=avisos",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=cobranca",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=seguranca",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/app/configuracoes?aba=dados",
+    "tamanho": "celular",
+    "violacoes": []
+  },
+  {
+    "rota": "/ (reduzir movimento)",
+    "elementosAnimando": []
+  }
+]

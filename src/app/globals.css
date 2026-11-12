@@ -1263,7 +1263,11 @@ a.cartao-linha:hover {
 .menu-painel a:focus-visible,
 .menu-painel button:focus-visible {
   background: var(--superficie-2);
-  outline: none;
+}
+.menu-painel a:focus-visible,
+.menu-painel button:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: -2px;
 }
 .menu-painel .perigo {
   color: var(--erro);

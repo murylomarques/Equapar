@@ -53,6 +53,18 @@
 .secao {
   padding: 64px 0;
 }
+/* Seções abaixo da dobra: o navegador só calcula o layout quando chegam perto da tela.
+   Corta o primeiro cálculo de estilo da landing e antecipa a primeira pintura no celular.
+   A altura reservada evita pulo na barra de rolagem; "auto" guarda a altura real depois de vista. */
+.revelar.secao {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 720px;
+}
+@media print {
+  .revelar.secao {
+    content-visibility: visible;
+  }
+}
 @media (max-width: 720px) {
   .secao {
     padding: 48px 0;

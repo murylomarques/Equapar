@@ -86,7 +86,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
         subtitulo={`Contrato ${p.contrato.numero} · ${p.contrato.orgao}`}
       />
 
-      <ol className="estados" aria-label="Etapas do pedido até o dinheiro entrar">
+      <ol className="estados" tabIndex={0} aria-label="Etapas do pedido até o dinheiro entrar">
         {ESTADOS.map((e, i) => (
           <li key={e.id} className={`${i <= idx && p.estado !== "INDEFERIDO" ? "feito" : ""} ${i === idx ? "atual" : ""}`} aria-current={i === idx ? "step" : undefined}>
             <strong className="fileira" style={{ gap: 4 }}>

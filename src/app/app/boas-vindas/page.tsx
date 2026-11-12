@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Primeiros passos | Equapar" };
 /** Etapa 0 ("Conta criada") já está feita: é verdade (P11). */
 function Progresso({ atual }: { atual: number }) {
   return (
-    <ol className="progresso" aria-label="Primeiros passos">
+    <ol className="progresso" tabIndex={0} aria-label="Primeiros passos">
       {ETAPAS_INICIO.map((e, i) => (
         <li key={e} className={i < atual ? "feito" : i === atual ? "atual" : undefined} aria-current={i === atual ? "step" : undefined}>
           <span>

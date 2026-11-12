@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Criar conta | Equapar" };
 
 function Etapas({ atual }: { atual: number }) {
   return (
-    <ol className="progresso" aria-label="Etapas até a carteira pronta" style={{ marginBottom: 20 }}>
+    <ol className="progresso" tabIndex={0} aria-label="Etapas até a carteira pronta" style={{ marginBottom: 20 }}>
       {ETAPAS_INICIO.map((e, i) => (
         <li key={e} className={i < atual ? "feito" : i === atual ? "atual" : undefined} aria-current={i === atual ? "step" : undefined} style={{ minWidth: 0 }}>
           <span>

@@ -170,7 +170,7 @@ export default function Landing() {
       <Revelar className="secao">
         <div className="site-largura">
           <h2 className="titulo-secao">Três jeitos de cuidar da repactuação</h2>
-          <div className="tabela-rolagem">
+          <div className="tabela-rolagem" tabIndex={0} role="region" aria-label="Comparação: planilha, consultoria e Equapar">
             <table className="tabela tabela-comparacao">
               <thead>
                 <tr>
