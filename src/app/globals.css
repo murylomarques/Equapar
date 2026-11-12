@@ -1793,3 +1793,13 @@ mark {
   line-height: 1.6;
   box-shadow: 4px 4px 0 -1px var(--papel), 4px 4px 0 0 var(--linha);
 }
+/* Esqueleto de página: invisível nos primeiros 400 ms (esperas curtas não piscam) */
+.esqueleto-pagina {
+  opacity: 0;
+  animation: surgir 150ms ease-out 400ms forwards;
+}
+@keyframes surgir {
+  to {
+    opacity: 1;
+  }
+}

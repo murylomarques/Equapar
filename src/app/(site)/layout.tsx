@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { SITE } from "@/lib/site";
 import { sessaoAtual } from "@/lib/auth";
+import { MenuSite } from "@/components/menu-site";
 import "./site.css";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -30,18 +31,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             <Link href="/raio-x" className="btn btn-primario so-desktop">
               Fazer o Raio-X grátis
             </Link>
-            <details className="menu so-celular">
-              <summary className="btn" aria-label="Abrir menu">
-                Menu
-              </summary>
-              <div className="menu-painel">
-                <Link href="/raio-x">Fazer o Raio-X grátis</Link>
-                <Link href="/#como-funciona">Como funciona</Link>
-                <Link href="/precos">Preços</Link>
-                <Link href="/assessorias">Para assessorias</Link>
-                <Link href="/guias">Guias</Link>
-              </div>
-            </details>
+            <MenuSite />
           </div>
         </div>
       </header>

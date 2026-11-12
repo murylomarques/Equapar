@@ -1,71 +1,58 @@
 "use client";
-import { useActionState } from "react";
 import Link from "next/link";
+import { useState } from "react";
+import { CheckCircle2, Download } from "lucide-react";
 import { BotaoEnvio } from "@/components/botao-envio";
-import { avisarDepois, pedirRelatorio, type EstadoForm } from "./acoes";
+import { FormAcao } from "@/components/form-acao";
+import { CampoTexto, Consentimento } from "@/components/ui/campos";
+import type { Resultado } from "@/lib/acao";
+import { avisarDepois, pedirRelatorio } from "./acoes";
 
 export function FormRelatorio({ cnpj }: { cnpj: string }) {
-  const [estado, acao] = useActionState<EstadoForm, FormData>(pedirRelatorio, {});
-  if (estado.ok)
+  const [enviado, setEnviado] = useState<Resultado | null>(null);
+  if (enviado?.ok)
     return (
-      <div className="aviso-caixa ok" role="status">
-        <p>Pronto. Mandamos o relatório para o seu e-mail.</p>
-        {estado.link && (
-          <a className="btn" href={estado.link}>
-            Baixar o relatório em PDF
+      <div role="status">
+        <p className="fileira" style={{ fontWeight: 600 }}>
+          <CheckCircle2 size={20} strokeWidth={1.5} aria-hidden style={{ color: "var(--verde)" }} /> Relatório enviado
+        </p>
+        <p className="secundario">Mandamos o relatório para o seu e-mail.</p>
+        {enviado.dados?.link ? (
+          <a className="btn btn-primario" href={String(enviado.dados.link)} download>
+            <Download size={16} strokeWidth={1.5} aria-hidden /> Baixar o PDF agora
           </a>
-        )}
+        ) : null}
         <p className="legenda mt-16 mb-0">
           Quer montar o pedido? <Link href={`/criar-conta?cnpj=${cnpj}`}>Criar conta grátis</Link>
         </p>
       </div>
     );
-  const e = estado.erros ?? {};
   return (
-    <form action={acao} noValidate>
+    <FormAcao action={pedirRelatorio} semToast aoConcluir={(r) => r.ok && setEnviado(r)}>
       <input type="hidden" name="cnpj" value={cnpj} />
-      <div className="campo">
-        <label htmlFor="rel-email">E-mail</label>
-        <input id="rel-email" name="email" type="email" autoComplete="email" required aria-invalid={!!e.email} aria-describedby={e.email ? "rel-email-erro" : undefined} />
-        {e.email && (
-          <span id="rel-email-erro" className="erro">
-            {e.email}
-          </span>
-        )}
-      </div>
-      <div className="campo">
-        <label htmlFor="rel-whats">WhatsApp (opcional)</label>
-        <input id="rel-whats" name="whatsapp" type="tel" autoComplete="tel" inputMode="tel" aria-describedby="rel-whats-ajuda" aria-invalid={!!e.whatsapp} />
-        <span id="rel-whats-ajuda" className="ajuda">
-          WhatsApp, para os avisos de prazo. Nada de propaganda.
-        </span>
-        {e.whatsapp && <span className="erro">{e.whatsapp}</span>}
-      </div>
-      <label className="check" style={{ marginBottom: 16 }}>
-        <input type="checkbox" name="consentimento" />
-        <span>Autorizo a Equapar a me mandar avisos de prazo destes contratos. Posso parar a qualquer momento respondendo SAIR.</span>
-      </label>
-      {e.consentimento && <p className="erro-texto">{e.consentimento}</p>}
-      <BotaoEnvio pendente="Enviando…">Enviar relatório</BotaoEnvio>
+      <CampoTexto nome="email" rotulo="E-mail" tipo="email" autoComplete="email" />
+      <CampoTexto nome="whatsapp" rotulo="WhatsApp" opcional tipo="tel" inputMode="tel" autoComplete="tel" ajuda="Só para os avisos de prazo. Nada de propaganda." />
+      <Consentimento nome="consentimento">Autorizo a Equapar a me mandar avisos de prazo destes contratos. Posso parar quando quiser, respondendo SAIR.</Consentimento>
+      <BotaoEnvio>Enviar relatório</BotaoEnvio>
       <p className="legenda mt-16 mb-0">
         Veja a <Link href="/privacidade">política de privacidade</Link>.
       </p>
-    </form>
+    </FormAcao>
   );
 }
 
 export function FormAvisarDepois({ cnpj }: { cnpj: string }) {
-  const [estado, acao] = useActionState<EstadoForm, FormData>(avisarDepois, {});
-  if (estado.ok) return <p role="status">{estado.erro ?? "Pronto. A consulta terminou e mandamos o link para o seu e-mail."}</p>;
+  const [ok, setOk] = useState<string | null>(null);
+  if (ok) return <p role="status">{ok}</p>;
   return (
-    <form action={acao} className="fileira" noValidate>
+    <FormAcao action={avisarDepois} semToast aoConcluir={(r) => r.ok && setOk(r.ok)} className="fileira" style={{ alignItems: "flex-end" }}>
       <input type="hidden" name="cnpj" value={cnpj} />
-      <label htmlFor="av-email" className="sr-only">
-        E-mail
-      </label>
-      <input id="av-email" name="email" type="email" placeholder="seu@email.com.br" style={{ maxWidth: 320 }} aria-invalid={!!estado.erros?.email} />
-      <BotaoEnvio className="btn">Avisar por e-mail</BotaoEnvio>
-      {estado.erros?.email && <span className="erro-texto">{estado.erros.email}</span>}
-    </form>
+      <div style={{ flex: "1 1 240px" }}>
+        <CampoTexto nome="email" rotulo="Seu e-mail" tipo="email" autoComplete="email" className="mb-0" />
+      </div>
+      <BotaoEnvio className="btn" style={{ marginBottom: 0 }}>
+        Avisar por e-mail
+      </BotaoEnvio>
+    </FormAcao>
   );
 }

@@ -161,7 +161,7 @@ export default function Landing() {
           <h2 className="titulo-secao">Comece pelo que já é público.</h2>
           <p style={{ color: "#cfccc4" }}>Digite o CNPJ e veja os contratos vigentes da sua empresa e quando cada um termina.</p>
           <div className="raiox-escuro">
-            <FormCnpj id="cnpj-meio" />
+            <FormCnpj id="cnpj-meio" escuro />
           </div>
         </div>
       </Revelar>

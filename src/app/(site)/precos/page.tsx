@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TabelaPlanos } from "@/components/planos";
+import { CalculadoraPreco } from "@/components/calculadora-preco";
 
 export const metadata: Metadata = {
   title: "Preços | Equapar",
@@ -15,6 +16,9 @@ export default function Precos() {
       <p className="secundario leitura">Comece pelo Raio-X grátis. O piloto resolve um pedido real; a carteira cobre todos os contratos, todo mês.</p>
       <div className="mt-24">
         <TabelaPlanos />
+      </div>
+      <div className="mt-32">
+        <CalculadoraPreco />
       </div>
       <div className="cartao mt-24 leitura">
         <h2>O que cada plano inclui</h2>

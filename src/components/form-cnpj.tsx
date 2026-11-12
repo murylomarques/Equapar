@@ -1,14 +1,21 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { cnpjValido, soDigitos } from "@/lib/cnpj";
+import { useId, useState } from "react";
+import { AlertCircle, Check } from "lucide-react";
+import { erroCnpj, mascaraCnpj, soDigitos } from "@/lib/mascaras";
 
-/** Campo do Raio-X: aceita colar com ou sem pontos. */
-export function FormCnpj({ id = "cnpj", valorInicial = "" }: { id?: string; valorInicial?: string }) {
+/**
+ * Campo do Raio-X: aceita colar em qualquer formato, mostra a máscara,
+ * valida ao sair do campo (nunca enquanto digita) e ao enviar.
+ */
+export function FormCnpj({ id, valorInicial = "", escuro }: { id?: string; valorInicial?: string; escuro?: boolean }) {
   const router = useRouter();
-  const [valor, setValor] = useState(valorInicial);
+  const auto = useId();
+  const campoId = id ?? `cnpj-${auto.replace(/:/g, "")}`;
+  const [valor, setValor] = useState(mascaraCnpj(valorInicial));
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const valido = soDigitos(valor).length === 14 && !erroCnpj(valor);
   return (
     <form
       action="/raio-x"
@@ -16,37 +23,56 @@ export function FormCnpj({ id = "cnpj", valorInicial = "" }: { id?: string; valo
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        const d = soDigitos(valor);
-        if (!cnpjValido(d)) {
-          setErro("Esse CNPJ não existe. Confira os 14 números.");
+        const msg = erroCnpj(valor);
+        if (msg) {
+          setErro(msg);
+          document.getElementById(campoId)?.focus();
           return;
         }
         setErro("");
         setEnviando(true);
-        router.push(`/raio-x?cnpj=${d}`);
+        router.push(`/raio-x?cnpj=${soDigitos(valor)}`);
+        window.setTimeout(() => setEnviando(false), 1500);
       }}
     >
-      <label htmlFor={id} className="rotulo" style={{ display: "block", marginBottom: 6 }}>
+      <label htmlFor={campoId} className="rotulo" style={{ display: "block", marginBottom: 6, color: escuro ? "#fff" : undefined }}>
         CNPJ da empresa
       </label>
       <div className="form-cnpj">
-        <input
-          id={id}
-          name="cnpj"
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="00.000.000/0000-00"
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          aria-invalid={!!erro}
-          aria-describedby={erro ? `${id}-erro` : undefined}
-        />
-        <button className="btn btn-primario" type="submit" disabled={enviando}>
-          {enviando ? "Consultando…" : "Ver meus contratos"}
+        <div className="entrada" style={{ flex: "1 1 240px" }}>
+          <input
+            id={campoId}
+            name="cnpj"
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="00.000.000/0000-00"
+            value={valor}
+            className="tnum"
+            onChange={(e) => {
+              setValor(mascaraCnpj(e.target.value));
+              if (erro) setErro("");
+            }}
+            onBlur={() => {
+              if (soDigitos(valor).length) setErro(erroCnpj(valor) ?? "");
+            }}
+            aria-invalid={!!erro}
+            aria-describedby={erro ? `${campoId}-erro` : undefined}
+          />
+          {valido && <Check className="icone-ok" size={18} strokeWidth={2} aria-label="CNPJ válido" />}
+        </div>
+        <button className="btn btn-primario" type="submit" aria-busy={enviando}>
+          {enviando ? (
+            <>
+              <span className="spinner" aria-hidden /> Abrindo…
+            </>
+          ) : (
+            "Ver meus contratos"
+          )}
         </button>
       </div>
       {erro && (
-        <p id={`${id}-erro`} className="erro-texto mt-0" style={{ marginTop: 8 }} role="alert">
+        <p id={`${campoId}-erro`} className="erro-texto" style={{ marginTop: 8, color: escuro ? "#ffb4a0" : undefined }} role="alert">
+          <AlertCircle size={16} strokeWidth={1.5} aria-hidden style={{ marginTop: 1, flexShrink: 0 }} />
           {erro}
         </p>
       )}

@@ -342,3 +342,21 @@
 .guia li {
   margin-bottom: 8px;
 }
+.menu-site-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(22, 24, 29, 0.45);
+  animation: fundo-entra 200ms ease-out;
+}
+.menu-site-painel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(320px, 88vw);
+  height: 100%;
+  background: var(--papel);
+  padding: 16px;
+  box-shadow: var(--e3);
+  animation: painel-entra 250ms var(--entra);
+}
