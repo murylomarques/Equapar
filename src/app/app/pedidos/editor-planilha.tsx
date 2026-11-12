@@ -230,7 +230,7 @@ export function EditorPlanilha({
 
         {posto && (
           <div className="cartao" style={{ padding: 16 }}>
-            <div className="linha-form" style={{ gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) auto", alignItems: "end" }}>
+            <div className="linha-form posto-cab">
               <div className="campo mb-0">
                 <label htmlFor={`nome-${posto.id}`}>Tipo de posto</label>
                 <input id={`nome-${posto.id}`} value={posto.nome} disabled={somenteLeitura} onChange={(e) => mudarPosto(posto.id, (x) => ({ ...x, nome: e.target.value }))} />
@@ -302,8 +302,9 @@ export function EditorPlanilha({
                         }
                       >
                         <ChevronDown size={16} strokeWidth={1.5} aria-hidden style={{ transform: fechado ? "rotate(-90deg)" : undefined, transition: "transform 120ms" }} />
-                        {m.nome}
-                        <span className="legenda">({linhas.length})</span>
+                        <span>
+                          {m.nome} <span className="legenda">({linhas.length})</span>
+                        </span>
                       </button>
                       <span className="num" style={{ fontWeight: 600 }}>
                         {subtotal ? brl(subtotal) : "—"}

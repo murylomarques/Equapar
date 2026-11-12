@@ -49,10 +49,10 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
   const lote = selecionadas.length > 1 && convencoesSel.size === 1 && !convencoesSel.has(null) && selecionadas.every((l) => l.pedir);
   const todos = sel.size === linhas.length && linhas.length > 0;
 
-  const Cab = ({ col, children, num }: { col: Coluna; children: React.ReactNode; num?: boolean }) => {
+  const cab = (col: Coluna, children: React.ReactNode, num?: boolean) => {
     const ativa = ordem.col === col;
     return (
-      <th scope="col" className={num ? "num" : undefined} aria-sort={ativa ? (ordem.asc ? "ascending" : "descending") : "none"}>
+      <th key={col} scope="col" className={num ? "num" : undefined} aria-sort={ativa ? (ordem.asc ? "ascending" : "descending") : "none"}>
         <button type="button" className="ordenar" onClick={() => setOrdem({ col, asc: ativa ? !ordem.asc : true })}>
           {children}
           {ativa ? ordem.asc ? <ArrowUp size={14} strokeWidth={1.5} aria-hidden /> : <ArrowDown size={14} strokeWidth={1.5} aria-hidden /> : <ArrowUpDown size={14} strokeWidth={1.5} aria-hidden style={{ opacity: 0.4 }} />}
@@ -98,19 +98,13 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
                   />
                 </th>
               )}
-              <Cab col="numero">Contrato</Cab>
-              <Cab col="orgao">Órgão</Cab>
-              <Cab col="postos" num>
-                Postos
-              </Cab>
-              <Cab col="valorMensal" num>
-                Valor mensal
-              </Cab>
-              <Cab col="convencao">Convenção</Cab>
-              <Cab col="fim" num>
-                Fim da vigência
-              </Cab>
-              <Cab col="prazoData">Próximo prazo</Cab>
+              {cab("numero", "Contrato")}
+              {cab("orgao", "Órgão")}
+              {cab("postos", "Postos", true)}
+              {cab("valorMensal", "Valor mensal", true)}
+              {cab("convencao", "Convenção")}
+              {cab("fim", "Fim da vigência", true)}
+              {cab("prazoData", "Próximo prazo")}
               <th scope="col">Situação</th>
             </tr>
           </thead>

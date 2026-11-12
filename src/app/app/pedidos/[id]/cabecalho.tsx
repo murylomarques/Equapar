@@ -24,7 +24,7 @@ export function CabecalhoPedido({
         subtitulo={`Contrato ${pedido.contrato.numero} · ${pedido.contrato.orgao} · salvo às ${hora(pedido.atualizadoEm)}`}
         menu={podeEditar ? <ItemDescartar id={pedido.id} /> : undefined}
       />
-      <Passos passos={PASSOS} atual={passo} liberados={pedido.passoAtual} hrefPasso={(n) => `/app/pedidos/${pedido.id}/passo/${n}`} />
+      <Passos passos={PASSOS} atual={passo} liberados={pedido.passoAtual} hrefBase={`/app/pedidos/${pedido.id}/passo/`} />
     </div>
   );
 }

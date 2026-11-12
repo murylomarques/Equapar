@@ -151,8 +151,8 @@ try {
     await ass.waitForURL("**/app/clientes");
     await foto(ass, "49", "Assessoria clientes vazio", null, tam);
     for (const [c, nome] of [["11222333000181", "Cliente Exemplo Um (fictício)"], ["33444555000140", "Cliente Exemplo Dois (fictício)"]]) {
-      await ass.fill("#cnpj", c);
-      await ass.fill("#razaoSocial", nome);
+      await ass.getByLabel("CNPJ do cliente").fill(c);
+      await ass.getByLabel(/^Razão social/).fill(nome);
       const imp = ass.locator('input[name="importar"]');
       if (await imp.isChecked()) await imp.uncheck({ force: true });
       await ass.locator('button[type="submit"]', { hasText: /Adicionar cliente/ }).click();

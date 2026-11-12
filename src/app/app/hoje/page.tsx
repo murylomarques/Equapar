@@ -9,7 +9,7 @@ import { addDias, data, diasAte, emDias, hojeUTC, plural, reais, reaisResumo, sa
 import { SeloSimples } from "@/components/selo";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
-import { CartaoNumero, EstadoVazio } from "@/components/ui/estrutura";
+import { CartaoNumero, EstadoVazio } from "@/components/ui/apresentacao";
 import { concluirTarefa } from "../acoes";
 
 export const metadata: Metadata = { title: "Hoje | Equapar" };

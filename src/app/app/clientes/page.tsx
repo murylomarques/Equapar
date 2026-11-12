@@ -9,7 +9,8 @@ import { acoesDoContrato } from "@/lib/prazos";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { CampoCnpj, CampoTexto, Interruptor } from "@/components/ui/campos";
-import { CabecalhoPagina, EstadoVazio } from "@/components/ui/estrutura";
+import { CabecalhoPagina } from "@/components/ui/estrutura";
+import { EstadoVazio } from "@/components/ui/apresentacao";
 import { adicionarCliente } from "../acoes";
 import { BotaoCliente } from "./botao-cliente";
 

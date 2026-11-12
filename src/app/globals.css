@@ -1439,13 +1439,15 @@ dialog.painel-lateral::backdrop {
   }
 }
 
-/* Revelar ao rolar: visível por padrão; só esconde depois que o script confirma que pode animar */
-.revelar.pre-anima {
-  opacity: 0;
-  transform: translateY(8px);
+/* Revelar ao rolar: nunca esconde; só anima a entrada quando o bloco chega pela rolagem */
+.revelar.entrando {
+  animation: revelar-entra 200ms ease-out 1;
 }
-.revelar.anima {
-  transition: opacity 200ms ease-out, transform 200ms ease-out;
+@keyframes revelar-entra {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 /* =============================== Movimento reduzido =============================== */
@@ -1467,9 +1469,6 @@ dialog.painel-lateral::backdrop {
   }
   .carimbo {
     transform: rotate(-2deg);
-  }
-  .revelar.pre-anima {
-    transform: none;
   }
   .esqueleto,
   .esqueleto-bloco {

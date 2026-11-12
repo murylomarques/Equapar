@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 import { escopoPedidos } from "@/lib/consultas";
 import { ESTADOS, NOME_ESTADO } from "@/lib/pedido";
 import { dataLocal, reais } from "@/lib/format";
-import { CabecalhoPagina, EstadoVazio } from "@/components/ui/estrutura";
+import { CabecalhoPagina } from "@/components/ui/estrutura";
+import { EstadoVazio } from "@/components/ui/apresentacao";
 import { SeloSimples } from "@/components/selo";
 import type { Tom } from "@/lib/prazos";
 

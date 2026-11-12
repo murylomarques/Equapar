@@ -168,12 +168,15 @@ function BarraNavegacao() {
     timers.current.forEach((t) => window.clearTimeout(t));
     timers.current = [];
     if (!visivel) return;
-    setLargura(100);
+    const r = window.requestAnimationFrame(() => setLargura(100));
     const t = window.setTimeout(() => {
       setVisivel(false);
       setLargura(0);
     }, 250);
-    return () => window.clearTimeout(t);
+    return () => {
+      window.cancelAnimationFrame(r);
+      window.clearTimeout(t);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, params]);
 

@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 import { escopoPedidos } from "@/lib/consultas";
 import { data, diasAte, diasAtras, plural, reais, reaisResumo } from "@/lib/format";
 import { SeloSimples } from "@/components/selo";
-import { Alerta, CabecalhoPagina, EstadoVazio, Termo } from "@/components/ui/estrutura";
+import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
+import { EstadoVazio } from "@/components/ui/apresentacao";
 
 export const metadata: Metadata = { title: "A receber | Equapar" };
 

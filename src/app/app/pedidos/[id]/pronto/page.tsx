@@ -291,6 +291,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
 
       <section className="cartao mt-24" aria-labelledby="hist">
         <h2 id="hist">Histórico</h2>
+        {historico.length === 0 && <p className="secundario mb-0">Nada registrado neste pedido ainda.</p>}
         <ul className="lista-limpa pilha-8">
           {historico.map((h) => (
             <li key={h.id} style={{ fontSize: 14 }}>

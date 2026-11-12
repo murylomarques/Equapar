@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { SearchX, WifiOff } from "lucide-react";
 import { Selo } from "@/components/selo";
 import { EtapasProgresso } from "@/components/ui/espera";
-import { EstadoVazio } from "@/components/ui/estrutura";
+import { EstadoVazio } from "@/components/ui/apresentacao";
 import type { ResultadoRaioX } from "@/lib/pncp";
 import { seloVigencia } from "@/lib/prazos";
 import { diasAte, data, plural } from "@/lib/format";

@@ -102,6 +102,7 @@ export const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho"
 
 export function saudacao(agora = new Date()) {
   const h = Number(agora.toLocaleString("en-US", { timeZone: TZ, hour: "numeric", hour12: false }));
+  if (h < 5) return "Boa noite";
   if (h < 12) return "Bom dia";
   if (h < 18) return "Boa tarde";
   return "Boa noite";

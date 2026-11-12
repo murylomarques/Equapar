@@ -4,7 +4,8 @@ import { contexto, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { data, dataLocal, MESES, paraInputData, plural } from "@/lib/format";
 import { SeloSimples } from "@/components/selo";
-import { CabecalhoPagina, EstadoVazio } from "@/components/ui/estrutura";
+import { CabecalhoPagina } from "@/components/ui/estrutura";
+import { EstadoVazio } from "@/components/ui/apresentacao";
 import { EditarConvencao, NovaConvencao } from "./form-convencao";
 
 export const metadata: Metadata = { title: "Convenções | Equapar" };

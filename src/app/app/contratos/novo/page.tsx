@@ -5,7 +5,8 @@ import { contexto, pode } from "@/lib/auth";
 import { SemPermissao } from "@/components/sem-permissao";
 import { db } from "@/lib/db";
 import { convencoesParaForm } from "@/lib/dto";
-import { CabecalhoPagina, EstadoVazio } from "@/components/ui/estrutura";
+import { CabecalhoPagina } from "@/components/ui/estrutura";
+import { EstadoVazio } from "@/components/ui/apresentacao";
 import { FormContrato } from "../form-contrato";
 import { criarContrato } from "../../acoes";
 

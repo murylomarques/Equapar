@@ -8,7 +8,8 @@ import { data, MESES, plural } from "@/lib/format";
 import { NOME_ESTADO } from "@/lib/pedido";
 import { seloSituacao } from "@/lib/prazos";
 import { Selo, SeloSimples } from "@/components/selo";
-import { CabecalhoPagina, EstadoVazio } from "@/components/ui/estrutura";
+import { CabecalhoPagina } from "@/components/ui/estrutura";
+import { EstadoVazio } from "@/components/ui/apresentacao";
 
 export const metadata: Metadata = { title: "Busca | Equapar" };
 

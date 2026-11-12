@@ -622,3 +622,13 @@
   font: 600 30px/36px var(--fonte);
   font-variant-numeric: tabular-nums;
 }
+.posto-cab {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: end;
+}
+@media (max-width: 720px) {
+  .posto-cab {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+}

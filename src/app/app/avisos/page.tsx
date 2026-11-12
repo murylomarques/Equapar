@@ -8,7 +8,8 @@ import { emailAtivo, whatsappAtivo } from "@/lib/mensagens";
 import { SeloSimples } from "@/components/selo";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
-import { Alerta, CabecalhoPagina, EstadoVazio } from "@/components/ui/estrutura";
+import { Alerta, CabecalhoPagina } from "@/components/ui/estrutura";
+import { EstadoVazio } from "@/components/ui/apresentacao";
 import { rodarAvisosAgora } from "../configuracoes/acoes";
 
 export const metadata: Metadata = { title: "Avisos | Equapar" };
