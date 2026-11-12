@@ -143,7 +143,7 @@ export async function trocarSenha(_: Resultado, fd: FormData): Promise<Resultado
     const atual = String(fd.get("atual") ?? "");
     const nova = String(fd.get("nova") ?? "");
     if (ctx.usuario.senhaHash && !(await conferirSenha(atual, ctx.usuario.senhaHash))) return { erro: "A senha atual não confere." };
-    const fraca = senhaFraca(nova);
+    const fraca = senhaFraca(nova, { duasEtapas: ctx.usuario.totpAtivo, email: ctx.usuario.email });
     if (fraca) return { erro: fraca };
     await db.usuario.update({ where: { id: ctx.usuario.id }, data: { senhaHash: await hashSenha(nova) } });
     await db.sessao.deleteMany({ where: { usuarioId: ctx.usuario.id, id: { not: ctx.sessaoId } } });

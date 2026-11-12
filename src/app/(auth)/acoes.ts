@@ -77,7 +77,7 @@ export async function criarConta(_: Estado, fd: FormData): Promise<Estado> {
   const p = esquemaConta.safeParse(bruto);
   const erros: Record<string, string> = {};
   if (!p.success) for (const i of p.error.issues) erros[String(i.path[0])] ??= i.message;
-  const fraca = senhaFraca(bruto.senha);
+  const fraca = senhaFraca(bruto.senha, { email: bruto.email });
   if (fraca) erros.senha = fraca;
   const cnpj = soDigitos(bruto.cnpj);
   if (bruto.tipo !== "ASSESSORIA" || cnpj) {

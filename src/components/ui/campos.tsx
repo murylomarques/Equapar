@@ -157,10 +157,10 @@ export function CampoTexto({
 
 // ============================================================ Senha
 
+// S10 (NIST SP 800-63B): só tamanho; sem regra de "letras e números". Senhas comuns são recusadas no servidor.
 const REGRAS_SENHA = [
-  { texto: "Pelo menos 10 caracteres", ok: (s: string) => s.length >= 10 },
-  { texto: "Letras", ok: (s: string) => /[A-Za-zÀ-ÿ]/.test(s) },
-  { texto: "Números", ok: (s: string) => /\d/.test(s) },
+  { texto: "Pelo menos 15 caracteres (uma frase serve)", ok: (s: string) => s.length >= 15 },
+  { texto: "Até 64 caracteres", ok: (s: string) => s.length > 0 && s.length <= 64 },
 ];
 
 export function CampoSenha({

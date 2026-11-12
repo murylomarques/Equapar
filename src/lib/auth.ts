@@ -34,11 +34,7 @@ export async function conferirSenha(senha: string, hash: string | null | undefin
   return bcrypt.compare(senha, hash);
 }
 
-export function senhaFraca(senha: string): string | null {
-  if (senha.length < 10) return "A senha precisa ter pelo menos 10 caracteres.";
-  if (!/[A-Za-z]/.test(senha) || !/\d/.test(senha)) return "Use letras e números na senha.";
-  return null;
-}
+export { senhaFraca } from "./senha"; // S10: regras do NIST SP 800-63B
 
 
 // ---------------------------------------------------------------------------
