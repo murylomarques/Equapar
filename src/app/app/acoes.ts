@@ -326,8 +326,8 @@ export async function adicionarCliente(_: Resultado, fd: FormData): Promise<Resu
     const ctx = await exigir("editar_contratos");
     if (ctx.conta.tipo !== "ASSESSORIA") return { erro: "Só contas de assessoria têm vários clientes." };
     const cnpj = soDigitos(texto(fd, "cnpj"));
-    if (!cnpjValido(cnpj)) return { erro: "Esse CNPJ não existe. Confira os 14 números." };
-    if (ctx.empresas.some((e) => e.cnpj === cnpj)) return { erro: "Este cliente já está na conta." };
+    if (!cnpjValido(cnpj)) return { campos: { cnpj: "Esse CNPJ não existe. Confira os 14 números." } };
+    if (ctx.empresas.some((e) => e.cnpj === cnpj)) return { campos: { cnpj: "Este cliente já está na conta." } };
     let razao = texto(fd, "razaoSocial");
     if (!razao) {
       try {
