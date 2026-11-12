@@ -77,6 +77,9 @@ model Usuario {
   whatsappConsentEm  DateTime?
   totpSegredoCifrado String?
   totpAtivo          Boolean   @default(false)
+  emailVerificadoEm   DateTime? // C7: confirmação do e-mail
+  totpSegredoPendente String? // C8: segredo novo até confirmar (cifrado)
+  codigosRecuperacao  String[]  @default([]) // C8: hashes dos códigos de recuperação
   // preferências de aviso: { prazo: "EMAIL"|"WHATSAPP"|"AMBOS", resposta: ..., deferido: ..., semanal: bool, hora: 7 }
   prefsAvisos        Json?
   criadoEm           DateTime  @default(now())
@@ -113,6 +116,8 @@ model Conta {
   mostrarValoresWhatsapp  Boolean   @default(false)
   pilotoInicio            DateTime?
   criadoEm                DateTime  @default(now())
+  demo                    Boolean   @default(false) // C6: conta de demonstração de um visitante
+  demoExpiraEm            DateTime? // C6: quando a conta de demonstração vence
 
   membros     Membro[]
   empresas    Empresa[]
@@ -184,6 +189,7 @@ model Contrato {
   objeto              String
   vigenciaInicio      DateTime
   vigenciaFim         DateTime
+  vigenciaFimPncp     DateTime? // L4: último fim de vigência lido do PNCP
   valorMensal         Decimal?     @db.Decimal(14, 2)
   valorGlobal         Decimal?     @db.Decimal(16, 2)
   postos              Int?
@@ -226,6 +232,7 @@ model Pedido {
   linhasNaoLidas      Json? // linhas que a leitura não entendeu
   checklist           Json? // { [id]: "ANEXADO" | "FALTA" | "OPCIONAL" }
   dataReferencia      DateTime? // até quando contar a diferença retroativa
+  hashCalculo         String? // C2: SHA-256 da base do cálculo no momento da aprovação
   diferencaMensal     Decimal?     @db.Decimal(14, 2)
   diferencaRetroativa Decimal?     @db.Decimal(14, 2)
   memoriaAprovadaPor  String?
@@ -382,4 +389,12 @@ model TrabalhoFundo {
   vistoEm     DateTime?
 
   @@index([usuarioId, criadoEm])
+}
+
+/// S1: tentativas de acesso (por e-mail e por IP), no banco em vez da memória do processo.
+model TentativaAcesso {
+  chave        String    @id // "email:<e-mail>" ou "ip:<ip>"
+  falhas       Int       @default(0)
+  janelaAte    DateTime
+  bloqueadoAte DateTime?
 }
