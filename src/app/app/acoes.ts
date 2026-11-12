@@ -33,6 +33,20 @@ export async function reenviarConfirmacao(): Promise<Resultado> {
   });
 }
 
+/** L14: troca a conta da sessão (só para contas de que a pessoa participa). */
+export async function trocarConta(_: Resultado, fd: FormData): Promise<Resultado> {
+  const r = await tentar(async (): Promise<Resultado | void> => {
+    const ctx = await contexto();
+    const contaId = texto(fd, "contaId");
+    const m = await db.membro.findUnique({ where: { usuarioId_contaId: { usuarioId: ctx.usuario.id, contaId } } });
+    if (!m) return { erro: "Você não participa desta conta." };
+    await db.sessao.update({ where: { id: ctx.sessaoId }, data: { contaId, empresaId: null } });
+  });
+  if (r.erro) return r;
+  revalidatePath("/app", "layout");
+  redirect("/app/hoje");
+}
+
 // ---------------------------------------------------------------------------
 // Importação do PNCP
 // ---------------------------------------------------------------------------

@@ -29,6 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
   const sino = avisosRecentes + trabalhosProntos;
   const demo = ehDemo(ctx);
+  const totalContas = demo ? 1 : await db.membro.count({ where: { usuarioId: ctx.usuario.id } }); // L14
   return (
     <div className="app">
       <aside className="app-lateral" aria-label="Navegação do produto">
@@ -119,6 +120,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <Link href="/app/avisos" role="menuitem">
                 <Bell size={16} strokeWidth={1.5} aria-hidden /> Avisos
               </Link>
+              {!demo && (
+                <Link href="/app/trocar-conta" role="menuitem">
+                  <Users size={16} strokeWidth={1.5} aria-hidden /> {totalContas > 1 ? "Trocar de conta" : "Contas"}
+                </Link>
+              )}
               <hr />
               <form action={sair}>
                 <button type="submit" role="menuitem">
