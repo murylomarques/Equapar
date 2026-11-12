@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { contexto } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { lerArquivo } from "@/lib/storage";
+import { cabecalhoAnexo } from "@/lib/arquivo-tipo";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,7 +21,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   try {
     const buf = await lerArquivo(d.caminho);
     return new NextResponse(new Uint8Array(buf), {
-      headers: { "content-type": d.mime, "content-disposition": `attachment; filename="${encodeURIComponent(d.nome)}"`, "cache-control": "no-store" },
+      headers: { "content-type": d.mime, "content-disposition": cabecalhoAnexo(d.nome), "cache-control": "no-store" },
     });
   } catch {
     return new NextResponse("O arquivo não está mais no armazenamento.", { status: 410 });

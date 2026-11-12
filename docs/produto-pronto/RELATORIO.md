@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento.
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; próximo: S5. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -36,3 +36,4 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | S1 Limite de tentativas no banco | feito | `src/lib/limite.test.ts`: antes, o teste com as funções antigas mostrou que trocar o X-Forwarded-For zerava o limite do e-mail; depois, tabela `TentativaAcesso` com chaves por e-mail (5 falhas/15 min) e por IP (30), IP só do `TRUSTED_PROXY_HEADER`; conta inexistente compara com hash falso (tempo igual); código das duas etapas também limitado no banco (C8.4). `e2e/bloqueadoras/s1-limite.mjs`. Commit "S1" | Configurar `TRUSTED_PROXY_HEADER` na hospedagem (decisão do dono, item 6 da seção 8) |
 | S2 Formulários e rotas públicas | feito | `e2e/bloqueadoras/s2-cotas.mjs`: antes, 4 relatórios (CNPJs diferentes) chegavam ao mesmo e-mail no dia; depois, no máximo 3. Cotas diárias no banco (`cota.ts`, testes de unidade): 3 mensagens por e-mail destino e 10 por IP (relatório e "avisar depois"); 60 consultas por IP na rota do Raio-X (tela própria de limite). Captcha Turnstile em simulação sem chave. Commit "S2" | Chave real do Turnstile (trava 5). Decisão sem certeza: "confirmação simples" = captcha + limite por destino (sem dupla confirmação por e-mail, para não travar o funil) |
 | S3 Cabeçalhos de segurança | feito | `e2e/bloqueadoras/s3-cabecalhos.mjs` (equivale a `curl -I`): antes, nenhum cabeçalho; depois, CSP, X-Frame-Options DENY, Referrer-Policy, nosniff, Permissions-Policy, sem X-Powered-By; HSTS só em produção; nenhuma violação de CSP no navegador nas telas principais. Commit "S3" | Decisão sem certeza: páginas estáticas (landing, preços, guias, termos) usam CSP sem nonce (`'unsafe-inline'` nos scripts), porque nonce exige renderização dinâmica e derrubaria o LCP; as dinâmicas usam nonce + `'strict-dynamic'`. Alternativa: `experimental.sri` |
+| S4 Conteúdo real dos arquivos e nome no download | parcial | `src/lib/arquivo-tipo.test.ts`: HTML disfarçado de PDF, PDF como .xlsx, Word como .xlsx, JPG como .png e binário como CSV são recusados; o tipo gravado é o detectado. Downloads com `filename*=UTF-8''…` (antes: "Conven%C3%A7%C3%A3o.pdf"). Commit "S4" | Rodar `e2e/bloqueadoras/s4-arquivos.mjs` no navegador: o servidor de teste foi parado pelo Claude Code por falta de memória antes da execução |

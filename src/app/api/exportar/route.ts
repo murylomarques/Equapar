@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { contexto, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { lerArquivo } from "@/lib/storage";
+import { cabecalhoAnexo } from "@/lib/arquivo-tipo";
 
 /** "Exportar tudo" (LGPD): JSON com todos os dados da conta + arquivos enviados. */
 export async function GET() {
@@ -34,6 +35,6 @@ export async function GET() {
   }
   const buf = await zip.generateAsync({ type: "nodebuffer" });
   return new NextResponse(new Uint8Array(buf), {
-    headers: { "content-type": "application/zip", "content-disposition": `attachment; filename="equapar-exportacao-${new Date().toISOString().slice(0, 10)}.zip"` },
+    headers: { "content-type": "application/zip", "content-disposition": cabecalhoAnexo(`equapar-exportacao-${new Date().toISOString().slice(0, 10)}.zip`) },
   });
 }

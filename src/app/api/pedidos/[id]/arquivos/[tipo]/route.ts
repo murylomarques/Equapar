@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { contexto, pedidoDaConta } from "@/lib/auth";
 import { memoriaPdf, oficioDocx, oficioPdf, pacoteZip, planilhaXlsx } from "@/lib/documentos";
+import { cabecalhoAnexo } from "@/lib/arquivo-tipo";
 
 const TIPOS = {
   "oficio.docx": { fn: oficioDocx, mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", nome: "oficio" },
@@ -22,7 +23,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     const ext = tipo.split(".").pop();
     const n = p.contrato.numero.replace(/[^\w.-]+/g, "-");
     return new NextResponse(new Uint8Array(buf), {
-      headers: { "content-type": t.mime, "content-disposition": `attachment; filename="${t.nome}-contrato-${n}.${ext}"`, "cache-control": "no-store" },
+      headers: { "content-type": t.mime, "content-disposition": cabecalhoAnexo(`${t.nome}-contrato-${n}.${ext}`), "cache-control": "no-store" },
     });
   } catch (e) {
     return new NextResponse((e as Error).message, { status: 409 });
