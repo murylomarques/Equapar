@@ -204,6 +204,7 @@ model Contrato {
   linkPncp            String?
   arquivado           Boolean      @default(false)
   criadoEm            DateTime     @default(now())
+  prorrogacoes        Prorrogacao[]
 
   pedidos    Pedido[]
   documentos Documento[]
@@ -232,6 +233,8 @@ model Pedido {
   linhasNaoLidas      Json? // linhas que a leitura não entendeu
   checklist           Json? // { [id]: "ANEXADO" | "FALTA" | "OPCIONAL" }
   dataReferencia      DateTime? // até quando contar a diferença retroativa
+  retroContarAte      RetroContarAte  @default(DATA_INFORMADA) // L11: até quando conta a diferença
+  retroMesIncompleto  RetroMesIncompleto @default(DIAS_CORRIDOS) // L11: mês incompleto
   hashCalculo         String? // C2: SHA-256 da base do cálculo no momento da aprovação
   diferencaMensal     Decimal?     @db.Decimal(14, 2)
   diferencaRetroativa Decimal?     @db.Decimal(14, 2)
@@ -397,4 +400,32 @@ model TentativaAcesso {
   falhas       Int       @default(0)
   janelaAte    DateTime
   bloqueadoAte DateTime?
+}
+
+/// L11: até quando a diferença retroativa é contada (padrão = comportamento atual)
+enum RetroContarAte {
+  DATA_INFORMADA
+  DATA_PROTOCOLO
+  DATA_APOSTILAMENTO
+}
+
+/// L11: como conta o mês incompleto (padrão = comportamento atual)
+enum RetroMesIncompleto {
+  DIAS_CORRIDOS
+  MES_30_DIAS
+}
+
+/// L17: prorrogações do contrato (termo aditivo), com ou sem ressalva do direito à repactuação
+model Prorrogacao {
+  id            String   @id @default(cuid())
+  contratoId    String
+  contrato      Contrato @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  dataTermo     DateTime
+  novoFim       DateTime
+  comRessalva   Boolean  @default(false)
+  textoRessalva String?
+  registradoPor String?
+  criadoEm      DateTime @default(now())
+
+  @@index([contratoId])
 }
