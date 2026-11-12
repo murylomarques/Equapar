@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L10 e L12 feitos (L7 sem o teste de navegador); L11 bloqueado (decisão do dono); L13 parcial; L14 feito; L15 parcial; L16 feito; L17 bloqueado (migração). Fase 0 sem as decisões do dono: concluída nesta sessão, falta a verificação no navegador. Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L10 e L12 feitos (L7 sem o teste de navegador); L11 bloqueado (decisão do dono); L13 parcial; L14 feito; **Fase 0: código concluído, parada para o "ok" do dono.** Faltam: (1) rodar os testes de navegador (o servidor de teste foi parado por falta de memória e só volta com autorização); (2) decisões L11 e L17 (migração e regra de cálculo); (3) ligar as limpezas em modo aplicar (hoje todas contam 0). Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -67,3 +67,31 @@ Seguindo a versão com L16 (valores no WhatsApp), L17 (registrar prorrogação, 
 | L15 Exportação | parcial | O download já recusa exportações com mais de 7 dias (410). `scripts/limpar-exportacoes.ts` apaga os arquivos vencidos em simulação (hoje: 0). Commit "L15" | Mover para a fila e gravar por partes no armazenamento depende da fila e da interface `Armazenamento` da fase 1. `--aplicar` depende do "ok" do dono (trava 2) |
 | L16 "Mostrar valores em dinheiro no WhatsApp" | feito | `src/lib/avisos-valores.test.ts` (os dois casos): antes, ligada, o WhatsApp de deferido seguia sem valor; depois, ligada usa o modelo `equapar_deferido_valor` com o valor; desligada, nunca leva valor; o e-mail continua com o valor. Commit "L16" | O modelo `equapar_deferido_valor` precisa ser aprovado na Meta (item 7 da seção 8). O resumo semanal hoje só sai por e-mail |
 | L17 Registrar prorrogação | bloqueado | — | Migração (trava 1): proposta no fim da fase 0 |
+
+## Fase 0: o que falta e depende do dono
+
+1. **Rodar a verificação no navegador**: `e2e/bloqueadoras/*.mjs` (C1–C7, S1–S4, S11, S12, L7), `e2e/fluxo.mjs` (computador e celular), `e2e/assessoria-2fa.mjs`, acessibilidade e teclado. Precisa reabrir o servidor de teste (parado pelo Claude Code por falta de memória).
+2. **L11, regra do retroativo** (trava 3 + migração): colunas `retroContarAte` (data informada | protocolo | apostilamento) e `retroMesIncompleto` (dias corridos | mês de 30 dias), com o padrão igual ao comportamento atual. O motor só muda depois da decisão.
+3. **L17, registrar prorrogação** (migração): tabela `Prorrogacao` (data do termo, novo fim, com ressalva e texto).
+4. **L12 ligado**: fluxo de revisão precisa de migração e de especialistas parceiros.
+5. **Limpezas em modo aplicar** (trava 2): `scripts/limpar-demos.ts`, `limpar-orfaos.ts`, `limpar-exportacoes.ts`, `normalizar-whatsapp.ts`. Hoje todas contam 0 neste banco.
+6. **Chaves** (trava 5): Turnstile (`TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`) e o modelo `equapar_deferido_valor` na Meta.
+7. **Hospedagem**: `TRUSTED_PROXY_HEADER` e `APP_URL` em HTTPS (ativa o cookie `__Host-` e o HSTS).
+
+## Variáveis novas da fase 0
+
+`TRUSTED_PROXY_HEADER`, `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `REVISAO_ESPECIALISTA_ATIVA`.
+
+## Dependências novas
+
+Nenhuma de produção. (Desenvolvimento, do redesenho: `axe-core`, `lighthouse`.)
+
+## Decisões tomadas sem certeza (fase 0)
+
+- C6.2: a demonstração isolada vence em 4 horas e copia a conta modelo inteira (empresa, convenções, contratos, pedidos e tarefas).
+- S2: "confirmação simples" = captcha + limite por destino; cotas: 3 mensagens por e-mail, 10 por IP e 60 consultas por IP por dia.
+- S3: páginas estáticas com CSP sem nonce (`'unsafe-inline'` nos scripts).
+- S8: o prefixo `__Host-` depende de `APP_URL` em HTTPS (não só de `NODE_ENV`).
+- S10: lista local de senhas comuns (curta), sem consulta a base de vazamentos.
+- L1: o cartão de Hoje passa a contar contratos com prazo (não ações); o resumo semanal usa a mesma regra com 7 dias.
+- L13: até a fila existir, "avisar depois" faz uma nova tentativa com mais tempo, e o texto diz isso.
