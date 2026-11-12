@@ -98,6 +98,15 @@ async function invalidarAprovacao(ctx: Ctx, p: PedidoAprov, motivo: string): Pro
   return data;
 }
 
+/** C4: quando a montagem dos arquivos falha por um motivo conhecido, diz qual é (sem detalhe técnico). */
+function motivoFalhaDocumento(e: unknown): string {
+  const m = (e as Error)?.message ?? "";
+  const car = m.match(/WinAnsi cannot encode "(.+?)"/);
+  if (car) return `Um texto do pedido tem um caractere que o PDF não aceita ("${car[1]}"). Troque esse caractere (nas descrições ou fontes do passo 3) e tente de novo.`;
+  if (/Worksheet name/i.test(m)) return "Dois tipos de posto ficaram com o mesmo nome na planilha do Excel. Renomeie um deles no passo 3 e tente de novo.";
+  return "Não foi possível montar os arquivos do pedido. Tente de novo; se continuar, fale com o suporte.";
+}
+
 /** Resposta padrão quando há pendências: mensagem + link para o passo de cada uma. */
 function recusarPorPendencias(pedidoId: string, pend: Pendencia[], titulo: string): Resultado {
   return {
@@ -322,7 +331,7 @@ export async function gerarPedido(_: Resultado, fd: FormData): Promise<Resultado
       await Promise.all([oficioPdf(p.id, ctx.conta.id), planilhaXlsx(p.id, ctx.conta.id), memoriaPdf(p.id, ctx.conta.id)]);
     } catch (e) {
       console.error(e);
-      return { erro: "Não foi possível montar os arquivos do pedido. Confira a planilha no passo 3 e tente de novo." };
+      return { erro: motivoFalhaDocumento(e) };
     }
     await db.pedido.update({
       where: { id: p.id },

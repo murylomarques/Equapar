@@ -1,5 +1,6 @@
 import "server-only";
 import ExcelJS from "exceljs";
+import { nomeAbaUnico } from "./excel-nomes";
 import JSZip from "jszip";
 import { AlignmentType, Document, Packer, Paragraph, TextRun } from "docx";
 import fs from "node:fs/promises";
@@ -234,6 +235,8 @@ export async function planilhaXlsx(pedidoId: string, contaId: string) {
   const wb = new ExcelJS.Workbook();
   wb.creator = marca(d).nome;
   const moeda = '"R$" #,##0.00;[Red]-"R$" #,##0.00';
+  // C4: nomes de aba únicos (postos com nomes parecidos não colidem mais)
+  const usados = new Set(["comparativo", "retroativo"]);
 
   for (const [rotulo, planilha] of [
     ["Planilha nova", p.planilhaAgora],
@@ -241,7 +244,7 @@ export async function planilhaXlsx(pedidoId: string, contaId: string) {
   ] as const) {
     const r = calcularPlanilha(planilha as unknown as PlanilhaCustos);
     for (const posto of r.postos) {
-      const ws = wb.addWorksheet(`${rotulo} - ${posto.nome}`.slice(0, 31).replace(/[\\/*?:[\]]/g, " "));
+      const ws = wb.addWorksheet(nomeAbaUnico(`${rotulo} - ${posto.nome}`, usados));
       ws.columns = [{ width: 52 }, { width: 18 }, { width: 70 }, { width: 40 }];
       ws.addRow([`${rotulo} · ${posto.nome} · ${posto.quantidade} posto(s)`]).font = { bold: true, size: 13 };
       ws.addRow([`Contrato ${p.contrato.numero} · ${p.contrato.orgao}`]);
