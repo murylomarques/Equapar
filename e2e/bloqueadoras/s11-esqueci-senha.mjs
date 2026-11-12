@@ -16,7 +16,8 @@ async function entrar(senha) {
   await p.fill("input[type=email]", email);
   await p.fill("input[type=password]", senha);
   await p.getByRole("button", { name: "Entrar", exact: true }).click();
-  await p.waitForTimeout(2500);
+  // espera o resultado de verdade: entrou (saiu de /entrar) ou apareceu a mensagem de erro
+  await Promise.race([p.waitForURL((u) => !u.pathname.startsWith("/entrar"), { timeout: 60000 }), p.getByText(/não conferem|Muitas tentativas/).first().waitFor({ timeout: 60000 })]).catch(() => {});
   return p;
 }
 try {
@@ -46,10 +47,12 @@ try {
   conferir((await p.getByText("Este link não vale mais").count()) > 0, "o mesmo link não serve de novo");
 
   // e-mail inexistente recebe a mesma resposta (não revela quem tem conta)
-  await p.goto(`${BASE}/esqueci-senha`);
+  await p.goto(`${BASE}/esqueci-senha`, { waitUntil: "networkidle" });
   await p.getByLabel("E-mail da conta").fill(`ninguem-${Date.now()}@exemplo.local`);
   await p.getByRole("button", { name: "Enviar o link" }).click();
-  conferir((await p.getByText(/Se houver uma conta com esse e-mail/).first().count()) > 0, "e-mail sem conta recebe a mesma resposta");
+  const mesma = await p.getByText(/Se houver uma conta com esse e-mail/).first().waitFor({ timeout: 30000 }).then(() => true, () => false);
+  if (!mesma) console.log("      tela:", (await p.locator("main").innerText()).slice(0, 300).split(String.fromCharCode(10)).join(" | "));
+  conferir(mesma, "e-mail sem conta recebe a mesma resposta");
 } finally {
   await db.aviso.deleteMany({ where: { destino: email } });
   await db.usuario.delete({ where: { id: u.id } });

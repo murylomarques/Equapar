@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { montarCsp, ROTAS_ESTATICAS } from "@/lib/csp";
+import { montarCsp, rotaEstatica } from "@/lib/csp";
 
 /** S3: CSP por requisição. Páginas dinâmicas ganham nonce; as estáticas, a política sem nonce. */
 export function proxy(req: NextRequest) {
-  const estatica = ROTAS_ESTATICAS.has(req.nextUrl.pathname);
+  const estatica = rotaEstatica(req.nextUrl.pathname);
   const nonce = estatica ? null : Buffer.from(crypto.randomUUID()).toString("base64");
   const csp = montarCsp(nonce);
   const cab = new Headers(req.headers);

@@ -50,7 +50,9 @@ export async function confirmarSeAbrir(p, timeout = 2500) {
 }
 
 const falhas = [];
+let conferidos = 0;
 export function conferir(cond, msg) {
+  conferidos++;
   console.log(`${cond ? "OK   " : "FALHA"} ${msg}`);
   if (!cond) falhas.push(msg);
 }
@@ -60,5 +62,13 @@ export async function fim(browser) {
   if (falhas.length) {
     console.log(`\n${falhas.length} verificação(ões) falharam.`);
     process.exitCode = 1;
-  } else console.log("\nTudo certo.");
+  }
 }
+
+// O resultado final só sai no fim do processo: um erro (ex.: tempo esgotado) depois de algumas
+// verificações também derruba o teste, e nunca aparece "Tudo certo" sem verificar nada.
+process.on("exit", (codigo) => {
+  if (codigo === 0 && conferidos && !falhas.length) console.log("\nTudo certo.");
+  else if (!conferidos) console.log("\nNenhuma verificação chegou a rodar (o teste parou antes).");
+  else if (codigo !== 0 && !falhas.length) console.log("\nO teste parou com erro antes de terminar.");
+});

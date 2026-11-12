@@ -2,8 +2,8 @@
 import ExcelJS from "exceljs";
 import { BASE, db, navegador, entrarComoDono, conferir, fim } from "./util.mjs";
 
-const modelo = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresa: { exemplo: true } } } });
-const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true } } });
+const modelo = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresa: { exemplo: true, conta: { demo: false } } } } });
+const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false } } } });
 await db.pedido.deleteMany({ where: { contratoId: c45.id, estado: { in: ["EM_ANALISE", "CALCULO_VALIDADO"] } } }); // só dado fictício
 const renomear = (pl) => {
   const t = pl.tipos[0];

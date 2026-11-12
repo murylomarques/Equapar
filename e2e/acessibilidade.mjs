@@ -15,9 +15,9 @@ const SENHA_DONO = process.env.SENHA_DONO; // senha impressa pelo seed (npm run 
 if (!SENHA_DONO) throw new Error("Defina SENHA_DONO com a senha do dono@exemplo.local impressa pelo seed.");
 const SAIDA = path.resolve(process.argv[2] ?? "docs/redesenho/acessibilidade.json");
 
-const ex = { contrato: { empresa: { exemplo: true } } };
-const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true } } });
-const c19 = await db.contrato.findFirst({ where: { numero: "19/2025", empresa: { exemplo: true } } });
+const ex = { contrato: { empresa: { exemplo: true, conta: { demo: false } } } };
+const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false } } } });
+const c19 = await db.contrato.findFirst({ where: { numero: "19/2025", empresa: { exemplo: true, conta: { demo: false } } } });
 const prot = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", ...ex } });
 const def = await db.pedido.findFirst({ where: { estado: "DEFERIDO", ...ex } });
 await db.$disconnect();

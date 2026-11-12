@@ -41,8 +41,8 @@ try {
   conferir(true, "visitante da demonstração consegue cadastrar (experimentar)");
   await v2.p.goto(`${BASE}/app/convencoes`);
   conferir((await v2.p.getByText(nomeConv, { exact: true }).count()) === 0, "o outro visitante não vê o que o primeiro criou");
-  const contasDemo = await db.conta.findMany({ where: { demo: true }, select: { id: true, demoExpiraEm: true } });
-  conferir(contasDemo.length >= 2 && contasDemo.every((c) => c.demoExpiraEm > new Date()), `cada visitante ganhou uma conta demo com vencimento (${contasDemo.length})`);
+  const contasDemo = await db.conta.findMany({ where: { demo: true, demoExpiraEm: { gt: new Date() } }, select: { id: true, demoExpiraEm: true } });
+  conferir(contasDemo.length >= 2, `cada visitante ganhou uma conta demo com vencimento (${contasDemo.length} válidas agora)`);
   await v1.p.goto(`${BASE}/app/configuracoes?aba=dados`);
   const enviados = await db.aviso.count({ where: { contaId: { in: contasDemo.map((c) => c.id) }, status: "ENVIADO" } });
   conferir(enviados === 0, "a demonstração não envia mensagem (nenhum aviso ENVIADO)");

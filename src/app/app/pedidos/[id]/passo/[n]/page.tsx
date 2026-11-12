@@ -244,7 +244,7 @@ function Passo3({ p, leitura }: { p: P; leitura: boolean }) {
           <div className="linha-form">
             <CampoSelect
               nome="retroContarAte"
-              rotulo="Contar a diferença até"
+              rotulo="Data final da contagem"
               valorInicial={p.retroContarAte}
               opcoes={[
                 { valor: "DATA_INFORMADA", rotulo: "A data informada acima (padrão)" },
