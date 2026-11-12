@@ -12,7 +12,8 @@ const db = new PrismaClient();
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const SAIDA = path.resolve(process.argv[2] ?? "docs/redesenho/capturas");
-const SENHA_DONO = process.env.SENHA_DONO ?? "aW6JLCMF7x";
+const SENHA_DONO = process.env.SENHA_DONO; // senha impressa pelo seed (npm run db:seed)
+if (!SENHA_DONO) throw new Error("Defina SENHA_DONO com a senha do dono@exemplo.local impressa pelo seed.");
 const CNPJ_FICT = "12345678000195";
 fs.mkdirSync(SAIDA, { recursive: true });
 
