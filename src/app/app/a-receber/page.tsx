@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DollarSign } from "lucide-react";
 import { contexto } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { escopoPedidos } from "@/lib/consultas";
-import { data, diasAte, diasAtras, reais, reaisResumo } from "@/lib/format";
+import { data, diasAte, diasAtras, plural, reais, reaisResumo } from "@/lib/format";
 import { SeloSimples } from "@/components/selo";
+import { Alerta, CabecalhoPagina, EstadoVazio, Termo } from "@/components/ui/estrutura";
 
 export const metadata: Metadata = { title: "A receber | Equapar" };
 
@@ -22,21 +24,28 @@ export default async function AReceber() {
   });
   const total = pedidos.reduce((s, p) => s + Number(p.valorDeferido ?? 0), 0);
   const recebido12 = recebidos.reduce((s, p) => s + Number(p.valorRecebido ?? 0), 0);
+  const atrasados = pedidos.filter((p) => !p.apostiladoEm && p.deferidoEm && diasAte(p.deferidoEm) <= -30);
+  const acao = (p: (typeof pedidos)[number]) => (p.estado === "FATURADO" ? "Marcar como recebido" : p.apostiladoEm ? "Gerar cobrança da diferença" : "Registrar apostilamento");
 
   return (
     <>
-      <div className="app-cab">
-        <div>
-          <h1>A receber</h1>
-          <p className="mt-16 mb-0" style={{ fontSize: 20, fontWeight: 600 }} title={reais(total)}>
-            {reaisResumo(total)} deferidos e ainda não recebidos
-          </p>
-        </div>
-      </div>
+      <CabecalhoPagina titulo="A receber" subtitulo={pedidos.length ? `${reaisResumo(total)} deferidos e ainda não recebidos` : undefined} />
+      {atrasados.length > 0 && (
+        <Alerta tipo="atencao" className="mb-16" titulo={`${plural(atrasados.length, "pedido deferido", "pedidos deferidos")} há mais de 30 dias sem apostilamento`}>
+          Sem <Termo>apostilamento</Termo>, o órgão não paga a diferença. Vale cobrar o fiscal do contrato: {atrasados.map((p) => `contrato ${p.contrato.numero}`).join(", ")}.
+        </Alerta>
+      )}
       {pedidos.length === 0 ? (
-        <div className="cartao vazio">
-          <p>Nada a receber agora. Pedidos deferidos aparecem aqui até o dinheiro entrar.</p>
-        </div>
+        <EstadoVazio
+          icone={DollarSign}
+          titulo="Nada a receber agora"
+          porque="Quando um pedido é deferido, ele aparece aqui e só sai quando o dinheiro entra no caixa."
+          acao={
+            <Link href="/app/pedidos" className="btn">
+              Ver pedidos
+            </Link>
+          }
+        />
       ) : (
         <>
           <div className="tabela-rolagem so-desktop">
@@ -45,7 +54,7 @@ export default async function AReceber() {
                 <tr>
                   <th scope="col">Contrato</th>
                   <th scope="col">Órgão</th>
-                  <th scope="col">Deferido em</th>
+                  <th scope="col">Deferido</th>
                   <th scope="col">Apostilado</th>
                   <th scope="col">Faturado</th>
                   <th scope="col">Recebido</th>
@@ -53,7 +62,7 @@ export default async function AReceber() {
                     Valor
                   </th>
                   <th scope="col">
-                    <span className="sr-only">Ação</span>
+                    <span className="sr-only">Próximo passo</span>
                   </th>
                 </tr>
               </thead>
@@ -61,35 +70,42 @@ export default async function AReceber() {
                 {pedidos.map((p) => {
                   const semApost = !p.apostiladoEm && p.deferidoEm && diasAte(p.deferidoEm) <= -30;
                   return (
-                    <tr key={p.id}>
+                    <tr key={p.id} className="linha-clicavel">
                       <td>
-                        <Link className="linha-link" href={`/app/contratos/${p.contrato.id}`}>
+                        <Link className="linha-link" href={`/app/pedidos/${p.id}/pronto`}>
                           {p.contrato.numero}
                         </Link>
                         {ctx.conta.tipo === "ASSESSORIA" && <div className="legenda">{p.contrato.empresa.razaoSocial}</div>}
                       </td>
                       <td>{p.contrato.orgao}</td>
-                      <td>{data(p.deferidoEm)}</td>
+                      <td>
+                        <SeloSimples texto={data(p.deferidoEm)} tom="verde" icone="carimbo" />
+                      </td>
                       <td>
                         {p.apostiladoEm ? (
-                          <SeloSimples texto={data(p.apostiladoEm)} tom="verde" />
+                          <SeloSimples texto={data(p.apostiladoEm)} tom="verde" icone="check" />
                         ) : (
-                          <SeloSimples texto={semApost ? "Falta há +30 dias" : "Falta"} tom={semApost ? "carimbo" : "ambar"} icone="alerta" />
+                          <SeloSimples texto={semApost ? "Falta há mais de 30 dias" : "Falta"} tom={semApost ? "carimbo" : "ambar"} icone="alerta" />
                         )}
                       </td>
-                      <td>{p.faturadoEm ? <SeloSimples texto={`NF ${p.notaFiscal}`} tom="verde" /> : <SeloSimples texto="Falta" tom="ambar" icone="alerta" />}</td>
+                      <td>{p.faturadoEm ? <SeloSimples texto={`NF ${p.notaFiscal}`} tom="verde" icone="check" /> : <SeloSimples texto="Falta" tom="neutro" icone="relogio" />}</td>
                       <td>
                         <SeloSimples texto="Ainda não" tom="neutro" icone="relogio" />
                       </td>
                       <td className="num">{reais(p.valorDeferido)}</td>
                       <td>
-                        <Link href={`/app/pedidos/${p.id}/pronto`} className="btn btn-pequeno">
-                          {p.estado === "FATURADO" ? "Marcar como recebido" : p.apostiladoEm ? "Gerar cobrança da diferença" : "Registrar apostilamento"}
+                        <Link href={`/app/pedidos/${p.id}/pronto`} className="btn btn-pequeno acima">
+                          {acao(p)}
                         </Link>
                       </td>
                     </tr>
                   );
                 })}
+                <tr className="total">
+                  <td colSpan={6}>Total a receber</td>
+                  <td className="num">{reais(total)}</td>
+                  <td />
+                </tr>
               </tbody>
             </table>
           </div>
@@ -100,10 +116,13 @@ export default async function AReceber() {
                 <span className="legenda">
                   Contrato {p.contrato.numero} · deferido em {data(p.deferidoEm)}
                 </span>
-                <div className="entre" style={{ marginTop: 6 }}>
+                <div className="entre mt-8">
                   <SeloSimples texto={p.estado === "FATURADO" ? "Faturado" : p.apostiladoEm ? "Apostilado" : "Falta apostilar"} tom={p.apostiladoEm ? "verde" : "ambar"} />
                   <span className="num">{reais(p.valorDeferido)}</span>
                 </div>
+                <span className="legenda" style={{ display: "block", marginTop: 6 }}>
+                  Próximo passo: {acao(p).toLowerCase()}
+                </span>
               </Link>
             ))}
           </div>
@@ -111,15 +130,17 @@ export default async function AReceber() {
       )}
 
       {recebidos.length > 0 && (
-        <section className="mt-24">
+        <section className="mt-32">
           <h2>Recebido nos últimos 12 meses: {reaisResumo(recebido12)}</h2>
           <ul className="lista-limpa pilha-8">
             {recebidos.map((p) => (
-              <li key={p.id} className="entre cartao-linha">
-                <span>
-                  Contrato {p.contrato.numero} · {p.contrato.orgao} · recebido em {data(p.recebidoEm)}
-                </span>
-                <span className="num">{reais(p.valorRecebido)}</span>
+              <li key={p.id}>
+                <Link href={`/app/pedidos/${p.id}/pronto`} className="cartao-linha entre">
+                  <span>
+                    Contrato {p.contrato.numero} · {p.contrato.orgao} · recebido em {data(p.recebidoEm)}
+                  </span>
+                  <span className="num">{reais(p.valorRecebido)}</span>
+                </Link>
               </li>
             ))}
           </ul>

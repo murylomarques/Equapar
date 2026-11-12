@@ -262,17 +262,6 @@
 }
 
 /* Assistente */
-.assistente {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: 24px;
-  align-items: start;
-}
-@media (max-width: 1100px) {
-  .assistente {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 .assistente > *,
 .hoje > * {
   min-width: 0;
@@ -295,33 +284,6 @@
   padding-top: 16px;
   border-top: 1px solid var(--linha);
   flex-wrap: wrap;
-}
-.editor-linhas td {
-  padding: 6px 8px;
-  height: auto;
-}
-.editor-linhas input,
-.editor-linhas select {
-  min-height: 34px;
-  padding: 4px 8px;
-  font-size: 14px;
-}
-.editor-linhas input.valor {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  width: 96px;
-}
-.zona-arquivo {
-  border: 1.5px dashed var(--borda-campo);
-  border-radius: var(--raio);
-  padding: 28px;
-  text-align: center;
-  background: var(--branco);
-  transition: border-color 100ms ease-out, background-color 100ms ease-out;
-}
-.zona-arquivo.arrastando {
-  border-color: var(--verde);
-  background: var(--selo-verde-bg);
 }
 .estados {
   display: flex;
@@ -471,4 +433,192 @@
   background: var(--superficie-2);
   color: var(--grafite);
   border: 1px solid var(--linha);
+}
+
+/* ===================== Editor da planilha ===================== */
+.assistente {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .assistente {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.modulo-planilha {
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+.modulo-cab {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px 6px 4px;
+  background: var(--superficie-2);
+  border-radius: var(--raio);
+}
+.modulo-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font: 600 14px/20px var(--fonte);
+  color: var(--verde-escuro);
+  cursor: pointer;
+  text-align: left;
+  min-height: 36px;
+}
+.modulo-toggle:hover {
+  background: var(--verde-suave);
+}
+.linhas-planilha {
+  display: grid;
+  padding: 4px 8px 8px;
+}
+.linha-planilha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 68px 112px 150px 36px;
+  gap: 6px;
+  align-items: start;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--linha);
+}
+.linha-planilha.cab {
+  font: 500 12px/16px var(--fonte);
+  color: var(--grafite);
+  padding: 4px 0;
+}
+.linha-planilha:last-of-type {
+  border-bottom: 0;
+}
+.linha-planilha.mudou .c-item > input:first-child {
+  border-left: 3px solid var(--verde);
+}
+.linha-planilha input,
+.linha-planilha select {
+  min-height: 36px;
+  padding: 5px 10px;
+  font-size: 15px;
+  line-height: 22px;
+}
+.linha-planilha select {
+  padding-right: 28px;
+  background-position: right 6px center;
+}
+.linha-planilha .c-item {
+  display: grid;
+  gap: 4px;
+}
+.linha-planilha input.fonte {
+  min-height: 30px;
+  font-size: 13px;
+  padding: 3px 10px;
+  color: var(--grafite);
+}
+.linha-planilha input.fonte.falta {
+  border-color: #c98a12;
+  background: #fffaf0;
+}
+.linha-planilha .c-valor input {
+  text-align: right;
+}
+@media (max-width: 720px) {
+  .linha-planilha {
+    grid-template-columns: 1fr 70px;
+    grid-template-areas: "item item" "valor tipo" "base acoes";
+    border: 1px solid var(--linha);
+    border-radius: var(--raio);
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+  .linha-planilha > [role="cell"]:nth-child(1) {
+    grid-area: item;
+  }
+  .linha-planilha > [role="cell"]:nth-child(2) {
+    grid-area: tipo;
+  }
+  .linha-planilha > [role="cell"]:nth-child(3) {
+    grid-area: valor;
+  }
+  .linha-planilha > [role="cell"]:nth-child(4) {
+    grid-area: base;
+  }
+  .linha-planilha > [role="cell"]:nth-child(5) {
+    grid-area: acoes;
+    justify-self: end;
+  }
+  .linha-planilha input,
+  .linha-planilha select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .modulo-planilha.fora-celular {
+    display: none;
+  }
+}
+.item-doc {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--linha);
+}
+.item-doc:last-child {
+  border-bottom: 0;
+}
+.passo-conteudo {
+  animation: aparece 200ms ease-in-out;
+}
+
+/* Memória: totais fixos no topo */
+.memoria-topo {
+  position: sticky;
+  top: 60px;
+  z-index: 12;
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--e2);
+}
+.memoria-topo > div {
+  display: grid;
+}
+.memoria-topo strong {
+  font-size: 24px;
+  line-height: 30px;
+}
+@media print {
+  .memoria-topo {
+    position: static;
+    box-shadow: none;
+  }
+}
+
+/* Momentos de pico */
+.cartao.pico {
+  border-top: 4px solid var(--verde);
+}
+.pico-valores {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin: 16px 0 0;
+}
+.pico-valores dt {
+  font: var(--t-ajuda);
+  color: var(--grafite);
+}
+.pico-valores dd {
+  margin: 0;
+  font: 600 30px/36px var(--fonte);
+  font-variant-numeric: tabular-nums;
 }

@@ -19,9 +19,9 @@ export function SeloSimples({ texto, tom, icone = "check" }: { texto: string; to
 }
 
 /** Carimbo: só "PRONTO PARA PROTOCOLAR", "DEFERIDO" e "RECEBIDO". */
-export function Carimbo({ texto, azul }: { texto: "PRONTO PARA PROTOCOLAR" | "DEFERIDO" | "RECEBIDO"; azul?: boolean }) {
+export function Carimbo({ texto, azul, grande }: { texto: "PRONTO PARA PROTOCOLAR" | "DEFERIDO" | "RECEBIDO"; azul?: boolean; grande?: boolean }) {
   return (
-    <span className={`carimbo${azul ? " carimbo-azul" : ""}`} role="status">
+    <span className={`carimbo${azul ? " carimbo-azul" : ""}${grande ? " carimbo-g" : ""}`} role="status">
       {texto}
     </span>
   );

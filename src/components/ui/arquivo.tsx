@@ -30,6 +30,7 @@ export function AreaArquivo({
   compacta,
   enviado,
   id,
+  textoEnviando = "Enviando…",
 }: {
   nome?: string;
   rotulo?: string;
@@ -39,6 +40,7 @@ export function AreaArquivo({
   compacta?: boolean;
   enviado?: boolean;
   id?: string;
+  textoEnviando?: string;
 }) {
   const { pendente } = useFormulario();
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -116,7 +118,9 @@ export function AreaArquivo({
               {arquivo.name} <span className="legenda">· {tamanho(arquivo.size)}</span>
             </span>
             {pendente ? (
-              <span className="legenda">Enviando…</span>
+              <span className="legenda fileira" style={{ gap: 6 }} role="status">
+                <span className="spinner" aria-hidden /> {textoEnviando}
+              </span>
             ) : enviado ? (
               <CheckCircle2 size={18} strokeWidth={1.5} aria-label="Enviado" style={{ color: "var(--verde)" }} />
             ) : (

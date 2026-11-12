@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { contratoDaConta, exigir, pedidoDaConta, registrarHistorico } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { tentar, texto, type Resultado } from "@/lib/acao";
+import { ErroCampos, tentar, texto, type Resultado } from "@/lib/acao";
 import { registrarEvento } from "@/lib/eventos";
 import { hora, hojeUTC, lerData, lerDinheiro } from "@/lib/format";
 import { avisarDeferido, avisarProtocolo } from "@/lib/avisos";
@@ -17,6 +17,7 @@ import { iaAtiva, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
 import { salvarArquivo } from "@/lib/storage";
 import { oportunidade } from "@/lib/prazos";
+import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -91,10 +92,12 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
     const dataDeposito = lerData(fd.get("dataDeposito"));
     const descricao = texto(fd, "descricaoGatilho") || null;
     if (convencaoId && !(await db.convencao.findFirst({ where: { id: convencaoId, contaId: ctx.conta.id } }))) return { erro: "Convenção inválida." };
-    if (gatilho !== "OUTRO_CUSTO" && !convencaoId) return { erro: "Escolha a convenção (ou cadastre a nova em Convenções)." };
-    if (!dataBase) return { erro: "Falta a data-base. Ela marca o início da diferença a receber." };
-    if (gatilho !== "OUTRO_CUSTO" && !dataDeposito) return { erro: "Falta a data do depósito da convenção. Sem ela, o órgão pode devolver o pedido." };
-    if (gatilho === "OUTRO_CUSTO" && !descricao) return { erro: "Descreva qual custo mudou." };
+    const campos: Record<string, string> = {};
+    if (gatilho !== "OUTRO_CUSTO" && !convencaoId) campos.convencaoId = "Escolha a convenção. Se ela não estiver na lista, cadastre em Convenções.";
+    if (!dataBase) campos.dataBase = "Falta a data-base. Ela marca o início da diferença a receber.";
+    if (gatilho !== "OUTRO_CUSTO" && !dataDeposito) campos.dataDeposito = "Falta a data do depósito da convenção. Sem ela, o órgão pode devolver o pedido.";
+    if (gatilho === "OUTRO_CUSTO" && !descricao) campos.descricaoGatilho = "Descreva qual custo mudou.";
+    if (Object.keys(campos).length) throw new ErroCampos(campos);
     await db.pedido.update({ where: { id: p.id }, data: { gatilho, convencaoId, dataBase, dataDeposito, descricaoGatilho: descricao, passoAtual: Math.max(p.passoAtual, 2) } });
     if (convencaoId && dataDeposito) await db.convencao.update({ where: { id: convencaoId }, data: { dataDeposito, situacao: "REGISTRADA" } });
     await registrarEvento("passo_concluido", { passo: 1 });
@@ -199,6 +202,15 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
     if (!calc.comparacao) return { erro: "Falta a planilha nova." };
     if (calc.comparacao.erros.length) return { erro: calc.comparacao.erros[0] };
     if (Number(calc.comparacao.diferencaMensal) <= 0) return { erro: "A planilha nova não aumenta o valor mensal. Confira os novos custos antes de continuar." };
+    // Toda linha alterada precisa dizer de onde veio o número (cláusula da convenção)
+    const semFonte = calc.comparacao.linhas.filter((l) => l.variacao !== "0.00" && !l.fonte?.trim());
+    if (semFonte.length)
+      return {
+        erro: `Informe a fonte (cláusula da convenção) das linhas alteradas: ${semFonte
+          .slice(0, 5)
+          .map((l) => l.descricao)
+          .join(", ")}${semFonte.length > 5 ? ` e mais ${semFonte.length - 5}` : ""}. O órgão pede a origem de cada valor.`,
+      };
     await db.pedido.update({
       where: { id: p.id },
       data: {
@@ -263,6 +275,13 @@ export async function gerarPedido(_: Resultado, fd: FormData): Promise<Resultado
     if (!p.memoriaAprovadaEm) return { erro: "A memória de cálculo precisa ser aprovada por Contador ou Dono antes de gerar o pedido." };
     const calc = calcularPedido(p);
     if (!calc.pronto) return { erro: "O cálculo tem pendências. Volte ao passo 3." };
+    // Monta os arquivos de verdade antes de marcar como pronto: nenhum documento quebrado chega à tela final.
+    try {
+      await Promise.all([oficioPdf(p.id, ctx.conta.id), planilhaXlsx(p.id, ctx.conta.id), memoriaPdf(p.id, ctx.conta.id)]);
+    } catch (e) {
+      console.error(e);
+      return { erro: "Não foi possível montar os arquivos do pedido. Confira a planilha no passo 3 e tente de novo." };
+    }
     await db.pedido.update({
       where: { id: p.id },
       data: { estado: "CALCULO_VALIDADO", geradoEm: new Date(), revisaoEspecialista: fd.get("revisao") === "on", passoAtual: 5 },
