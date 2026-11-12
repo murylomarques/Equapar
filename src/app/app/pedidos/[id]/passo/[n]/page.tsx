@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { brl, pct } from "@/lib/calculo/motor";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
 import { calcularPedido, NOME_GATILHO, situacaoChecklist } from "@/lib/pedido";
-import { data, dataLocal, paraInputData, hojeUTC } from "@/lib/format";
+import { data, dataLocal, paraInputData, hojeUTC, plural } from "@/lib/format";
 import { FONTES } from "@/lib/prazos";
 import { iaAtiva } from "@/lib/ia";
 import { convencoesParaForm } from "@/lib/dto";
@@ -74,6 +74,7 @@ function Rodape({ voltar, continuar = "Continuar", leitura }: { voltar?: string;
 
 async function Passo1({ p, contaId, leitura }: { p: P; contaId: string; leitura: boolean }) {
   const convs = await db.convencao.findMany({ where: { contaId }, orderBy: { ano: "desc" } });
+  const usamConvencao = p.convencaoId ? await db.contrato.count({ where: { convencaoId: p.convencaoId } }) : 0;
   return (
     <div className="cartao" style={{ maxWidth: 760 }}>
       <h2>O que mudou?</h2>
@@ -118,6 +119,17 @@ async function Passo1({ p, contaId, leitura }: { p: P; contaId: string; leitura:
               ajuda="A convenção precisa estar depositada no Ministério do Trabalho, pelo sistema Mediador."
             />
           </div>
+          {p.convencao?.dataDeposito && (
+            <label className="check mb-16">
+              <input type="checkbox" name="atualizarConvencao" disabled={leitura} />
+              <span>
+                Se a data de depósito for diferente da registrada na convenção ({data(p.convencao.dataDeposito)}), atualizar também a convenção para {plural(usamConvencao, "o contrato que a usa", `os ${usamConvencao} contratos que a usam`, false)}
+                <span className="ajuda-texto" style={{ display: "block" }}>
+                  Sem marcar, a data fica só neste pedido.
+                </span>
+              </span>
+            </label>
+          )}
           <TextoLongo nome="descricaoGatilho" rotulo="Descrição" opcional valorInicial={p.descricaoGatilho} limite={500} ajuda="Obrigatória quando o motivo for “Outro custo”." />
         </fieldset>
         <Rodape leitura={leitura} />

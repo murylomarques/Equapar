@@ -127,7 +127,8 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
     const dataBase = lerData(fd.get("dataBase"));
     const dataDeposito = lerData(fd.get("dataDeposito"));
     const descricao = texto(fd, "descricaoGatilho") || null;
-    if (convencaoId && !(await db.convencao.findFirst({ where: { id: convencaoId, contaId: ctx.conta.id } }))) return { erro: "Convenção inválida." };
+    const conv = convencaoId ? await db.convencao.findFirst({ where: { id: convencaoId, contaId: ctx.conta.id } }) : null;
+    if (convencaoId && !conv) return { erro: "Convenção inválida." };
     const campos: Record<string, string> = {};
     if (gatilho !== "OUTRO_CUSTO" && !convencaoId) campos.convencaoId = "Escolha a convenção. Se ela não estiver na lista, cadastre em Convenções.";
     if (!dataBase) campos.dataBase = "Falta a data-base. Ela marca o início da diferença a receber.";
@@ -143,7 +144,15 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
       where: { id: p.id },
       data: { ...invalidar, ...totaisGravados({ ...p, dataBase }), gatilho, convencaoId, dataBase, dataDeposito, descricaoGatilho: descricao, passoAtual: Math.max(p.passoAtual, 2) },
     });
-    if (convencaoId && dataDeposito) await db.convencao.update({ where: { id: convencaoId }, data: { dataDeposito, situacao: "REGISTRADA" } });
+    // L5: a convenção é compartilhada pelos contratos. Vazia, preenche; diferente, só com a confirmação da pessoa.
+    if (conv && dataDeposito && conv.dataDeposito?.getTime() !== dataDeposito.getTime()) {
+      if (!conv.dataDeposito) await db.convencao.update({ where: { id: conv.id }, data: { dataDeposito, situacao: "REGISTRADA" } });
+      else if (fd.get("atualizarConvencao") === "on") {
+        const n = await db.contrato.count({ where: { convencaoId: conv.id } });
+        await db.convencao.update({ where: { id: conv.id }, data: { dataDeposito, situacao: "REGISTRADA" } });
+        await registrarHistorico(ctx, `Atualizou a data de depósito da convenção ${conv.nome ?? ""} (usada por ${n} contratos)`.replace("  ", " "), { pedidoId: p.id, contratoId: p.contratoId });
+      }
+    }
     await registrarEvento("passo_concluido", { passo: 1 });
   });
   if (r.erro) return r;
