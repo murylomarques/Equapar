@@ -203,7 +203,18 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
     if (calc.comparacao.erros.length) return { erro: calc.comparacao.erros[0] };
     if (Number(calc.comparacao.diferencaMensal) <= 0) return { erro: "A planilha nova não aumenta o valor mensal. Confira os novos custos antes de continuar." };
     // Toda linha alterada precisa dizer de onde veio o número (cláusula da convenção)
-    const semFonte = calc.comparacao.linhas.filter((l) => l.variacao !== "0.00" && !l.fonte?.trim());
+    // Mesma regra do editor: só pede fonte da linha cujo valor, tipo ou base foi mudado à mão.
+    // Linhas que variam só por consequência (ex.: 13º sobre o novo salário) não precisam.
+    const antes = p.planilhaAntes as unknown as PlanilhaCustos;
+    const agora = p.planilhaAgora as unknown as PlanilhaCustos;
+    const semFonte = agora.tipos.flatMap((t) => {
+      const ta = antes.tipos.find((x) => x.id === t.id);
+      return t.linhas.filter((l) => {
+        const la = ta?.linhas.find((x) => x.id === l.id);
+        const mudou = !la || la.valor !== l.valor || la.tipo !== l.tipo || la.base !== l.base;
+        return mudou && !l.fonte?.trim();
+      });
+    });
     if (semFonte.length)
       return {
         erro: `Informe a fonte (cláusula da convenção) das linhas alteradas: ${semFonte

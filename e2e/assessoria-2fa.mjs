@@ -34,11 +34,12 @@ try {
   ok("conta de assessoria criada, abre em Clientes");
 
   for (const nome of ["Cliente Um (fictício)", "Cliente Dois (fictício)"]) {
-    await page.fill("#cnpj", cnpj());
-    await page.fill("#razaoSocial", nome);
-    await page.uncheck('input[name="importar"]');
-    await page.click('button:has-text("Adicionar cliente")');
-    await page.getByRole("cell", { name: new RegExp(nome.replace(/[()]/g, ".")) }).waitFor();
+    await page.getByLabel("CNPJ do cliente").fill(cnpj());
+    await page.getByLabel(/^Razão social/).fill(nome);
+    const imp = page.locator('input[name="importar"]');
+    if (await imp.isChecked()) await imp.uncheck({ force: true });
+    await page.getByRole("button", { name: /Adicionar cliente/ }).click();
+    await page.getByText(nome).filter({ visible: true }).first().filter({ visible: true }).first().waitFor();
   }
   ok("dois clientes adicionados");
 
@@ -56,12 +57,12 @@ try {
   const totp = OTPAuth.URI.parse(uri.trim());
   await page.fill("#cod-on", totp.generate());
   await page.click('button:has-text("Confirmar")');
-  await page.getByText("Ativada.").waitFor();
+  await page.getByText("Ativada.").filter({ visible: true }).first().waitFor();
   ok("2FA ativada");
 
   // sair e entrar de novo: pede código
-  await page.click('summary[aria-label="Conta"]');
-  await page.click('button:has-text("Sair")');
+  await page.locator('[aria-label="Conta"]').first().click();
+  await page.getByRole("menuitem", { name: "Sair" }).or(page.getByRole("button", { name: "Sair" })).first().click();
   await page.waitForURL(BASE + "/");
   await page.goto(`${BASE}/entrar`);
   await page.fill("#email", email);
@@ -73,7 +74,7 @@ try {
   ok("com 2FA pendente, /app redireciona para o código");
   await page.fill("#codigo", "000000");
   await page.click('button:has-text("Confirmar")');
-  await page.getByText(/Código não confere/).waitFor();
+  await page.getByText(/Código não confere/).filter({ visible: true }).first().waitFor();
   await page.fill("#codigo", totp.generate());
   await page.click('button:has-text("Confirmar")');
   await page.waitForURL("**/app/hoje", { timeout: 30000 });
@@ -86,7 +87,7 @@ try {
   await p2.fill("#email", email);
   await p2.fill("#senha", "errada123456");
   await p2.click('button:has-text("Entrar")');
-  await p2.getByText("E-mail ou senha não conferem.").waitFor();
+  await p2.getByText("E-mail ou senha não conferem.").filter({ visible: true }).first().waitFor();
   ok("senha errada recusada");
   await c2.close();
 } catch (e) {

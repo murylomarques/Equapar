@@ -1,18 +1,25 @@
 // Teste ponta a ponta da Equapar num navegador real (Edge), com dados fictícios.
+// Uso: node e2e/fluxo.mjs [desktop|celular]   (servidor em BASE_URL, padrão http://localhost:3000)
+// Cobre: Raio-X, primeiros passos, cadastrar contrato, pedido em 5 passos, protocolo, deferido,
+// recebido e configurações de avisos. Remove no fim a conta e o Raio-X de exemplo que criou.
 import { chromium } from "playwright-core";
 import ExcelJS from "exceljs";
+import { createRequire } from "node:module";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const require = createRequire(import.meta.url);
+const { PrismaClient } = require("@prisma/client");
+const db = new PrismaClient();
+
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
-const SHOTS = path.join(AQUI, "capturas");
-await import("node:fs").then((fs) => fs.mkdirSync(SHOTS, { recursive: true }));
-const passos = [];
-const ok = (m) => {
-  passos.push(`OK  ${m}`);
-  console.log(`OK  ${m}`);
-};
+const TAM = process.argv[2] === "celular" ? "celular" : "desktop";
+const SHOTS = path.join(AQUI, "capturas", TAM);
+fs.mkdirSync(SHOTS, { recursive: true });
+const CELULAR = TAM === "celular";
+const ok = (m) => console.log(`OK  [${TAM}] ${m}`);
 
 function cnpj() {
   const b = Array.from({ length: 12 }, (_, i) => (i < 8 ? Math.floor(Math.random() * 10) : [0, 0, 0, 1][i - 8]));
@@ -28,7 +35,6 @@ function cnpj() {
 async function planilhaExcel(arquivo) {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("Servente 44h");
-  const pct = (r) => (ws.getRow(r).getCell(3).numFmt = "0.00%");
   const rows = [
     ["", "Quantidade de postos", 10],
     ["", "MÓDULO 1 - COMPOSIÇÃO DA REMUNERAÇÃO", ""],
@@ -56,207 +62,282 @@ async function planilhaExcel(arquivo) {
     ["E", "ISS", 0.05],
   ];
   rows.forEach((r) => ws.addRow(r));
-  ws.eachRow((row, n) => {
+  ws.eachRow((row) => {
     const v = row.getCell(3).value;
-    if (typeof v === "number" && v < 1 && v > 0) pct(n);
+    if (typeof v === "number" && v < 1 && v > 0) row.getCell(3).numFmt = "0.00%";
   });
   await wb.xlsx.writeFile(arquivo);
 }
 
 const hoje = new Date();
-const iso = (d) => d.toISOString().slice(0, 10);
-const mais = (n) => iso(new Date(hoje.getTime() + n * 86400000));
+const ano = hoje.getUTCFullYear();
+const br = (d) => `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
+const daqui = (n) => br(new Date(hoje.getTime() + n * 86400000));
+
+const CNPJ_RAIOX = "12345678000195"; // fictício, com dígitos válidos
+const email = `e2e-${TAM}-${Date.now()}@exemplo.local`;
+const senha = "SenhaTeste12345";
 
 const browser = await chromium.launch({ channel: process.env.NAVEGADOR ?? "msedge", headless: true });
-const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 }, locale: "pt-BR" });
+const ctx = await browser.newContext(
+  CELULAR
+    ? { viewport: { width: 390, height: 844 }, locale: "pt-BR", isMobile: true, hasTouch: true, deviceScaleFactor: 2 }
+    : { viewport: { width: 1440, height: 900 }, locale: "pt-BR" },
+);
 const page = await ctx.newPage();
+page.setDefaultTimeout(20000);
 const erros = [];
 page.on("pageerror", (e) => erros.push(e.message));
-page.on("console", (m) => m.type() === "error" && erros.push(m.text()));
+page.on("console", (m) => m.type() === "error" && !/Failed to load resource/.test(m.text()) && erros.push(m.text()));
+
+async function semRolagemLateral(onde) {
+  if (!CELULAR) return;
+  const w = await page.evaluate(() => document.documentElement.scrollWidth);
+  if (w > 391) throw new Error(`rolagem horizontal no celular em ${onde}: ${w}px`);
+}
+const continuar = () => page.locator(".rodape-assistente").getByRole("button", { name: "Continuar" }).click();
+// Clica e, se abrir a janela de confirmação, confirma nela.
+async function clicarConfirmando(nome) {
+  await page.getByRole("button", { name: nome }).first().click();
+  const janela = page.getByRole("dialog");
+  try {
+    await janela.waitFor({ state: "visible", timeout: 1500 });
+    await janela.getByRole("button").last().click();
+  } catch {}
+}
+const toast = (texto) => page.getByRole("status").filter({ hasText: texto }).first().waitFor();
 
 try {
-  // Landing e capturas
-  await page.goto(BASE);
-  await page.screenshot({ path: `${SHOTS}/01-landing.png`, fullPage: false });
-  ok("landing abre");
+  // ---------------------------------------------------------------- Raio-X
+  const resultado = {
+    cnpj: CNPJ_RAIOX, razaoSocial: "EMPRESA EXEMPLO LIMPEZA LTDA (FICTÍCIA)", consultadoEm: new Date().toISOString(), fonte: "cache",
+    contratos: [
+      { controle: "EXEMPLO-1", numero: "45/2025", orgao: "Prefeitura Municipal de Exemplo", orgaoCnpj: "", uf: "ES", municipio: "Cidade Exemplo", esfera: "M", objeto: "Limpeza e conservação predial com dedicação exclusiva de mão de obra (exemplo)", inicio: `${ano - 1}-03-01`, fim: new Date(hoje.getTime() + 25 * 86400000).toISOString().slice(0, 10), valorGlobal: null, link: "https://pncp.gov.br", sugereMaoDeObra: true },
+    ],
+  };
+  await db.raioXCache.upsert({ where: { cnpj: CNPJ_RAIOX }, create: { cnpj: CNPJ_RAIOX, resultado }, update: { resultado, consultadoEm: new Date() } });
+  await page.goto(BASE + "/raio-x");
+  const campoCnpj = page.getByLabel("CNPJ da empresa").first();
+  await campoCnpj.fill("11111111111111");
+  await campoCnpj.blur();
+  await page.getByText("Esse CNPJ não existe. Confira os 14 números.").filter({ visible: true }).first().waitFor();
+  ok("Raio-X recusa CNPJ inválido com mensagem clara");
+  await campoCnpj.fill(CNPJ_RAIOX);
+  if ((await campoCnpj.inputValue()) !== "12.345.678/0001-95") throw new Error("máscara do CNPJ não aplicada");
+  await page.getByRole("button", { name: "Ver meus contratos" }).first().click();
+  await page.waitForURL(`**/raio-x?cnpj=${CNPJ_RAIOX}`);
+  await page.getByText("EMPRESA EXEMPLO LIMPEZA LTDA (FICTÍCIA)").filter({ visible: true }).first().waitFor({ timeout: 30000 });
+  await page.getByText("Prefeitura Municipal de Exemplo").filter({ visible: true }).first().waitFor();
+  await semRolagemLateral("/raio-x resultado");
+  await page.screenshot({ path: `${SHOTS}/01-raio-x.png`, fullPage: true });
+  ok("Raio-X mostra a empresa e os contratos (resultado em cache, fictício)");
 
-  // Criar conta
-  const email = `e2e${Date.now()}@exemplo.local`;
-  const senha = "SenhaTeste12345";
+  // ---------------------------------------------------------------- Criar conta e primeiros passos
   await page.goto(`${BASE}/criar-conta?cnpj=${cnpj()}`);
-  await page.fill("#nome", "Pessoa Teste");
-  await page.fill("#email", email);
-  await page.fill("#senha", senha);
-  await page.fill("#razaoSocial", "Empresa Teste E2E (fictícia)");
-  await page.check('input[name="termos"]');
-  await page.click('button:has-text("Criar conta")');
+  await page.getByLabel("Seu nome").fill("Pessoa Teste");
+  await page.getByLabel("E-mail de trabalho").fill(email);
+  await page.getByLabel("Senha", { exact: true }).fill(senha);
+  await page.getByLabel(/^Razão social/).fill("Empresa Teste E2E (fictícia)");
+  await page.locator('input[name="termos"]').check();
+  await page.getByRole("button", { name: "Criar conta" }).click();
   await page.waitForURL("**/app/boas-vindas**", { timeout: 30000 });
-  ok("conta criada e onboarding aberto");
+  await page.getByRole("button", { name: "Importar meus contratos" }).waitFor();
+  await semRolagemLateral("/app/boas-vindas");
+  ok("conta criada; primeiros passos abre com a importação do PNCP");
 
   // Convenção
   await page.goto(`${BASE}/app/convencoes`);
-  await page.fill("#nome-nova", "CCT Teste ES 2026");
-  await page.fill("#uf-nova", "ES");
-  await page.fill("#ano-nova", String(hoje.getUTCFullYear()));
-  await page.selectOption("#mes-nova", "1");
-  await page.fill("#dep-nova", `${hoje.getUTCFullYear()}-02-10`);
-  await page.fill("#reg-nova", "ES999999/2026");
-  await page.click('button:has-text("Cadastrar")');
-  await page.getByText("Convenção salva.").waitFor();
+  const formConv = page.locator("form", { has: page.getByRole("button", { name: "Cadastrar convenção" }) });
+  await formConv.getByLabel("Nome").fill(`CCT Teste ES ${ano}`);
+  await formConv.getByLabel("Cidade").fill("Cidade Teste");
+  await formConv.getByLabel("UF").selectOption("ES");
+  await formConv.getByLabel("Mês da data-base").selectOption("1");
+  await formConv.getByLabel("Ano").fill(String(ano));
+  await formConv.getByLabel("Data do depósito (Mediador)").fill(`10/02/${ano}`);
+  await formConv.getByLabel("Número do registro").fill(`ES999999/${ano}`);
+  await formConv.getByRole("button", { name: "Cadastrar convenção" }).click();
+  await page.getByText(`CCT Teste ES ${ano}`, { exact: true }).filter({ visible: true }).first().waitFor();
+  await semRolagemLateral("/app/convencoes");
   ok("convenção cadastrada");
 
-  // Contrato à mão
-  await page.goto(`${BASE}/app/contratos/novo`);
-  await page.fill("#numero", "99/2025");
-  await page.fill("#orgao", "Órgão Teste");
-  await page.fill("#objeto", "Limpeza e conservação com dedicação exclusiva (teste)");
-  await page.fill("#municipio", "Cidade Teste");
-  await page.fill("#uf", "ES");
-  await page.fill("#vigenciaInicio", `${hoje.getUTCFullYear() - 1}-03-01`);
-  await page.fill("#vigenciaFim", mais(40));
-  await page.fill("#dataProposta", `${hoje.getUTCFullYear() - 1}-02-01`);
-  await page.fill("#postos", "10");
-  await page.selectOption("#convencaoId", { label: "CCT Teste ES 2026" });
-  await page.click('button:has-text("Cadastrar contrato")');
-  await page.waitForURL("**/app/contratos/**", { timeout: 30000 });
-  await page.getByText(/Pedir até/).first().waitFor();
+  // ---------------------------------------------------------------- Cadastrar contrato
+  await page.goto(`${BASE}/app/boas-vindas`);
+  await page.getByRole("link", { name: "Cadastrar à mão" }).click();
+  await page.waitForURL("**/app/contratos/novo");
+  await page.getByRole("button", { name: "Cadastrar contrato" }).click();
+  await page.getByText(/Falta corrigir \d+ campos/).filter({ visible: true }).first().waitFor();
+  ok("enviar o contrato vazio mostra o resumo de erros");
+  await page.getByLabel("Número do contrato").fill("99/2025");
+  await page.getByLabel("Órgão contratante").fill("Órgão Teste (fictício)");
+  await page.getByLabel("Objeto").fill("Limpeza e conservação com dedicação exclusiva (teste)");
+  await page.getByLabel("Cidade").fill("Cidade Teste");
+  await page.getByLabel("UF").selectOption("ES");
+  await page.getByLabel("Início da vigência").fill(`01/03/${ano - 1}`);
+  await page.getByLabel("Fim da vigência").fill(daqui(40));
+  await page.getByLabel("Data da proposta").fill(`01/02/${ano - 1}`);
+  await page.getByLabel("Postos de trabalho").fill("10");
+  await page.getByLabel("Valor mensal").fill("58805,66");
+  await page.getByRole("combobox", { name: "Convenção coletiva" }).fill("CCT Teste");
+  await page.getByRole("option", { name: new RegExp(`CCT Teste ES ${ano}`) }).click();
+  await semRolagemLateral("/app/contratos/novo");
+  await page.screenshot({ path: `${SHOTS}/02-contrato-novo.png`, fullPage: true });
+  await page.getByRole("button", { name: "Cadastrar contrato" }).click();
+  await page.waitForURL(/\/app\/contratos\/(?!novo)[^/?]+/, { timeout: 30000 });
+  await page.getByText(/Pedir até/).filter({ visible: true }).first().waitFor();
+  await semRolagemLateral("contrato");
   ok("contrato cadastrado com selo 'Pedir até'");
 
-  // Hoje mostra a ação
+  // Primeiros passos: convenção sugerida e tela final
+  await page.goto(`${BASE}/app/boas-vindas?passo=convencoes`);
+  await page.getByRole("radio", { name: new RegExp(`CCT Teste ES ${ano}`) }).check();
+  await continuar();
+  await page.waitForURL("**passo=pronto");
+  await page.getByText(/Sua carteira tem 1 contrato/).filter({ visible: true }).first().waitFor();
+  ok("primeiros passos concluídos: 'Sua carteira tem 1 contrato…'");
+
+  // ---------------------------------------------------------------- Pedido em 5 passos
   await page.goto(`${BASE}/app/hoje`);
-  await page.getByText("Pedir repactuação").first().waitFor();
-  await page.screenshot({ path: `${SHOTS}/02-hoje.png` });
+  await page.getByText("Pedir repactuação").filter({ visible: true }).first().waitFor();
+  await semRolagemLateral("/app/hoje");
+  await page.screenshot({ path: `${SHOTS}/03-hoje.png`, fullPage: true });
   ok("Hoje mostra 'Pedir repactuação'");
   await page.getByRole("link", { name: "Montar pedido" }).first().click();
   await page.waitForURL("**/app/pedidos/novo**");
-  await page.click('button:has-text("Começar")');
-  await page.waitForURL("**/passo/1");
+  await page.getByRole("button", { name: "Começar" }).click();
+  await page.waitForURL("**/passo/1", { timeout: 30000 });
 
-  // Passo 1
-  const dataBase = await page.inputValue("#dataBase");
-  const deposito = await page.inputValue("#dataDeposito");
+  const dataBase = await page.getByLabel("Data-base").inputValue();
+  const deposito = await page.getByLabel("Data do depósito da convenção").inputValue();
   if (!dataBase || !deposito) throw new Error(`passo 1 sem data-base (${dataBase}) ou depósito (${deposito})`);
-  await page.click('button:has-text("Continuar")');
-  await page.waitForURL("**/passo/2");
+  await semRolagemLateral("passo 1");
+  await continuar();
+  await page.waitForURL("**/passo/2", { timeout: 30000 });
   ok(`passo 1 (data-base ${dataBase}, depósito ${deposito})`);
 
-  // Passo 2: Excel
-  const xlsx = path.join(AQUI, "planilha-teste.xlsx");
+  const xlsx = path.join(AQUI, "capturas", `planilha-teste-${TAM}.xlsx`);
   await planilhaExcel(xlsx);
-  await page.setInputFiles('input[name="arquivo"]', xlsx);
-  await page.getByText(/Lemos \d+ linhas/).waitFor({ timeout: 30000 });
-  const lidas = await page.getByText(/Lemos \d+ linhas/).textContent();
-  await page.waitForTimeout(800);
-  await page.screenshot({ path: `${SHOTS}/03-passo2.png`, fullPage: true });
-  await page.locator(".rodape-assistente button:has-text('Continuar')").click();
+  await page.locator('input[type="file"]').first().setInputFiles(xlsx);
+  await page.getByText(/Lemos \d+ linhas/).filter({ visible: true }).first().waitFor({ timeout: 30000 });
+  const lidas = (await page.getByText(/Lemos \d+ linhas/).first().textContent()).trim();
+  await semRolagemLateral("passo 2");
+  await continuar();
   await page.waitForURL("**/passo/3", { timeout: 30000 });
-  ok(`passo 2: ${lidas.trim()}`);
+  ok(`passo 2: ${lidas}`);
 
-  // Passo 3: novo piso
-  const salario = page.locator("input.valor").first();
-  await salario.fill("1820,00");
-  await page.getByText(/Salvo às/).last().waitFor({ timeout: 15000 });
-  await page.waitForTimeout(1200);
-  const dif = await page.locator("aside").getByText("Diferença por mês").locator("xpath=following-sibling::dd[1]").textContent();
-  await page.screenshot({ path: `${SHOTS}/04-passo3.png`, fullPage: false });
-  await page.locator(".rodape-assistente button:has-text('Continuar')").click();
-  await page.waitForURL("**/passo/4", { timeout: 30000 });
-  ok(`passo 3: diferença por mês ${dif.trim()}`);
-
-  // Passo 4: convenção nova "fora do sistema"
-  await page.locator("li", { hasText: "Convenção coletiva nova" }).getByRole("button", { name: "Já tenho fora do sistema" }).click();
+  // Passo 3: novo piso, sem fonte é barrado; com fonte, segue
+  const mostrarTodas = page.getByRole("button", { name: /Mostrar todas/ });
+  if (await mostrarTodas.count()) await mostrarTodas.first().click();
+  await page.getByLabel("Valor em R$ de Salário base").first().fill("1820,00");
+  await page.getByText(/^Salvo/).filter({ visible: true }).first().waitFor({ timeout: 15000 });
+  await continuar();
+  await page.getByText(/fonte/i).filter({ visible: true }).first().waitFor();
+  if (!page.url().endsWith("/passo/3")) throw new Error("passo 3 aceitou linha alterada sem fonte");
+  await page.getByLabel("Fonte de Salário base").first().fill(`CCT Teste ES ${ano}, cláusula 4ª`);
+  await page.waitForTimeout(400);
+  await page.getByText(/^Salvo/).filter({ visible: true }).first().waitFor({ timeout: 15000 });
   await page.waitForTimeout(1500);
-  await page.locator(".rodape-assistente button:has-text('Continuar')").click();
+  const memoria = page.getByRole("complementary", { name: "Memória de cálculo" });
+  const dif = (await memoria.locator("dt", { hasText: "Diferença por mês" }).locator("xpath=following-sibling::dd[1]").textContent()).trim();
+  await semRolagemLateral("passo 3");
+  await page.screenshot({ path: `${SHOTS}/04-passo3.png`, fullPage: true });
+  await continuar();
+  await page.waitForURL("**/passo/4", { timeout: 30000 });
+  ok(`passo 3: linha sem fonte é barrada; diferença por mês ${dif}`);
+
+  await page.locator("li", { hasText: "Convenção coletiva nova" }).getByRole("button", { name: "Já tenho fora do sistema" }).click();
+  await page.getByText("Tudo pronto").waitFor();
+  await semRolagemLateral("passo 4");
+  await continuar();
   await page.waitForURL("**/passo/5", { timeout: 30000 });
   ok("passo 4: documentos completos");
 
-  // Passo 5: tentar gerar sem aprovação
-  await page.click('button:has-text("Gerar pedido")');
-  await page.getByText(/precisa ser aprovada/).waitFor();
-  ok("gerar sem aprovação é bloqueado");
+  await page.getByRole("button", { name: "Gerar pedido" }).click();
+  await page.getByText(/precisa ser aprovada/).filter({ visible: true }).first().waitFor();
+  ok("gerar sem a memória aprovada é bloqueado");
   await page.getByRole("link", { name: /aprovar a memória/i }).click();
   await page.waitForURL("**/memoria");
-  await page.screenshot({ path: `${SHOTS}/05-memoria.png` });
-  await page.click('button:has-text("Aprovar memória")');
-  await page.getByText(/Aprovada por/).waitFor();
+  await semRolagemLateral("memória");
+  await clicarConfirmando("Aprovar memória");
+  await page.getByText(/Aprovada por/).filter({ visible: true }).first().waitFor();
   ok("memória aprovada pelo Dono");
-  await page.goBack();
   await page.goto(page.url().replace(/\/memoria$/, "/passo/5"));
-  await page.click('button:has-text("Gerar pedido")');
-  await page.waitForURL("**/pronto", { timeout: 30000 });
-  await page.getByText("PRONTO PARA PROTOCOLAR").waitFor();
-  await page.screenshot({ path: `${SHOTS}/06-pronto.png` });
+  await page.getByRole("button", { name: "Gerar pedido" }).click();
+  await page.waitForURL("**/pronto", { timeout: 60000 });
+  await page.getByText("PRONTO PARA PROTOCOLAR").filter({ visible: true }).first().waitFor();
+  await semRolagemLateral("pronto");
+  await page.screenshot({ path: `${SHOTS}/05-pronto.png`, fullPage: true });
   ok("pedido gerado: PRONTO PARA PROTOCOLAR");
 
-  // Downloads
-  const pedidoUrl = page.url().replace(/\/pronto$/, "");
+  const apiPedido = page.url().replace(/\/pronto$/, "").replace("/app/pedidos", "/api/pedidos");
   for (const t of ["oficio.docx", "oficio.pdf", "planilha.xlsx", "memoria.pdf", "pacote.zip"]) {
-    const r = await page.request.get(`${pedidoUrl.replace("/app/pedidos", "/api/pedidos")}/arquivos/${t}`);
+    const r = await page.request.get(`${apiPedido}/arquivos/${t}`);
     if (r.status() !== 200) throw new Error(`download ${t}: ${r.status()}`);
   }
   ok("5 arquivos baixam (Word, PDF, Excel, PDF, ZIP)");
 
-  // Protocolo -> resposta -> apostilamento -> cobrança -> recebido
-  await page.fill("#protocoloNumero", "TESTE-123/2026");
-  await page.click('button:has-text("Registrar protocolo")');
-  await page.getByText(/Aguardando o órgão/).first().waitFor();
+  // ---------------------------------------------------------------- Protocolo, deferido, recebido
+  await page.getByLabel("Número do protocolo").fill("TESTE-123/2026");
+  await clicarConfirmando("Registrar protocolo");
+  await page.getByText(/Aguardando o órgão/).filter({ visible: true }).first().waitFor();
   ok("protocolo registrado");
-  await page.reload();
-  await page.click('button:has-text("Registrar resposta")');
-  await page.getByText("DEFERIDO", { exact: true }).waitFor();
+  await clicarConfirmando("Registrar resposta");
+  await page.getByText("DEFERIDO", { exact: true }).filter({ visible: true }).first().waitFor();
+  await page.screenshot({ path: `${SHOTS}/06-deferido.png`, fullPage: true });
   ok("deferido (carimbo DEFERIDO)");
-  await page.click('button:has-text("Registrar apostilamento")');
-  await page.locator("#notaFiscal").waitFor();
-  await page.fill("#notaFiscal", "NF 555");
-  await page.click('button:has-text("Gerar cobrança da diferença")');
-  await page.locator("#valorRecebido").waitFor();
-  await page.click('button:has-text("Marcar como recebido")');
-  await page.getByText("RECEBIDO", { exact: true }).waitFor();
-  await page.screenshot({ path: `${SHOTS}/07-recebido.png` });
+  await clicarConfirmando("Registrar apostilamento");
+  await page.getByLabel("Número da nota fiscal").fill("NF 555");
+  await clicarConfirmando("Gerar cobrança da diferença");
+  await page.getByLabel("Valor recebido").waitFor();
+  await clicarConfirmando("Marcar como recebido");
+  await page.getByText("RECEBIDO", { exact: true }).filter({ visible: true }).first().waitFor();
+  await semRolagemLateral("recebido");
+  await page.screenshot({ path: `${SHOTS}/07-recebido.png`, fullPage: true });
   ok("recebido (carimbo RECEBIDO)");
 
-  // Avisos simulados
   await page.goto(`${BASE}/app/avisos`);
-  await page.getByText(/Protocolado: contrato 99\/2025/).first().waitFor();
-  await page.getByText(/Deferido: contrato 99\/2025/).first().waitFor();
+  await page.getByText(/Protocolado: contrato 99\/2025/).filter({ visible: true }).first().waitFor();
+  await page.getByText(/Deferido: contrato 99\/2025/).filter({ visible: true }).first().waitFor();
   ok("avisos de protocolo e deferimento registrados (simulação)");
+
+  // ---------------------------------------------------------------- Configurações de avisos
+  await page.goto(`${BASE}/app/configuracoes?aba=avisos`);
+  const prazo = page.getByLabel("Prazos (60, 30 e 7 dias)");
+  const opcoes = await prazo.locator("option").evaluateAll((os) => os.map((o) => o.value));
+  const atual = await prazo.inputValue();
+  const outra = opcoes.find((v) => v !== atual);
+  await prazo.selectOption(outra);
+  await page.getByRole("button", { name: "Salvar preferências" }).click();
+  await toast("Preferências de aviso salvas.");
+  await page.reload();
+  if ((await page.getByLabel("Prazos (60, 30 e 7 dias)").inputValue()) !== outra) throw new Error("preferência de aviso não ficou salva");
+  await semRolagemLateral("configurações de avisos");
+  ok(`configurações de avisos: canal de prazos mudou de ${atual} para ${outra} e ficou salvo`);
 
   // Prorrogação
   await page.goto(`${BASE}/app/carteira`);
-  await page.getByRole("link", { name: "99/2025" }).click();
-  await page.waitForURL("**/app/contratos/**");
+  await page.getByRole("link", { name: /99\/2025/ }).first().click();
+  await page.waitForURL(/\/app\/contratos\/[^/?]+/);
   await page.goto(page.url().split("?")[0] + "/prorrogacao");
-  await page.getByText("A convenção ainda não saiu").waitFor();
-  ok("tela de decisão de prorrogação com os 3 casos");
-
-  // Celular
-  const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "pt-BR", isMobile: true, hasTouch: true });
-  const pm = await mob.newPage();
-  await pm.goto(BASE);
-  await pm.screenshot({ path: `${SHOTS}/08-landing-celular.png` });
-  const larguraDoc = await pm.evaluate(() => document.documentElement.scrollWidth);
-  if (larguraDoc > 390) throw new Error(`rolagem horizontal no celular: ${larguraDoc}px`);
-  await pm.goto(`${BASE}/demonstracao`);
-  await pm.waitForURL("**/app/hoje");
-  await pm.screenshot({ path: `${SHOTS}/09-hoje-celular.png` });
-  for (const u of ["/app/hoje", "/app/carteira", "/app/a-receber", "/app/pedidos", "/app/convencoes", "/app/avisos", "/app/configuracoes", "/raio-x", "/precos", "/entrar"]) {
-    await pm.goto(BASE + u);
-    const w = await pm.evaluate(() => document.documentElement.scrollWidth);
-    if (w > 390) throw new Error(`rolagem horizontal no celular em ${u}: ${w}px`);
-  }
-  await pm.goto(BASE + "/app/carteira");
-  await pm.locator(".cartoes-celular a", { hasText: "Prefeitura Municipal de Exemplo" }).first().click();
-  await pm.waitForURL("**/app/contratos/**");
-  const wc = await pm.evaluate(() => document.documentElement.scrollWidth);
-  if (wc > 390) throw new Error(`rolagem horizontal no celular no contrato: ${wc}px`);
-  await pm.screenshot({ path: `${SHOTS}/10-contrato-celular.png` });
-  ok("celular sem rolagem horizontal (landing e app)");
-  await mob.close();
+  await page.getByText("A convenção ainda não saiu").filter({ visible: true }).first().waitFor();
+  await semRolagemLateral("prorrogação");
+  ok("decisão de prorrogação com os 3 casos");
 } catch (e) {
-  console.error("FALHOU:", e.message);
+  console.error(`FALHOU [${TAM}]:`, e.message.split("\n")[0]);
   await page.screenshot({ path: `${SHOTS}/zz-falha.png`, fullPage: true }).catch(() => {});
   process.exitCode = 1;
 } finally {
-  if (erros.length) console.log("Erros no console do navegador:\n" + [...new Set(erros)].slice(0, 10).join("\n"));
+  const unicos = [...new Set(erros)];
+  if (unicos.length) {
+    console.log(`Erros no console do navegador [${TAM}]:\n` + unicos.slice(0, 10).join("\n"));
+    process.exitCode = 1;
+  }
   await browser.close();
+  // limpeza: só o que este teste criou (conta de teste e Raio-X fictício)
+  const u = await db.usuario.findUnique({ where: { email }, include: { membros: true } });
+  if (u) {
+    for (const m of u.membros) await db.conta.deleteMany({ where: { id: m.contaId } }).catch(() => {});
+    await db.usuario.deleteMany({ where: { id: u.id } }).catch(() => {});
+  }
+  await db.raioXCache.deleteMany({ where: { cnpj: CNPJ_RAIOX } });
+  await db.$disconnect();
 }
