@@ -177,6 +177,7 @@ try {
     await foto(ass, "50", "Assessoria clientes", "/app/clientes", tam);
     const demo = await (await browser.newContext(ctxOpts)).newPage();
     await demo.goto(BASE + "/demonstracao");
+    await demo.getByRole("button", { name: "Entrar na demonstração" }).click();
     await demo.waitForURL("**/app/hoje");
     await foto(demo, "51", "Demonstracao", null, tam);
     console.log("ok", tam.nome);

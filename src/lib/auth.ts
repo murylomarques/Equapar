@@ -7,6 +7,7 @@ import * as OTPAuth from "otpauth";
 import type { Papel, Prisma } from "@prisma/client";
 import { db } from "./db";
 import { cifrar, decifrar, sha256, tokenAleatorio } from "./cripto";
+import { EMAIL_DEMO } from "./site";
 
 const COOKIE = "eq_sessao";
 const DURACAO_DIAS = 30;
@@ -51,8 +52,9 @@ export function limparFalhas(chave: string) {
 // ---------------------------------------------------------------------------
 
 /**
- * Abre a sessão. Antes, remove as vencidas do usuário e a anterior do MESMO navegador
- * (o cookie atual ou o mesmo user agent), para não acumular sessões a cada login.
+ * Abre a sessão. Antes, remove só as sessões VENCIDAS do usuário e a sessão do cookie atual
+ * quando ela é do MESMO usuário (novo login no mesmo navegador). Nunca apaga por navegador:
+ * duas pessoas com o mesmo navegador (ou visitantes da demonstração) não derrubam uma à outra (C6).
  * `lembrar`: 30 dias com cookie persistente; sem lembrar, 12 horas e cookie de sessão.
  */
 export async function criarSessao(usuarioId: string, opts: { pendente2fa?: boolean; contaId?: string; lembrar?: boolean } = {}) {
@@ -65,8 +67,7 @@ export async function criarSessao(usuarioId: string, opts: { pendente2fa?: boole
     where: {
       OR: [
         { usuarioId, expiraEm: { lt: new Date() } },
-        ...(anterior ? [{ id: sha256(anterior) }] : []),
-        ...(userAgent ? [{ usuarioId, userAgent }] : []),
+        ...(anterior ? [{ id: sha256(anterior), usuarioId }] : []),
       ],
     },
   });
@@ -169,9 +170,28 @@ export const contexto = cache(async () => {
 
 export type Contexto = Awaited<ReturnType<typeof contexto>>;
 
+/** A sessão é da demonstração (conta fictícia compartilhada, só para ver). */
+export function ehDemo(ctx: { usuario: { email: string } }) {
+  return ctx.usuario.email === EMAIL_DEMO;
+}
+
+const SO_VER = "A demonstração é só para ver. Crie sua conta para usar.";
+
+/**
+ * Ponto central de permissão das ações de servidor. Na demonstração, só "ver" passa (C6):
+ * nenhuma ação que muda dados funciona, mesmo que a tela mostre o botão.
+ */
 export async function exigir(acao: Acao) {
   const ctx = await contexto();
+  if (acao !== "ver" && ehDemo(ctx)) throw new Error(SO_VER);
   if (!pode(ctx.papel, acao)) throw new Error("Seu papel nesta conta não permite esta ação.");
+  return ctx;
+}
+
+/** Ações da própria pessoa (senha, duas etapas, sessões, avisos): qualquer papel, menos a demonstração. */
+export async function exigirUsuario() {
+  const ctx = await contexto();
+  if (ehDemo(ctx)) throw new Error(SO_VER);
   return ctx;
 }
 

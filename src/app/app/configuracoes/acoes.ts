@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Papel, Plano } from "@prisma/client";
-import { conferirSenha, conferirTotp, contexto, encerrarSessao, exigir, hashSenha, novoTotp, registrarHistorico, senhaFraca } from "@/lib/auth";
+import { conferirSenha, conferirTotp, exigirUsuario, encerrarSessao, exigir, hashSenha, novoTotp, registrarHistorico, senhaFraca } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { tentar, texto, type Resultado } from "@/lib/acao";
 import { tokenAleatorio } from "@/lib/cripto";
@@ -32,7 +32,7 @@ export async function salvarConta(_: Resultado, fd: FormData): Promise<Resultado
 
 export async function salvarAvisos(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
-    const ctx = await contexto();
+    const ctx = await exigirUsuario();
     if (ctx.usuario.email === EMAIL_DEMO) return { erro: "A demonstração é só para leitura." };
     const canal = z.enum(["EMAIL", "WHATSAPP", "AMBOS"]);
     const prefs = {
@@ -137,7 +137,7 @@ export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado>
 
 export async function trocarSenha(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
-    const ctx = await contexto();
+    const ctx = await exigirUsuario();
     if (ctx.usuario.email === EMAIL_DEMO) return { erro: "A demonstração é só para leitura." };
     const atual = String(fd.get("atual") ?? "");
     const nova = String(fd.get("nova") ?? "");
@@ -152,7 +152,7 @@ export async function trocarSenha(_: Resultado, fd: FormData): Promise<Resultado
 
 export async function iniciar2fa(): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
-    const ctx = await contexto();
+    const ctx = await exigirUsuario();
     if (ctx.usuario.email === EMAIL_DEMO) return { erro: "A demonstração é só para leitura." };
     const { segredoCifrado, uri } = novoTotp(ctx.usuario.email);
     await db.usuario.update({ where: { id: ctx.usuario.id }, data: { totpSegredoCifrado: segredoCifrado, totpAtivo: false } });
@@ -164,7 +164,7 @@ export async function iniciar2fa(): Promise<Resultado> {
 
 export async function confirmar2faConfig(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
-    const ctx = await contexto();
+    const ctx = await exigirUsuario();
     const u = await db.usuario.findUnique({ where: { id: ctx.usuario.id } });
     if (!u?.totpSegredoCifrado) return { erro: "Comece a configuração de novo." };
     if (!conferirTotp(u.totpSegredoCifrado, texto(fd, "codigo"))) return { erro: "Código não confere. Confira o relógio do celular e tente o código atual." };
@@ -176,7 +176,7 @@ export async function confirmar2faConfig(_: Resultado, fd: FormData): Promise<Re
 
 export async function desativar2fa(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
-    const ctx = await contexto();
+    const ctx = await exigirUsuario();
     const u = await db.usuario.findUnique({ where: { id: ctx.usuario.id } });
     if (!u?.totpSegredoCifrado || !conferirTotp(u.totpSegredoCifrado, texto(fd, "codigo"))) return { erro: "Para desativar, digite o código atual do aplicativo." };
     await db.usuario.update({ where: { id: u.id }, data: { totpAtivo: false, totpSegredoCifrado: null } });
@@ -187,7 +187,7 @@ export async function desativar2fa(_: Resultado, fd: FormData): Promise<Resultad
 
 export async function encerrarOutraSessao(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
-    const ctx = await contexto();
+    const ctx = await exigirUsuario();
     await db.sessao.deleteMany({ where: { id: texto(fd, "sessaoId"), usuarioId: ctx.usuario.id } });
     revalidatePath("/app/configuracoes");
     return { ok: "Sessão encerrada." };
@@ -222,7 +222,7 @@ export async function rodarAvisosAgora(): Promise<Resultado> {
 
 export async function encerrarOutrasSessoes(): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
-    const ctx = await contexto();
+    const ctx = await exigirUsuario();
     const r = await db.sessao.deleteMany({ where: { usuarioId: ctx.usuario.id, id: { not: ctx.sessaoId } } });
     revalidatePath("/app/configuracoes");
     return { ok: r.count ? `${r.count === 1 ? "1 sessão encerrada" : `${r.count} sessões encerradas`}.` : "Não havia outras sessões abertas." };
