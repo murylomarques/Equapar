@@ -104,9 +104,13 @@ export async function avisarDeferido(pedidoId: string) {
   let corpo = MODELOS.equapar_deferido(params);
   for (const m of conta.membros) {
     for (const d of canais(m.usuario, prefsDe(m.usuario).deferido)) {
-      // Valores em dinheiro no WhatsApp só se a conta ligou a opção (Configurações)
-      if (d.canal === "EMAIL" && p.valorDeferido) corpo = `${MODELOS.equapar_deferido(params)}\nValor deferido: ${reais(p.valorDeferido)}.`;
-      if (d.canal === "WHATSAPP") corpo = MODELOS.equapar_deferido(params);
+      // L16: valores em dinheiro no WhatsApp só se a conta ligou a opção (Configurações), com modelo próprio
+      const comValor = d.canal === "WHATSAPP" && conta.mostrarValoresWhatsapp && !!p.valorDeferido;
+      const modelo: { nome: ModeloWhatsapp; params: Record<string, string> } = comValor
+        ? { nome: "equapar_deferido_valor", params: { ...params, valor: reais(p.valorDeferido) } }
+        : { nome: "equapar_deferido", params };
+      if (d.canal === "EMAIL") corpo = p.valorDeferido ? `${MODELOS.equapar_deferido(params)}\nValor deferido: ${reais(p.valorDeferido)}.` : MODELOS.equapar_deferido(params);
+      else corpo = MODELOS[modelo.nome](modelo.params);
       await enviar({
         contaId: conta.id,
         contratoId: p.contratoId,
@@ -116,7 +120,7 @@ export async function avisarDeferido(pedidoId: string) {
         destino: d.destino,
         assunto: `Deferido: contrato ${p.contrato.numero} (${p.contrato.orgao})`,
         corpo,
-        modelo: { nome: "equapar_deferido", params },
+        modelo,
       });
     }
   }

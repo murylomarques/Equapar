@@ -25,7 +25,7 @@ export function appUrl(caminho = "") {
 // sempre citam o contrato específico e não misturam propaganda.
 // ---------------------------------------------------------------------------
 
-export type ModeloWhatsapp = "equapar_prazo_60" | "equapar_prazo_30" | "equapar_prazo_7" | "equapar_prazo_resposta" | "equapar_deferido";
+export type ModeloWhatsapp = "equapar_prazo_60" | "equapar_prazo_30" | "equapar_prazo_7" | "equapar_prazo_resposta" | "equapar_deferido" | "equapar_deferido_valor";
 
 export const MODELOS: Record<ModeloWhatsapp, (p: Record<string, string>) => string> = {
   equapar_prazo_60: (p) =>
@@ -36,6 +36,9 @@ export const MODELOS: Record<ModeloWhatsapp, (p: Record<string, string>) => stri
   equapar_prazo_resposta: (p) =>
     `Equapar: o pedido do contrato ${p.numero} foi protocolado em ${p.dataProtocolo}. O prazo preferencial de resposta do órgão termina em ${p.dataResposta}. Ver pedido: ${p.link}`,
   equapar_deferido: (p) => `Equapar: o pedido do contrato ${p.numero} foi marcado como deferido. Próximo passo: apostilamento e fatura da diferença. ${p.link}`,
+  // L16: só quando a conta liga "Mostrar valores em dinheiro no WhatsApp" (modelo próprio, aprovado à parte na Meta)
+  equapar_deferido_valor: (p) =>
+    `Equapar: o pedido do contrato ${p.numero} foi marcado como deferido, no valor de ${p.valor}. Próximo passo: apostilamento e fatura da diferença. ${p.link}`,
 };
 
 /** Ordem dos parâmetros nos modelos aprovados na Meta (corpo com {{1}}, {{2}}, ...). */
@@ -45,6 +48,7 @@ const PARAMS: Record<ModeloWhatsapp, string[]> = {
   equapar_prazo_7: ["numero", "orgao", "link"],
   equapar_prazo_resposta: ["numero", "dataProtocolo", "dataResposta", "link"],
   equapar_deferido: ["numero", "link"],
+  equapar_deferido_valor: ["numero", "valor", "link"],
 };
 
 // ---------------------------------------------------------------------------
