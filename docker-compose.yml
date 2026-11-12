@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: equapar-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: equapar
+      POSTGRES_PASSWORD: equapar_local
+      POSTGRES_DB: equapar
+    ports:
+      - "5440:5432"
+    volumes:
+      - equapar-pg:/var/lib/postgresql/data
+volumes:
+  equapar-pg:

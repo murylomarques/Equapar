@@ -1,0 +1,366 @@
+// Equapar — modelo de dados
+// Conta = quem assina (empresa ou assessoria). Empresa = CNPJ atendido (1 numa empresa, N numa assessoria).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoConta {
+  EMPRESA
+  ASSESSORIA
+}
+
+enum Plano {
+  GRATIS
+  PILOTO
+  CARTEIRA
+  ASSESSORIA
+}
+
+enum Papel {
+  DONO
+  GERENTE
+  CONTADOR
+  LEITURA
+}
+
+enum TipoReajuste {
+  REPACTUACAO
+  INDICE
+}
+
+enum SituacaoConvencao {
+  REGISTRADA
+  PENDENTE
+}
+
+// Os 6 estados do dinheiro (Dossiê, "Como funciona" item 6) + INDEFERIDO
+enum EstadoPedido {
+  EM_ANALISE
+  CALCULO_VALIDADO
+  PROTOCOLADO
+  DEFERIDO
+  FATURADO
+  RECEBIDO
+  INDEFERIDO
+}
+
+enum Gatilho {
+  NOVA_CONVENCAO
+  ACORDO_DISSIDIO
+  OUTRO_CUSTO
+}
+
+enum CanalAviso {
+  EMAIL
+  WHATSAPP
+}
+
+enum StatusAviso {
+  SIMULADO
+  ENVIADO
+  ERRO
+}
+
+model Usuario {
+  id                 String    @id @default(cuid())
+  nome               String
+  email              String    @unique
+  senhaHash          String?
+  googleId           String?   @unique
+  whatsapp           String?
+  whatsappConsentEm  DateTime?
+  totpSegredoCifrado String?
+  totpAtivo          Boolean   @default(false)
+  // preferências de aviso: { prazo: "EMAIL"|"WHATSAPP"|"AMBOS", resposta: ..., deferido: ..., semanal: bool, hora: 7 }
+  prefsAvisos        Json?
+  criadoEm           DateTime  @default(now())
+
+  sessoes     Sessao[]
+  membros     Membro[]
+  historicos  Historico[]
+  comentarios ComentarioLinha[]
+}
+
+model Sessao {
+  id         String   @id // hash SHA-256 do token do cookie
+  usuarioId  String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaId    String?
+  empresaId  String? // empresa selecionada (assessoria)
+  pendente2fa Boolean @default(false)
+  userAgent  String?
+  criadoEm   DateTime @default(now())
+  expiraEm   DateTime
+  vistoEm    DateTime @default(now())
+
+  @@index([usuarioId])
+}
+
+model Conta {
+  id                      String    @id @default(cuid())
+  nome                    String
+  tipo                    TipoConta @default(EMPRESA)
+  plano                   Plano     @default(GRATIS)
+  marcaNome               String? // assessoria: nome nos PDFs
+  marcaCor                String? // assessoria: cor nos PDFs
+  mostrarValoresWhatsapp  Boolean   @default(false)
+  pilotoInicio            DateTime?
+  criadoEm                DateTime  @default(now())
+
+  membros     Membro[]
+  empresas    Empresa[]
+  convencoes  Convencao[]
+  historicos  Historico[]
+  avisos      Aviso[]
+  tarefas     Tarefa[]
+  faturas     Fatura[]
+}
+
+model Membro {
+  id        String  @id @default(cuid())
+  usuarioId String
+  contaId   String
+  papel     Papel
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  conta     Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  criadoEm  DateTime @default(now())
+
+  @@unique([usuarioId, contaId])
+}
+
+model Empresa {
+  id          String     @id @default(cuid())
+  contaId     String
+  conta       Conta      @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  cnpj        String
+  razaoSocial String
+  exemplo     Boolean    @default(false) // dado fictício de demonstração
+  criadoEm    DateTime   @default(now())
+  contratos   Contrato[]
+
+  @@unique([contaId, cnpj])
+}
+
+model Convencao {
+  id            String            @id @default(cuid())
+  contaId       String
+  conta         Conta             @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  nome          String // ex.: "CCT Asseio e Conservação ES 2026"
+  sindicatos    String?
+  categoria     String            @default("Asseio e conservação")
+  cidade        String?
+  uf            String
+  ano           Int
+  mesDataBase   Int // 1..12
+  situacao      SituacaoConvencao @default(PENDENTE)
+  dataDeposito  DateTime?
+  registroMte   String? // número no sistema Mediador
+  observacoes   String?
+  criadoEm      DateTime          @default(now())
+
+  contratos     Contrato[]
+  pedidos       Pedido[]
+  documentos    Documento[]
+}
+
+model Contrato {
+  id                  String       @id @default(cuid())
+  empresaId           String
+  empresa             Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  numero              String
+  orgao               String
+  orgaoCnpj           String?
+  uf                  String?
+  municipio           String?
+  esfera              String? // F, E, M, D
+  objeto              String
+  vigenciaInicio      DateTime
+  vigenciaFim         DateTime
+  valorMensal         Decimal?     @db.Decimal(14, 2)
+  valorGlobal         Decimal?     @db.Decimal(16, 2)
+  postos              Int?
+  maoDeObraDedicada   Boolean      @default(false)
+  tipoReajuste        TipoReajuste @default(REPACTUACAO)
+  clausulaReajuste    String?
+  convencaoId         String?
+  convencao           Convencao?   @relation(fields: [convencaoId], references: [id], onDelete: SetNull)
+  dataProposta        DateTime?
+  ultimoApostilamento DateTime?
+  pncpControle        String?
+  linkPncp            String?
+  arquivado           Boolean      @default(false)
+  criadoEm            DateTime     @default(now())
+
+  pedidos    Pedido[]
+  documentos Documento[]
+  historicos Historico[]
+  avisos     Aviso[]
+  tarefas    Tarefa[]
+
+  @@unique([empresaId, pncpControle])
+}
+
+model Pedido {
+  id                  String       @id @default(cuid())
+  contratoId          String
+  contrato            Contrato     @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  estado              EstadoPedido @default(EM_ANALISE)
+  passoAtual          Int          @default(1)
+  gatilho             Gatilho      @default(NOVA_CONVENCAO)
+  convencaoId         String?
+  convencao           Convencao?   @relation(fields: [convencaoId], references: [id], onDelete: SetNull)
+  dataBase            DateTime? // início dos efeitos financeiros
+  dataDeposito        DateTime?
+  descricaoGatilho    String?
+  // Planilhas de custos (formato PlanilhaCustos de src/lib/calculo)
+  planilhaAntes       Json?
+  planilhaAgora       Json?
+  linhasNaoLidas      Json? // linhas que a leitura não entendeu
+  checklist           Json? // { [id]: "ANEXADO" | "FALTA" | "OPCIONAL" }
+  dataReferencia      DateTime? // até quando contar a diferença retroativa
+  diferencaMensal     Decimal?     @db.Decimal(14, 2)
+  diferencaRetroativa Decimal?     @db.Decimal(14, 2)
+  memoriaAprovadaPor  String?
+  memoriaAprovadaEm   DateTime?
+  revisaoEspecialista Boolean      @default(false)
+  geradoEm            DateTime?
+  protocoloNumero     String?
+  protocoloData       DateTime?
+  respostaData        DateTime?
+  respostaResumo      String?
+  deferidoEm          DateTime?
+  valorDeferido       Decimal?     @db.Decimal(14, 2)
+  apostiladoEm        DateTime?
+  faturadoEm          DateTime?
+  notaFiscal          String?
+  recebidoEm          DateTime?
+  valorRecebido       Decimal?     @db.Decimal(14, 2)
+  criadoEm            DateTime     @default(now())
+  atualizadoEm        DateTime     @updatedAt
+
+  documentos  Documento[]
+  comentarios ComentarioLinha[]
+  historicos  Historico[]
+}
+
+model Documento {
+  id          String     @id @default(cuid())
+  contratoId  String?
+  contrato    Contrato?  @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  pedidoId    String?
+  pedido      Pedido?    @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  convencaoId String?
+  convencao   Convencao? @relation(fields: [convencaoId], references: [id], onDelete: Cascade)
+  tipo        String // PLANILHA, CONVENCAO, OFICIO, PROTOCOLO, APOSTILAMENTO, NOTA_FISCAL, OUTRO
+  nome        String
+  versao      Int        @default(1)
+  mime        String
+  tamanho     Int
+  caminho     String
+  enviadoPor  String?
+  criadoEm    DateTime   @default(now())
+}
+
+model ComentarioLinha {
+  id        String   @id @default(cuid())
+  pedidoId  String
+  pedido    Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  linhaId   String
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  texto     String
+  criadoEm  DateTime @default(now())
+}
+
+model Historico {
+  id         String    @id @default(cuid())
+  contaId    String
+  conta      Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  contratoId String?
+  contrato   Contrato? @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  pedidoId   String?
+  pedido     Pedido?   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  usuarioId  String?
+  usuario    Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  acao       String
+  detalhe    String?
+  criadoEm   DateTime  @default(now())
+
+  @@index([contaId, criadoEm])
+}
+
+model Tarefa {
+  id         String    @id @default(cuid())
+  contaId    String
+  conta      Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  contratoId String?
+  contrato   Contrato? @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  titulo     String
+  prazo      DateTime?
+  feitaEm    DateTime?
+  criadoEm   DateTime  @default(now())
+}
+
+model Aviso {
+  id         String      @id @default(cuid())
+  contaId    String?
+  conta      Conta?      @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  contratoId String?
+  contrato   Contrato?   @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  chave      String // idempotência: ex. "D60:contratoId:2027-03-01"
+  tipo       String // D60, D30, D7, RESPOSTA, DEFERIDO, SEMANAL, APOSTILAMENTO
+  canal      CanalAviso
+  destino    String
+  assunto    String?
+  corpo      String
+  status     StatusAviso
+  erro       String?
+  enviadoEm  DateTime    @default(now())
+
+  @@unique([chave, canal, destino])
+  @@index([contaId, enviadoEm])
+}
+
+model Fatura {
+  id         String   @id @default(cuid())
+  contaId    String
+  conta      Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  referencia String // "2026-11"
+  descricao  String
+  valor      Decimal  @db.Decimal(12, 2)
+  postos     Int?
+  pagaEm     DateTime?
+  criadoEm   DateTime @default(now())
+}
+
+// Raio-X: contato deixado para receber o relatório (só com consentimento)
+model Lead {
+  id                 String   @id @default(cuid())
+  cnpj               String
+  email              String
+  whatsapp           String?
+  consentimentoAvisos Boolean @default(false)
+  criadoEm           DateTime @default(now())
+}
+
+model RaioXCache {
+  cnpj        String   @id
+  resultado   Json
+  consultadoEm DateTime @default(now())
+}
+
+// Eventos de produto: nunca guardam dado pessoal
+model Evento {
+  id       String   @id @default(cuid())
+  nome     String
+  props    Json?
+  criadoEm DateTime @default(now())
+
+  @@index([nome, criadoEm])
+}

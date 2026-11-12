@@ -1,0 +1,30 @@
+import { NextResponse } from "next/server";
+import { contexto, pedidoDaConta } from "@/lib/auth";
+import { memoriaPdf, oficioDocx, oficioPdf, pacoteZip, planilhaXlsx } from "@/lib/documentos";
+
+const TIPOS = {
+  "oficio.docx": { fn: oficioDocx, mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", nome: "oficio" },
+  "oficio.pdf": { fn: oficioPdf, mime: "application/pdf", nome: "oficio" },
+  "planilha.xlsx": { fn: planilhaXlsx, mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", nome: "planilha" },
+  "memoria.pdf": { fn: memoriaPdf, mime: "application/pdf", nome: "memoria-de-calculo" },
+  "pacote.zip": { fn: pacoteZip, mime: "application/zip", nome: "pedido-completo" },
+} as const;
+
+export async function GET(_: Request, { params }: { params: Promise<{ id: string; tipo: string }> }) {
+  const { id, tipo } = await params;
+  const t = TIPOS[tipo as keyof typeof TIPOS];
+  if (!t) return new NextResponse("Arquivo desconhecido.", { status: 404 });
+  const ctx = await contexto();
+  const p = await pedidoDaConta(ctx, id).catch(() => null);
+  if (!p) return new NextResponse("Pedido não encontrado.", { status: 404 });
+  try {
+    const buf = await t.fn(id, ctx.conta.id);
+    const ext = tipo.split(".").pop();
+    const n = p.contrato.numero.replace(/[^\w.-]+/g, "-");
+    return new NextResponse(new Uint8Array(buf), {
+      headers: { "content-type": t.mime, "content-disposition": `attachment; filename="${t.nome}-contrato-${n}.${ext}"`, "cache-control": "no-store" },
+    });
+  } catch (e) {
+    return new NextResponse((e as Error).message, { status: 409 });
+  }
+}
