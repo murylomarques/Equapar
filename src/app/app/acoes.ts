@@ -1,7 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { contexto, contratoDaConta, exigir, registrarHistorico } from "@/lib/auth";
+import { contexto, contratoDaConta, exigir, exigirUsuario, registrarHistorico } from "@/lib/auth";
+import { enviarConfirmacaoEmail } from "@/lib/confirmacao-envio";
 import { db } from "@/lib/db";
 import { ErroCampos, tentar, texto, type Resultado } from "@/lib/acao";
 import { cnpjValido, soDigitos } from "@/lib/cnpj";
@@ -19,6 +20,16 @@ export async function selecionarEmpresa(empresaId: string | null) {
   if (empresaId && !ctx.empresas.some((e) => e.id === empresaId)) throw new Error("Cliente não encontrado.");
   await db.sessao.update({ where: { id: ctx.sessaoId }, data: { empresaId } });
   revalidatePath("/app", "layout");
+}
+
+/** C7: reenvia o link de confirmação do e-mail. */
+export async function reenviarConfirmacao(): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigirUsuario();
+    if (ctx.usuario.emailVerificadoEm) return { ok: "Seu e-mail já está confirmado." };
+    await enviarConfirmacaoEmail(ctx.usuario);
+    return { ok: `Enviamos um link novo para ${ctx.usuario.email}.` };
+  });
 }
 
 // ---------------------------------------------------------------------------

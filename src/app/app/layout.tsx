@@ -10,6 +10,9 @@ import { AtalhoBusca } from "./atalho-busca";
 import { sair } from "../(auth)/acoes";
 import { EMAIL_DEMO } from "@/lib/site";
 import { diasAtras } from "@/lib/format";
+import { FormAcao } from "@/components/form-acao";
+import { BotaoEnvio } from "@/components/botao-envio";
+import { reenviarConfirmacao } from "./acoes";
 import "./app.css";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +69,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {demo && (
           <div className="faixa-demo">
             Demonstração com dados fictícios, só para leitura. Nada aqui é de uma empresa real. <Link href="/criar-conta">Crie sua conta para usar</Link>.
+          </div>
+        )}
+        {!demo && !ctx.usuario.emailVerificadoEm && (
+          <div className="faixa-demo faixa-confirmar">
+            <span>
+              Confirme seu e-mail (<strong>{ctx.usuario.email}</strong>) para receber os avisos de prazo. O link está na sua caixa de entrada.
+            </span>
+            <FormAcao action={reenviarConfirmacao} className="fileira" semToast={false}>
+              <BotaoEnvio className="btn btn-pequeno">Reenviar o link</BotaoEnvio>
+            </FormAcao>
           </div>
         )}
         <header className="app-topo">

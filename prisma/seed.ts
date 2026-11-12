@@ -82,7 +82,7 @@ async function main() {
   const senhaDono = `${crypto.randomBytes(6).toString("base64url")}7x`;
   const conta = await db.conta.create({ data: { nome: "Empresa Exemplo Limpeza e Conservação (fictícia)", tipo: "EMPRESA", plano: "CARTEIRA" } });
   const demo = await db.usuario.create({ data: { nome: "Juliana (exemplo)", email: EMAIL_DEMO, senhaHash: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 12) } });
-  const dono = await db.usuario.create({ data: { nome: "Marcos (exemplo)", email: EMAIL_DONO, senhaHash: await bcrypt.hash(senhaDono, 12) } });
+  const dono = await db.usuario.create({ data: { nome: "Marcos (exemplo)", email: EMAIL_DONO, senhaHash: await bcrypt.hash(senhaDono, 12), emailVerificadoEm: new Date() } });
   await db.membro.createMany({
     data: [
       { usuarioId: demo.id, contaId: conta.id, papel: "LEITURA" },

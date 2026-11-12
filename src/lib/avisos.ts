@@ -20,6 +20,7 @@ type ContratoAviso = Contrato & { convencao: Convencao | null; pedidos: Pedido[]
 
 function canais(u: Usuario, escolha: "EMAIL" | "WHATSAPP" | "AMBOS") {
   const out: { canal: "EMAIL" | "WHATSAPP"; destino: string }[] = [];
+  if (!u.emailVerificadoEm) return out; // C7: sem e-mail confirmado, não recebe avisos
   if (escolha !== "WHATSAPP") out.push({ canal: "EMAIL", destino: u.email });
   if (escolha !== "EMAIL" && u.whatsapp && u.whatsappConsentEm) out.push({ canal: "WHATSAPP", destino: u.whatsapp });
   return out;

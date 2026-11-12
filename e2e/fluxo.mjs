@@ -145,6 +145,13 @@ try {
   await semRolagemLateral("/app/boas-vindas");
   ok("conta criada; primeiros passos abre com a importação do PNCP");
 
+  // Confirmação do e-mail (C7): sem ela, a conta não recebe avisos
+  await page.getByText(/Confirme seu e-mail/).first().waitFor();
+  const conf = await db.aviso.findFirst({ where: { destino: email, tipo: "CONFIRMAR_EMAIL" }, orderBy: { enviadoEm: "desc" } });
+  await page.goto(conf.corpo.match(/https?:\/\/\S+/)[0].replace(/^https?:\/\/[^/]+/, BASE));
+  await page.getByText("E-mail confirmado").first().waitFor();
+  ok("e-mail confirmado pelo link (e-mail simulado)");
+
   // Convenção
   await page.goto(`${BASE}/app/convencoes`);
   const formConv = page.locator("form", { has: page.getByRole("button", { name: "Cadastrar convenção" }) });

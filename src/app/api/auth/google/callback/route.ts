@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { criarSessao } from "@/lib/auth";
-import { appUrl } from "@/lib/mensagens";
+import { appUrl, enviar } from "@/lib/mensagens";
 
 export async function GET(req: NextRequest) {
   const falha = () => NextResponse.redirect(appUrl("/entrar?erro=google"));
@@ -33,8 +33,29 @@ export async function GET(req: NextRequest) {
 
   const email = perfil.email.toLowerCase();
   let u = await db.usuario.findFirst({ where: { OR: [{ googleId: perfil.sub }, { email }] } });
-  if (!u) u = await db.usuario.create({ data: { email, nome: perfil.name ?? email, googleId: perfil.sub } });
-  else if (!u.googleId) u = await db.usuario.update({ where: { id: u.id }, data: { googleId: perfil.sub } });
+  if (!u) u = await db.usuario.create({ data: { email, nome: perfil.name ?? email, googleId: perfil.sub, emailVerificadoEm: new Date() } });
+  else if (!u.googleId) {
+    // C7: o Google prova que esta pessoa é dona do e-mail. Se a conta foi criada com senha e o e-mail
+    // nunca foi confirmado, quem cadastrou pode não ser a dona: a senha deixa de valer.
+    // Em qualquer caso, as outras sessões caem e a pessoa é avisada por e-mail.
+    const naoConfirmado = !u.emailVerificadoEm;
+    u = await db.usuario.update({
+      where: { id: u.id },
+      data: { googleId: perfil.sub, emailVerificadoEm: u.emailVerificadoEm ?? new Date(), ...(naoConfirmado ? { senhaHash: null } : {}) },
+    });
+    await db.sessao.deleteMany({ where: { usuarioId: u.id } });
+    await enviar({
+      contaId: null,
+      chave: `google-ligado:${u.id}:${perfil.sub}`,
+      tipo: "SEGURANCA",
+      canal: "EMAIL",
+      destino: u.email,
+      assunto: "Sua conta Equapar foi ligada ao Google",
+      corpo: `Sua conta Equapar agora entra com o Google.${
+        naoConfirmado ? " Como o e-mail ainda não estava confirmado, a senha cadastrada antes foi desativada." : ""
+      } As outras sessões abertas foram encerradas. Se não foi você, responda este e-mail.`,
+    });
+  }
 
   await criarSessao(u.id, { pendente2fa: u.totpAtivo });
   if (u.totpAtivo) return NextResponse.redirect(appUrl("/entrar/2fa"));

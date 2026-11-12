@@ -20,6 +20,7 @@ import { registrarEvento } from "@/lib/eventos";
 import { consultarPncp } from "@/lib/pncp";
 
 import type { Resultado } from "@/lib/acao";
+import { enviarConfirmacaoEmail } from "@/lib/confirmacao-envio";
 
 export type Estado = Resultado;
 
@@ -118,6 +119,7 @@ export async function criarConta(_: Estado, fd: FormData): Promise<Estado> {
     include: { membros: true },
   });
   await registrarEvento("conta_criada", { tipo: d.tipo });
+  await enviarConfirmacaoEmail(usuario); // C7: sem confirmar, usa o produto mas não recebe avisos
   await criarSessao(usuario.id, { contaId: usuario.membros[0].contaId });
   redirect(d.tipo === "ASSESSORIA" && !cnpj ? "/app/clientes" : "/app/boas-vindas");
 }
