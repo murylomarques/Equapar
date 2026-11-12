@@ -4,14 +4,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
-  bloqueado,
   conferirSenha,
   conferirTotp,
   criarSessao,
   encerrarSessao,
-  falhou,
   hashSenha,
-  limparFalhas,
   senhaFraca,
   sessaoAtual,
 } from "@/lib/auth";
@@ -22,27 +19,24 @@ import { consultarPncp } from "@/lib/pncp";
 import type { Resultado } from "@/lib/acao";
 import { enviarConfirmacaoEmail } from "@/lib/confirmacao-envio";
 import { usarCodigoRecuperacao } from "@/lib/recuperacao";
+import { chavesDeAcesso, estaBloqueado, limparChave, limparTentativas, registrarFalha } from "@/lib/limite";
 
 export type Estado = Resultado;
-
-async function ip() {
-  const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-}
 
 export async function entrar(_: Estado, fd: FormData): Promise<Estado> {
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
   const senha = String(fd.get("senha") ?? "");
   const destino = String(fd.get("destino") ?? "");
-  const chave = `${email}|${await ip()}`;
   if (!email || !senha) return { erro: "Digite o e-mail e a senha." };
-  if (bloqueado(chave)) return { erro: "Muitas tentativas seguidas. Por segurança, espere 15 minutos e tente de novo." };
+  // S1: limite no banco, por e-mail e por IP do proxy de confiança
+  const chaves = chavesDeAcesso(email, await headers());
+  if (await estaBloqueado(chaves)) return { erro: "Muitas tentativas seguidas. Por segurança, espere 15 minutos e tente de novo." };
   const u = await db.usuario.findUnique({ where: { email } });
-  if (!u || !(await conferirSenha(senha, u.senhaHash))) {
-    falhou(chave);
+  if (!(await conferirSenha(senha, u?.senhaHash)) || !u) {
+    await registrarFalha(chaves);
     return { erro: "E-mail ou senha não conferem. Confira e tente de novo." };
   }
-  limparFalhas(chave);
+  await limparTentativas(email);
   await criarSessao(u.id, { pendente2fa: u.totpAtivo, lembrar: fd.get("lembrar") === "on" });
   if (u.totpAtivo) redirect(`/entrar/2fa${destino.startsWith("/app") ? `?destino=${encodeURIComponent(destino)}` : ""}`);
   redirect(destino.startsWith("/app") ? destino : "/app/hoje");
@@ -52,17 +46,17 @@ export async function confirmar2fa(_: Estado, fd: FormData): Promise<Estado> {
   const s = await sessaoAtual();
   if (!s) redirect("/entrar");
   const codigo = String(fd.get("codigo") ?? "");
-  const chave = `2fa|${s.usuarioId}`;
-  if (bloqueado(chave)) return { erro: "Muitas tentativas. Espere 15 minutos." };
+  const chave = `2fa:${s.usuarioId}`; // C8/S1: tentativas do código no banco
+  if (await estaBloqueado([chave])) return { erro: "Muitas tentativas. Espere 15 minutos." };
   const okTotp = !!s.usuario.totpSegredoCifrado && conferirTotp(s.usuario.totpSegredoCifrado, codigo);
   // C8: sem o celular, um código de recuperação entra uma vez
   const resto = okTotp ? null : usarCodigoRecuperacao(codigo, s.usuario.codigosRecuperacao);
   if (!okTotp && !resto) {
-    falhou(chave);
+    await registrarFalha([chave]);
     return { campos: { codigo: "Código não confere. Use os 6 números que o aplicativo mostra agora (o código muda a cada 30 segundos) ou um código de recuperação." } };
   }
   if (resto) await db.usuario.update({ where: { id: s.usuarioId }, data: { codigosRecuperacao: resto } });
-  limparFalhas(chave);
+  await limparChave(chave);
   await db.sessao.update({ where: { id: s.id }, data: { pendente2fa: false } });
   const destino = String(fd.get("destino") ?? "");
   redirect(destino.startsWith("/app") ? destino : "/app/hoje");

@@ -20,8 +20,15 @@ export async function hashSenha(senha: string) {
   return bcrypt.hash(senha, 12);
 }
 
+// Hash bcrypt de um valor aleatório descartado: comparar contra ele leva o mesmo tempo de uma senha real (S1).
+const HASH_FALSO = "$2b$12$v2UqiqhT6P/Fz.3x3Je8EeLfrGV725WI6GIoG8PYqqg7YLSur5QZa";
+
+/** Compara a senha. Sem hash (conta inexistente ou só Google), compara com um hash falso: o tempo de resposta não revela quem tem conta. */
 export async function conferirSenha(senha: string, hash: string | null | undefined) {
-  if (!hash) return false;
+  if (!hash) {
+    await bcrypt.compare(senha, HASH_FALSO);
+    return false;
+  }
   return bcrypt.compare(senha, hash);
 }
 
@@ -31,21 +38,6 @@ export function senhaFraca(senha: string): string | null {
   return null;
 }
 
-// Limite simples de tentativas por chave (e-mail ou IP), em memória do processo.
-const tentativas = new Map<string, { n: number; ate: number }>();
-export function bloqueado(chave: string) {
-  const t = tentativas.get(chave);
-  return !!t && t.n >= 5 && t.ate > Date.now();
-}
-export function falhou(chave: string) {
-  const t = tentativas.get(chave);
-  const agora = Date.now();
-  if (!t || t.ate < agora) tentativas.set(chave, { n: 1, ate: agora + 15 * 60_000 });
-  else t.n++;
-}
-export function limparFalhas(chave: string) {
-  tentativas.delete(chave);
-}
 
 // ---------------------------------------------------------------------------
 // Sessões
