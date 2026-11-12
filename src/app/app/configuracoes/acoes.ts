@@ -12,6 +12,7 @@ import { rodarAvisos } from "@/lib/avisos";
 import { apagarPastaConta } from "@/lib/storage";
 import { EMAIL_DEMO } from "@/lib/site";
 import { normalizarTelefoneBR } from "@/lib/telefone";
+import { gerarCodigosRecuperacao } from "@/lib/recuperacao";
 
 export async function salvarConta(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
@@ -150,12 +151,23 @@ export async function trocarSenha(_: Resultado, fd: FormData): Promise<Resultado
   });
 }
 
-export async function iniciar2fa(): Promise<Resultado> {
+/**
+ * C8. Começa a configurar (ou trocar) o aplicativo autenticador. Com as duas etapas ativas, exige o
+ * código atual ou a senha. O segredo novo fica pendente: o atual continua valendo até a confirmação.
+ */
+export async function iniciar2fa(_?: Resultado, fd?: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigirUsuario();
     if (ctx.usuario.email === EMAIL_DEMO) return { erro: "A demonstração é só para leitura." };
+    if (ctx.usuario.totpAtivo) {
+      const codigo = fd ? texto(fd, "codigo") : "";
+      const senha = fd ? String(fd.get("senha") ?? "") : "";
+      const okCodigo = !!codigo && !!ctx.usuario.totpSegredoCifrado && conferirTotp(ctx.usuario.totpSegredoCifrado, codigo);
+      const okSenha = !okCodigo && !!senha && (await conferirSenha(senha, ctx.usuario.senhaHash));
+      if (!okCodigo && !okSenha) return { erro: "Para trocar o aplicativo, digite o código atual do aplicativo ou a sua senha." };
+    }
     const { segredoCifrado, uri } = novoTotp(ctx.usuario.email);
-    await db.usuario.update({ where: { id: ctx.usuario.id }, data: { totpSegredoCifrado: segredoCifrado, totpAtivo: false } });
+    await db.usuario.update({ where: { id: ctx.usuario.id }, data: { totpSegredoPendente: segredoCifrado } });
     const QR = await import("qrcode");
     const svg = await QR.toString(uri, { type: "svg", margin: 1, width: 200 });
     return { ok: "Leia o código no aplicativo autenticador e confirme abaixo.", dados: { svg, uri } };
@@ -166,11 +178,15 @@ export async function confirmar2faConfig(_: Resultado, fd: FormData): Promise<Re
   return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigirUsuario();
     const u = await db.usuario.findUnique({ where: { id: ctx.usuario.id } });
-    if (!u?.totpSegredoCifrado) return { erro: "Comece a configuração de novo." };
-    if (!conferirTotp(u.totpSegredoCifrado, texto(fd, "codigo"))) return { erro: "Código não confere. Confira o relógio do celular e tente o código atual." };
-    await db.usuario.update({ where: { id: u.id }, data: { totpAtivo: true } });
+    if (!u?.totpSegredoPendente) return { erro: "Comece a configuração de novo." };
+    if (!conferirTotp(u.totpSegredoPendente, texto(fd, "codigo"))) return { erro: "Código não confere. Confira o relógio do celular e tente o código atual." };
+    const { codigos, hashes } = gerarCodigosRecuperacao();
+    await db.usuario.update({
+      where: { id: u.id },
+      data: { totpSegredoCifrado: u.totpSegredoPendente, totpSegredoPendente: null, totpAtivo: true, codigosRecuperacao: hashes },
+    });
     revalidatePath("/app/configuracoes");
-    return { ok: "Verificação em duas etapas ativada." };
+    return { ok: "Verificação em duas etapas ativada. Guarde os códigos de recuperação.", dados: { codigos } };
   });
 }
 
@@ -179,7 +195,7 @@ export async function desativar2fa(_: Resultado, fd: FormData): Promise<Resultad
     const ctx = await exigirUsuario();
     const u = await db.usuario.findUnique({ where: { id: ctx.usuario.id } });
     if (!u?.totpSegredoCifrado || !conferirTotp(u.totpSegredoCifrado, texto(fd, "codigo"))) return { erro: "Para desativar, digite o código atual do aplicativo." };
-    await db.usuario.update({ where: { id: u.id }, data: { totpAtivo: false, totpSegredoCifrado: null } });
+    await db.usuario.update({ where: { id: u.id }, data: { totpAtivo: false, totpSegredoCifrado: null, totpSegredoPendente: null, codigosRecuperacao: [] } });
     revalidatePath("/app/configuracoes");
     return { ok: "Verificação em duas etapas desativada." };
   });

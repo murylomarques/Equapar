@@ -58,7 +58,18 @@ try {
   await page.fill("#cod-on", totp.generate());
   await page.click('button:has-text("Confirmar")');
   await page.getByText("Ativada.").filter({ visible: true }).first().waitFor();
-  ok("2FA ativada");
+  const codigosRec = (await page.locator("ul li").allInnerTexts()).filter((t) => /^[A-Z2-9]{5}-[A-Z2-9]{5}$/.test(t.trim()));
+  if (codigosRec.length !== 10) throw new Error(`esperava 10 códigos de recuperação, vieram ${codigosRec.length}`);
+  ok("2FA ativada; 10 códigos de recuperação mostrados uma vez");
+
+  // C8: trocar de aplicativo sem o código atual não desliga nada
+  await page.reload();
+  await page.getByRole("button", { name: "Trocar de aplicativo" }).click();
+  await page.locator("#troca-cod").locator("xpath=ancestor::form").getByRole("button", { name: "Continuar" }).click();
+  await page.getByText(/digite o código atual do aplicativo ou a sua senha/).filter({ visible: true }).first().waitFor();
+  await page.reload();
+  await page.getByText("Ativada.").filter({ visible: true }).first().waitFor();
+  ok("trocar de aplicativo sem código é recusado e as duas etapas continuam ativas");
 
   // sair e entrar de novo: pede código
   await page.locator('[aria-label^="Conta"]').first().click();
@@ -79,6 +90,24 @@ try {
   await page.click('button:has-text("Confirmar")');
   await page.waitForURL("**/app/hoje", { timeout: 30000 });
   ok("código errado recusado; código certo entra");
+
+  // C8: código de recuperação entra uma vez só
+  for (const [tentativa, deveEntrar] of [[1, true], [2, false]]) {
+    const cr = await browser.newContext();
+    const pr = await cr.newPage();
+    await pr.goto(`${BASE}/entrar`);
+    await pr.fill("#email", email);
+    await pr.fill("#senha", senha);
+    await pr.click('button:has-text("Entrar")');
+    await pr.waitForURL("**/entrar/2fa**");
+    await pr.fill("#codigo", codigosRec[0]);
+    await pr.click('button:has-text("Confirmar")');
+    if (deveEntrar) await pr.waitForURL("**/app/hoje", { timeout: 30000 });
+    else await pr.getByText(/Código não confere/).filter({ visible: true }).first().waitFor();
+    await cr.close();
+    void tentativa;
+  }
+  ok("código de recuperação entra uma vez e é recusado na segunda");
 
   // senha errada
   const c2 = await browser.newContext();

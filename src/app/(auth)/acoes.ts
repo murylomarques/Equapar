@@ -21,6 +21,7 @@ import { consultarPncp } from "@/lib/pncp";
 
 import type { Resultado } from "@/lib/acao";
 import { enviarConfirmacaoEmail } from "@/lib/confirmacao-envio";
+import { usarCodigoRecuperacao } from "@/lib/recuperacao";
 
 export type Estado = Resultado;
 
@@ -53,10 +54,14 @@ export async function confirmar2fa(_: Estado, fd: FormData): Promise<Estado> {
   const codigo = String(fd.get("codigo") ?? "");
   const chave = `2fa|${s.usuarioId}`;
   if (bloqueado(chave)) return { erro: "Muitas tentativas. Espere 15 minutos." };
-  if (!s.usuario.totpSegredoCifrado || !conferirTotp(s.usuario.totpSegredoCifrado, codigo)) {
+  const okTotp = !!s.usuario.totpSegredoCifrado && conferirTotp(s.usuario.totpSegredoCifrado, codigo);
+  // C8: sem o celular, um código de recuperação entra uma vez
+  const resto = okTotp ? null : usarCodigoRecuperacao(codigo, s.usuario.codigosRecuperacao);
+  if (!okTotp && !resto) {
     falhou(chave);
-    return { campos: { codigo: "Código não confere. Use os 6 números que o aplicativo mostra agora (o código muda a cada 30 segundos)." } };
+    return { campos: { codigo: "Código não confere. Use os 6 números que o aplicativo mostra agora (o código muda a cada 30 segundos) ou um código de recuperação." } };
   }
+  if (resto) await db.usuario.update({ where: { id: s.usuarioId }, data: { codigosRecuperacao: resto } });
   limparFalhas(chave);
   await db.sessao.update({ where: { id: s.id }, data: { pendente2fa: false } });
   const destino = String(fd.get("destino") ?? "");

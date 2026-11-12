@@ -37,7 +37,7 @@ export function Form2fa({ destino }: { destino?: string }) {
   return (
     <FormAcao action={confirmar2fa} semToast>
       <input type="hidden" name="destino" value={destino ?? ""} />
-      <CampoTexto nome="codigo" id="codigo" rotulo="Código do aplicativo autenticador" inputMode="numeric" autoComplete="one-time-code" maxLength={7} largura="curto" autoFocus ajuda="6 números" />
+      <CampoTexto nome="codigo" id="codigo" rotulo="Código do aplicativo autenticador" autoComplete="one-time-code" maxLength={12} largura="curto" autoFocus ajuda="Os 6 números do aplicativo, ou um código de recuperação (ex.: ABCDE-FGH23)" />
       <BotaoEnvio>Confirmar</BotaoEnvio>
     </FormAcao>
   );
