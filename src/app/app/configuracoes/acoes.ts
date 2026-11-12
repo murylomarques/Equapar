@@ -11,6 +11,7 @@ import { appUrl, enviar } from "@/lib/mensagens";
 import { rodarAvisos } from "@/lib/avisos";
 import { apagarPastaConta } from "@/lib/storage";
 import { EMAIL_DEMO } from "@/lib/site";
+import { normalizarTelefoneBR } from "@/lib/telefone";
 
 export async function salvarConta(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
@@ -41,8 +42,10 @@ export async function salvarAvisos(_: Resultado, fd: FormData): Promise<Resultad
       semanal: fd.get("semanal") === "on",
       hora: Math.min(23, Math.max(0, Number(texto(fd, "hora")) || 7)),
     };
-    const whats = texto(fd, "whatsapp").replace(/\D/g, "");
-    if (whats && (whats.length < 10 || whats.length > 13)) return { campos: { whatsapp: "Digite o WhatsApp com DDD, por exemplo (27) 99999-0000." } };
+    // C5: grava no formato internacional (+55 DDD número), o que a Meta exige
+    const bruto = texto(fd, "whatsapp");
+    const whats = bruto ? normalizarTelefoneBR(bruto) : null;
+    if (bruto && !whats) return { campos: { whatsapp: "Digite o WhatsApp com DDD, por exemplo (27) 99999-0000." } };
     const consent = fd.get("consentimento") === "on";
     if (whats && !consent) return { campos: { consentimento: "Para receber avisos no WhatsApp, marque a autorização." } };
     await db.usuario.update({

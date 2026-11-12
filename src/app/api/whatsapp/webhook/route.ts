@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { ehPedidoParaSair, finalTelefone, mesmoTelefone } from "@/lib/telefone";
 
 /** Verificação do webhook pela Meta. */
 export async function GET(req: NextRequest) {
@@ -25,16 +26,21 @@ export async function POST(req: NextRequest) {
     return new NextResponse("WHATSAPP_APP_SECRET não configurado.", { status: 500 });
   }
   type Msg = { from: string; type: string; text?: { body: string } };
-  const dados = JSON.parse(corpo) as { entry?: { changes?: { value?: { messages?: Msg[] } }[] }[] };
+  let dados: { entry?: { changes?: { value?: { messages?: Msg[] } }[] }[] };
+  try {
+    dados = JSON.parse(corpo);
+  } catch {
+    return new NextResponse("Corpo inválido.", { status: 400 });
+  }
   const msgs = dados.entry?.flatMap((e) => e.changes?.flatMap((c) => c.value?.messages ?? []) ?? []) ?? [];
   for (const m of msgs) {
-    if (m.type === "text" && m.text?.body.trim().toUpperCase() === "SAIR") {
-      const numero = m.from.replace(/\D/g, "");
-      const finais = numero.slice(-10);
-      const usuarios = await db.usuario.findMany({ where: { whatsapp: { endsWith: finais } } });
-      for (const u of usuarios) await db.usuario.update({ where: { id: u.id }, data: { whatsappConsentEm: null } });
-      await db.lead.updateMany({ where: { whatsapp: { endsWith: finais } }, data: { whatsapp: null, consentimentoAvisos: false } });
-    }
+    // "SAIR", "PARAR" ou "STOP" (C5); o número é comparado com e sem o 9 depois do DDD.
+    if (m.type !== "text" || !ehPedidoParaSair(m.text?.body)) continue;
+    const finais = finalTelefone(m.from); // 8 últimos dígitos: comuns às formas com e sem o 9
+    const usuarios = await db.usuario.findMany({ where: { whatsapp: { endsWith: finais } } });
+    for (const u of usuarios) if (mesmoTelefone(u.whatsapp, m.from)) await db.usuario.update({ where: { id: u.id }, data: { whatsappConsentEm: null } });
+    const leads = await db.lead.findMany({ where: { whatsapp: { endsWith: finais } } });
+    for (const l of leads) if (mesmoTelefone(l.whatsapp, m.from)) await db.lead.update({ where: { id: l.id }, data: { whatsapp: null, consentimentoAvisos: false } });
   }
   return NextResponse.json({ ok: true });
 }

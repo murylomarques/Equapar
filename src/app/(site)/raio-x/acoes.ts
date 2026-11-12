@@ -6,6 +6,7 @@ import { assinar } from "@/lib/cripto";
 import { registrarEvento } from "@/lib/eventos";
 import { appUrl, enviar } from "@/lib/mensagens";
 import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
+import { normalizarTelefoneBR } from "@/lib/telefone";
 
 import type { Resultado } from "@/lib/acao";
 
@@ -17,8 +18,8 @@ const esquema = z.object({
   whatsapp: z
     .string()
     .trim()
-    .transform((v) => v.replace(/\D/g, ""))
-    .refine((v) => v === "" || (v.length >= 10 && v.length <= 13), "Digite o WhatsApp com DDD, por exemplo (27) 99999-0000."),
+    .refine((v) => v === "" || normalizarTelefoneBR(v) !== null, "Digite o WhatsApp com DDD, por exemplo (27) 99999-0000.")
+    .transform((v) => (v === "" ? "" : normalizarTelefoneBR(v)!)),
   consentimento: z.boolean(),
 });
 
