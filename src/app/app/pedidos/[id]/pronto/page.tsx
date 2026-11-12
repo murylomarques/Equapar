@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Check, FileArchive, FileSpreadsheet, FileText } from "lucide-react";
 import { contexto, pedidoDaConta, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { brl } from "@/lib/calculo/motor";
+import { brl, calcularRetroativo } from "@/lib/calculo/motor";
 import { calcularPedido, ESTADOS } from "@/lib/pedido";
 import { data, dataHora, dataLocal, diasAte, emDias, paraInputData, hojeUTC, reais } from "@/lib/format";
 import { FONTES, prazoResposta } from "@/lib/prazos";
@@ -199,6 +199,13 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 <dd style={{ fontSize: 20 }}>{data(p.deferidoEm)}</dd>
               </div>
             </dl>
+            {p.diferencaMensal && p.dataBase && (
+              // L11: só informação, à parte; não muda o pedido protocolado nem o valor deferido
+              <p className="legenda mt-8 mb-0">
+                Só para informação: com a diferença de {brl(p.diferencaMensal.toString())} por mês, a diferença acumulada desde a data-base até hoje seria de{" "}
+                {brl(calcularRetroativo(p.diferencaMensal.toString(), p.dataBase, hojeUTC(), p.retroMesIncompleto).total)}.
+              </p>
+            )}
             <h2 id="deferido" className="mt-24">
               {p.estado === "FATURADO" ? "Próximo passo: confirmar o recebimento" : p.apostiladoEm ? "Próximo passo: faturar a diferença" : "Próximo passo: o apostilamento"}
             </h2>

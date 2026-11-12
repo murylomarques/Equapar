@@ -141,11 +141,14 @@ function jsonCanonico(v: unknown): string {
     .join(",")}}`;
 }
 
-type BaseCalculo = Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase" | "dataReferencia" | "gatilho">;
+type BaseCalculo = Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase" | "dataReferencia" | "gatilho"> & Partial<Pick<Pedido, "retroContarAte" | "retroMesIncompleto">>;
 
 /** SHA-256 de {planilhas, data-base, data de referência, gatilho, versão da regra}. */
 export function hashCalculo(p: BaseCalculo): string {
-  const base = { planilhaAntes: p.planilhaAntes, planilhaAgora: p.planilhaAgora, dataBase: p.dataBase, dataReferencia: p.dataReferencia, gatilho: p.gatilho, versaoRegra: VERSAO_REGRA };
+  const base: Record<string, unknown> = { planilhaAntes: p.planilhaAntes, planilhaAgora: p.planilhaAgora, dataBase: p.dataBase, dataReferencia: p.dataReferencia, gatilho: p.gatilho, versaoRegra: VERSAO_REGRA };
+  // L11: as opções do retroativo entram só quando diferem do padrão (assinaturas antigas continuam valendo)
+  if (p.retroContarAte && p.retroContarAte !== "DATA_INFORMADA") base.retroContarAte = p.retroContarAte;
+  if (p.retroMesIncompleto && p.retroMesIncompleto !== "DIAS_CORRIDOS") base.retroMesIncompleto = p.retroMesIncompleto;
   return crypto.createHash("sha256").update(jsonCanonico(base)).digest("hex");
 }
 

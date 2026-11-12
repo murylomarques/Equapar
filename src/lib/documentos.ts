@@ -85,7 +85,7 @@ function textoOficio(d: Dados) {
       "",
       `Em atenção ao art. 135, § 6º, da Lei nº 14.133/2021, segue a demonstração analítica da variação dos custos, na planilha de custos e formação de preços e na memória de cálculo anexas, linha a linha, com a indicação da cláusula da convenção que fundamenta cada valor.`,
       "",
-      `Conforme a memória de cálculo, o valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, uma diferença de ${brl(comp.diferencaMensal)} por mês${comp.variacaoPct ? ` (${pct(comp.variacaoPct)})` : ""}.${retro ? ` A diferença acumulada desde a data-base até ${data(calc.dataReferencia)} soma ${brl(retro.total)}.` : ""}`,
+      `Conforme a memória de cálculo, o valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, uma diferença de ${brl(comp.diferencaMensal)} por mês${comp.variacaoPct ? ` (${pct(comp.variacaoPct)})` : ""}.${retro ? ` A diferença acumulada desde a data-base até ${data(calc.dataReferencia)} soma ${brl(retro.total)} (${calc.regraRetroativo}).` : ""}`,
       "",
       "Diante do exposto, requer:",
       `a) a repactuação do valor mensal do contrato para ${brl(comp.mensalAgora)}, com efeitos financeiros a partir de ${data(p.dataBase)};`,
@@ -189,7 +189,10 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
     ["e", "d", "d", "d", "d", "d", "d"],
   );
   pdf.texto(`Diferença por mês: ${brl(comp.diferencaMensal)}${comp.variacaoPct ? ` (${pct(comp.variacaoPct)})` : ""}`, { tam: 12, negrito: true });
-  if (calc.retroativo) pdf.texto(`Desde a data-base (${data(p.dataBase)}) até ${data(calc.dataReferencia)}: ${brl(calc.retroativo.total)}`, { tam: 12, negrito: true, espaco: 10 });
+  if (calc.retroativo) {
+    pdf.texto(`Desde a data-base (${data(p.dataBase)}) até ${data(calc.dataReferencia)}: ${brl(calc.retroativo.total)}`, { tam: 12, negrito: true, espaco: 4 });
+    pdf.texto(`Regra: diferença ${calc.regraRetroativo}.`, { tam: 9, espaco: 10 });
+  }
 
   for (const posto of comp.postos) {
     pdf.titulo(`Linha a linha · ${posto.nome}`, 12);

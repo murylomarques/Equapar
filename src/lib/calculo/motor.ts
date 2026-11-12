@@ -318,7 +318,13 @@ function diasNoMes(ano: number, mes0: number) {
  * Mês cheio = diferença mensal. Mês parcial = diferença × dias ÷ dias do mês (pro rata por dia corrido).
  * Datas em UTC, sem horário.
  */
-export function calcularRetroativo(diferencaMensal: string, inicio: Date, fim: Date): Retroativo {
+/**
+ * L11: como contar o mês incompleto. DIAS_CORRIDOS (padrão, regra original): diferença × dias ÷ dias do mês.
+ * MES_30_DIAS (opção, só quando o pedido escolhe): diferença × dias ÷ 30, com no máximo 30 dias no mês.
+ */
+export type MesIncompleto = "DIAS_CORRIDOS" | "MES_30_DIAS";
+
+export function calcularRetroativo(diferencaMensal: string, inicio: Date, fim: Date, mesIncompleto: MesIncompleto = "DIAS_CORRIDOS"): Retroativo {
   const dif = dec(diferencaMensal);
   const meses: MesRetroativo[] = [];
   const i = new Date(Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), inicio.getUTCDate()));
@@ -333,7 +339,10 @@ export function calcularRetroativo(diferencaMensal: string, inicio: Date, fim: D
     const ultimo = ano === f.getUTCFullYear() && mes === f.getUTCMonth() ? f.getUTCDate() : dim;
     const dias = ultimo - primeiro + 1;
     const cheio = dias === dim;
-    const valor = cheio ? r2(dif) : r2(dif.times(dias).div(dim));
+    const base30 = mesIncompleto === "MES_30_DIAS";
+    const diasConta = base30 ? Math.min(dias, 30) : dias;
+    const divisor = base30 ? 30 : dim;
+    const valor = cheio ? r2(dif) : r2(dif.times(diasConta).div(divisor));
     total = total.plus(valor);
     const comp = `${ano}-${String(mes + 1).padStart(2, "0")}`;
     meses.push({
@@ -341,7 +350,7 @@ export function calcularRetroativo(diferencaMensal: string, inicio: Date, fim: D
       dias,
       diasNoMes: dim,
       valor: valor.toFixed(2),
-      conta: cheio ? `mês cheio: ${brl(dif)}` : `${brl(dif)} × ${dias} ÷ ${dim} dias = ${brl(valor)}`,
+      conta: cheio ? `mês cheio: ${brl(dif)}` : `${brl(dif)} × ${diasConta} ÷ ${divisor} dias = ${brl(valor)}`,
     });
     mes++;
     if (mes > 11) {

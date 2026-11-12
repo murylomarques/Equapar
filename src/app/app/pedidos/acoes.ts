@@ -269,12 +269,21 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
     const ref = lerData(fd.get("dataReferencia")) ?? hojeUTC();
     const pend = pendenciasParaGerar({ ...p, dataReferencia: ref }, [], 3);
     if (pend.length) return recusarPorPendencias(p.id, pend, "Antes de continuar, resolva:");
-    const calc = calcularPedido({ ...p, dataReferencia: ref });
-    const invalidar = p.dataReferencia?.getTime() !== ref.getTime() ? await invalidarAprovacao(ctx, p, "Alterou a data até onde a diferença é contada") : {};
+    // L11: regra do retroativo escolhida no pedido (padrão = regra original)
+    const retroContarAte = z.enum(["DATA_INFORMADA", "DATA_PROTOCOLO", "DATA_APOSTILAMENTO"]).catch(p.retroContarAte).parse(texto(fd, "retroContarAte") || p.retroContarAte);
+    const retroMesIncompleto = z.enum(["DIAS_CORRIDOS", "MES_30_DIAS"]).catch(p.retroMesIncompleto).parse(texto(fd, "retroMesIncompleto") || p.retroMesIncompleto);
+    const calc = calcularPedido({ ...p, dataReferencia: ref, retroContarAte, retroMesIncompleto });
+    const mudouRegra = retroContarAte !== p.retroContarAte || retroMesIncompleto !== p.retroMesIncompleto;
+    const invalidar =
+      p.dataReferencia?.getTime() !== ref.getTime() || mudouRegra
+        ? await invalidarAprovacao(ctx, p, mudouRegra ? "Alterou a regra da diferença retroativa" : "Alterou a data até onde a diferença é contada")
+        : {};
     await db.pedido.update({
       where: { id: p.id },
       data: {
         ...invalidar,
+        retroContarAte,
+        retroMesIncompleto,
         dataReferencia: ref,
         diferencaMensal: calc.comparacao!.diferencaMensal,
         diferencaRetroativa: calc.retroativo?.total ?? null,

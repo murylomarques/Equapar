@@ -16,9 +16,10 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { FonteRegra } from "@/components/fonte-regra";
 import { SeloSimples } from "@/components/selo";
 import { AreaArquivo } from "@/components/ui/arquivo";
-import { CampoData, Combobox, RadiosCartao, TextoLongo } from "@/components/ui/campos";
+import { CampoData, CampoSelect, Combobox, RadiosCartao, TextoLongo } from "@/components/ui/campos";
 import { Alerta, Termo } from "@/components/ui/estrutura";
 import { aprovacaoValida } from "@/lib/pedido-regras";
+import { NOME_CONTAR_ATE, NOME_MES_INCOMPLETO } from "@/lib/pedido";
 import { CabecalhoPedido } from "../../cabecalho";
 import { EditorPlanilha } from "../../../editor-planilha";
 import { anexarDocumentoPedido, concluirPasso2, concluirPasso3, concluirPasso4, enviarPlanilha, gerarPedido, marcarItem, salvarPasso1, usarModelo } from "../../../acoes";
@@ -235,6 +236,34 @@ function Passo3({ p, leitura }: { p: P; leitura: boolean }) {
       />
       <FormAcao action={concluirPasso3} id="form-passo3" semToast esperarSalvamento>
         <input type="hidden" name="pedidoId" value={p.id} />
+        <details className="cartao mb-16">
+          <summary style={{ cursor: "pointer" }}>
+            Regra da diferença retroativa: contada até {NOME_CONTAR_ATE[p.retroContarAte]}, mês incompleto por {NOME_MES_INCOMPLETO[p.retroMesIncompleto]}
+          </summary>
+          <p className="ajuda-texto mt-8">O padrão é o usado até hoje. Mude só se o seu jurídico orientar; a regra escolhida aparece na memória e no ofício.</p>
+          <div className="linha-form">
+            <CampoSelect
+              nome="retroContarAte"
+              rotulo="Contar a diferença até"
+              valorInicial={p.retroContarAte}
+              opcoes={[
+                { valor: "DATA_INFORMADA", rotulo: "A data informada acima (padrão)" },
+                { valor: "DATA_PROTOCOLO", rotulo: "A data do protocolo" },
+                { valor: "DATA_APOSTILAMENTO", rotulo: "A data do apostilamento" },
+              ]}
+            />
+            <CampoSelect
+              nome="retroMesIncompleto"
+              rotulo="Mês incompleto"
+              valorInicial={p.retroMesIncompleto}
+              opcoes={[
+                { valor: "DIAS_CORRIDOS", rotulo: "Dias corridos do mês (padrão)" },
+                { valor: "MES_30_DIAS", rotulo: "Mês de 30 dias" },
+              ]}
+            />
+          </div>
+          <p className="legenda mb-0">Enquanto o protocolo ou o apostilamento não acontecem, vale a data informada.</p>
+        </details>
         <Rodape voltar={`/app/pedidos/${p.id}/passo/2`} leitura={leitura} salvandoAntes />
       </FormAcao>
     </div>

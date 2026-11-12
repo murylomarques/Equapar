@@ -84,7 +84,9 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
                 Desde a data-base ({p.dataBase ? `${MESES[p.dataBase.getUTCMonth()]} de ${p.dataBase.getUTCFullYear()}` : "não informada"})
               </span>
               <strong className="tnum">{calc.retroativo ? brl(calc.retroativo.total) : "—"}</strong>
-              <span className="legenda">até {data(calc.dataReferencia)}</span>
+              <span className="legenda">
+                até {data(calc.dataReferencia)} · {calc.regraRetroativo}
+              </span>
             </div>
           </div>
           <MemoriaView

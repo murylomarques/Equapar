@@ -38,20 +38,42 @@ export function situacaoChecklist(p: Pick<Pedido, "checklist" | "planilhaAgora" 
   });
 }
 
+/** L11: texto da regra do retroativo escolhida (aparece na memória e no ofício). */
+export const NOME_CONTAR_ATE = { DATA_INFORMADA: "a data informada", DATA_PROTOCOLO: "a data do protocolo", DATA_APOSTILAMENTO: "a data do apostilamento" } as const;
+export const NOME_MES_INCOMPLETO = { DIAS_CORRIDOS: "dias corridos do mês", MES_30_DIAS: "mês de 30 dias" } as const;
+
 export interface CalculoPedido {
   comparacao: Comparacao | null;
   retroativo: Retroativo | null;
   dataReferencia: Date;
+  /** L11: regra usada no retroativo */
+  regraRetroativo: string;
   versaoRegra: string;
   pronto: boolean;
 }
 
-export function calcularPedido(p: Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase" | "dataReferencia">): CalculoPedido {
-  const dataReferencia = p.dataReferencia ?? hojeUTC();
-  if (!p.planilhaAntes || !p.planilhaAgora) return { comparacao: null, retroativo: null, dataReferencia, versaoRegra: VERSAO_REGRA, pronto: false };
+type PedidoCalculo = Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase" | "dataReferencia"> &
+  Partial<Pick<Pedido, "retroContarAte" | "retroMesIncompleto" | "protocoloData" | "apostiladoEm">>;
+
+/**
+ * L11: até quando contar. Padrão: a data informada no passo 3. Opções do pedido: a data do protocolo
+ * ou a do apostilamento (enquanto a data escolhida não existe, vale a data informada).
+ */
+function fimDoRetroativo(p: PedidoCalculo): Date {
+  const informada = p.dataReferencia ?? hojeUTC();
+  if (p.retroContarAte === "DATA_PROTOCOLO") return p.protocoloData ?? informada;
+  if (p.retroContarAte === "DATA_APOSTILAMENTO") return p.apostiladoEm ?? informada;
+  return informada;
+}
+
+export function calcularPedido(p: PedidoCalculo): CalculoPedido {
+  const dataReferencia = fimDoRetroativo(p);
+  const mes = p.retroMesIncompleto ?? "DIAS_CORRIDOS";
+  const regraRetroativo = `contado até ${NOME_CONTAR_ATE[p.retroContarAte ?? "DATA_INFORMADA"]}, mês incompleto por ${NOME_MES_INCOMPLETO[mes]}`;
+  if (!p.planilhaAntes || !p.planilhaAgora) return { comparacao: null, retroativo: null, dataReferencia, regraRetroativo, versaoRegra: VERSAO_REGRA, pronto: false };
   const comparacao = compararPlanilhas(p.planilhaAntes as unknown as PlanilhaCustos, p.planilhaAgora as unknown as PlanilhaCustos);
-  const retroativo = comparacao.erros.length === 0 && p.dataBase ? calcularRetroativo(comparacao.diferencaMensal, p.dataBase, dataReferencia) : null;
-  return { comparacao, retroativo, dataReferencia, versaoRegra: VERSAO_REGRA, pronto: comparacao.erros.length === 0 };
+  const retroativo = comparacao.erros.length === 0 && p.dataBase ? calcularRetroativo(comparacao.diferencaMensal, p.dataBase, dataReferencia, mes) : null;
+  return { comparacao, retroativo, dataReferencia, regraRetroativo, versaoRegra: VERSAO_REGRA, pronto: comparacao.erros.length === 0 };
 }
 
 /** Os 6 estados do dinheiro, em ordem (Dossiê, "Como funciona" item 6). */
