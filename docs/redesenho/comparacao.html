@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Equapar: antes e depois</title>
+<style>
+  :root { --papel:#f6f4ef; --tinta:#1c1c1c; --cinza:#5f5d58; --linha:#dcd8cf; --verde:#1e7a55; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --papel:#17181a; --tinta:#ecebe7; --cinza:#a9a69f; --linha:#34353a; --verde:#4fbf8c; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--papel); color:var(--tinta); font:15px/1.5 system-ui, sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:var(--papel); border-bottom:1px solid var(--linha); padding:12px 16px; display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
+  h1 { font-size:18px; margin:0; }
+  .abas button { font:inherit; padding:6px 12px; border:1px solid var(--linha); background:transparent; color:var(--tinta); border-radius:6px; cursor:pointer; }
+  .abas button[aria-pressed="true"] { border-color:var(--verde); color:var(--verde); font-weight:600; }
+  nav { display:flex; flex-wrap:wrap; gap:6px; font-size:13px; }
+  nav a { color:var(--cinza); }
+  main { padding:16px; max-width:1800px; margin:0 auto; }
+  section { border-top:1px solid var(--linha); padding:24px 0; scroll-margin-top:110px; }
+  h2 { font-size:17px; margin:0 0 12px; }
+  .par { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; }
+  .lado h3 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--cinza); margin:0 0 6px; }
+  .lado img { display:block; width:100%; height:auto; border:1px solid var(--linha); border-radius:6px; margin-bottom:8px; background:#fff; }
+  body[data-tam="celular"] .lado img { max-width:390px; }
+  body[data-tam="desktop"] .so-celular, body[data-tam="celular"] .so-desktop { display:none; }
+  .vazio { color:var(--cinza); font-style:italic; }
+  @media (max-width:700px) { .par { grid-template-columns:minmax(0,1fr); } }
+</style>
+</head>
+<body data-tam="desktop">
+<header>
+  <h1>Equapar: antes e depois</h1>
+  <div class="abas" role="group" aria-label="Tamanho da tela">
+    <button type="button" data-t="desktop" aria-pressed="true">Computador (1440)</button>
+    <button type="button" data-t="celular" aria-pressed="false">Celular (390)</button>
+  </div>
+  <nav aria-label="Telas"><a href="#t01">01</a><a href="#t02">02</a><a href="#t03">03</a><a href="#t04">04</a><a href="#t05">05</a><a href="#t06">06</a><a href="#t07">07</a><a href="#t08">08</a><a href="#t09">09</a><a href="#t10">10</a><a href="#t11">11</a><a href="#t12">12</a><a href="#t13">13</a><a href="#t14">14</a><a href="#t15">15</a><a href="#t16">16</a><a href="#t17">17</a><a href="#t18">18</a><a href="#t19">19</a><a href="#t20">20</a><a href="#t21">21</a><a href="#t22">22</a><a href="#t23">23</a><a href="#t24">24</a><a href="#t25">25</a><a href="#t26">26</a><a href="#t27">27</a><a href="#t28">28</a><a href="#t29">29</a><a href="#t30">30</a><a href="#t31">31</a><a href="#t32">32</a><a href="#t33">33</a><a href="#t34">34</a><a href="#t35">35</a><a href="#t36">36</a><a href="#t37">37</a><a href="#t38">38</a><a href="#t39">39</a><a href="#t40">40</a><a href="#t41">41</a><a href="#t42">42</a><a href="#t43">43</a><a href="#t44">44</a><a href="#t45">45</a><a href="#t46">46</a><a href="#t47">47</a><a href="#t48">48</a><a href="#t49">49</a><a href="#t50">50</a><a href="#t51">51</a></nav>
+</header>
+<main>
+<p style="color:var(--cinza)">Capturas com dados fictícios. Clique numa imagem para abrir no tamanho real. Páginas muito altas no celular aparecem em partes.</p>
+<section id="t01">
+  <h2>01 · Landing</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/01-landing-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/01-landing-desktop.png" alt="Landing, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/01-landing-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/01-landing-desktop.png" alt="Landing, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/01-landing-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/01-landing-celular.png" alt="Landing, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/01-landing-celular-parte1.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/01-landing-celular-parte1.png" alt="Landing, depois, celular"></a><a href="depois/01-landing-celular-parte2.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/01-landing-celular-parte2.png" alt="Landing, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t02">
+  <h2>02 · Raio-X entrada</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/02-raio-x-entrada-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/02-raio-x-entrada-desktop.png" alt="Raio-X entrada, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/02-raio-x-entrada-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/02-raio-x-entrada-desktop.png" alt="Raio-X entrada, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/02-raio-x-entrada-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/02-raio-x-entrada-celular.png" alt="Raio-X entrada, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/02-raio-x-entrada-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/02-raio-x-entrada-celular.png" alt="Raio-X entrada, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t03">
+  <h2>03 · Raio-X resultado (exemplo)</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/03-raio-x-resultado-exemplo-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/03-raio-x-resultado-exemplo-desktop.png" alt="Raio-X resultado (exemplo), antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/03-raio-x-resultado-exemplo-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/03-raio-x-resultado-exemplo-desktop.png" alt="Raio-X resultado (exemplo), depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/03-raio-x-resultado-exemplo-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/03-raio-x-resultado-exemplo-celular.png" alt="Raio-X resultado (exemplo), antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/03-raio-x-resultado-exemplo-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/03-raio-x-resultado-exemplo-celular.png" alt="Raio-X resultado (exemplo), depois, celular"></a></div>
+  </div>
+</section>
+<section id="t04">
+  <h2>04 · Raio-X CNPJ invalido</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/04-raio-x-cnpj-invalido-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/04-raio-x-cnpj-invalido-desktop.png" alt="Raio-X CNPJ invalido, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/04-raio-x-cnpj-invalido-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/04-raio-x-cnpj-invalido-desktop.png" alt="Raio-X CNPJ invalido, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/04-raio-x-cnpj-invalido-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/04-raio-x-cnpj-invalido-celular.png" alt="Raio-X CNPJ invalido, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/04-raio-x-cnpj-invalido-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/04-raio-x-cnpj-invalido-celular.png" alt="Raio-X CNPJ invalido, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t05">
+  <h2>05 · Precos</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/05-precos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/05-precos-desktop.png" alt="Precos, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/05-precos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/05-precos-desktop.png" alt="Precos, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/05-precos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/05-precos-celular.png" alt="Precos, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/05-precos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/05-precos-celular.png" alt="Precos, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t06">
+  <h2>06 · Para assessorias</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/06-para-assessorias-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/06-para-assessorias-desktop.png" alt="Para assessorias, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/06-para-assessorias-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/06-para-assessorias-desktop.png" alt="Para assessorias, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/06-para-assessorias-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/06-para-assessorias-celular.png" alt="Para assessorias, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/06-para-assessorias-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/06-para-assessorias-celular.png" alt="Para assessorias, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t07">
+  <h2>07 · Guias</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/07-guias-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/07-guias-desktop.png" alt="Guias, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/07-guias-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/07-guias-desktop.png" alt="Guias, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/07-guias-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/07-guias-celular.png" alt="Guias, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/07-guias-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/07-guias-celular.png" alt="Guias, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t08">
+  <h2>08 · Guia prorrogacao</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/08-guia-prorrogacao-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/08-guia-prorrogacao-desktop.png" alt="Guia prorrogacao, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/08-guia-prorrogacao-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/08-guia-prorrogacao-desktop.png" alt="Guia prorrogacao, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/08-guia-prorrogacao-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/08-guia-prorrogacao-celular.png" alt="Guia prorrogacao, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/08-guia-prorrogacao-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/08-guia-prorrogacao-celular.png" alt="Guia prorrogacao, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t09">
+  <h2>09 · Privacidade</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/09-privacidade-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/09-privacidade-desktop.png" alt="Privacidade, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/09-privacidade-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/09-privacidade-desktop.png" alt="Privacidade, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/09-privacidade-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/09-privacidade-celular.png" alt="Privacidade, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/09-privacidade-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/09-privacidade-celular.png" alt="Privacidade, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t10">
+  <h2>10 · Termos</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/10-termos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/10-termos-desktop.png" alt="Termos, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/10-termos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/10-termos-desktop.png" alt="Termos, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/10-termos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/10-termos-celular.png" alt="Termos, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/10-termos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/10-termos-celular.png" alt="Termos, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t11">
+  <h2>11 · Entrar</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/11-entrar-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/11-entrar-desktop.png" alt="Entrar, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/11-entrar-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/11-entrar-desktop.png" alt="Entrar, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/11-entrar-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/11-entrar-celular.png" alt="Entrar, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/11-entrar-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/11-entrar-celular.png" alt="Entrar, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t12">
+  <h2>12 · Criar conta</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/12-criar-conta-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/12-criar-conta-desktop.png" alt="Criar conta, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/12-criar-conta-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/12-criar-conta-desktop.png" alt="Criar conta, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/12-criar-conta-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/12-criar-conta-celular.png" alt="Criar conta, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/12-criar-conta-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/12-criar-conta-celular.png" alt="Criar conta, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t13">
+  <h2>13 · Nao encontrada</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/13-nao-encontrada-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/13-nao-encontrada-desktop.png" alt="Nao encontrada, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/13-nao-encontrada-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/13-nao-encontrada-desktop.png" alt="Nao encontrada, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/13-nao-encontrada-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/13-nao-encontrada-celular.png" alt="Nao encontrada, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/13-nao-encontrada-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/13-nao-encontrada-celular.png" alt="Nao encontrada, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t14">
+  <h2>14 · Hoje</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/14-hoje-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/14-hoje-desktop.png" alt="Hoje, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/14-hoje-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/14-hoje-desktop.png" alt="Hoje, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/14-hoje-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/14-hoje-celular.png" alt="Hoje, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/14-hoje-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/14-hoje-celular.png" alt="Hoje, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t15">
+  <h2>15 · Boas-vindas importar</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/15-boas-vindas-importar-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/15-boas-vindas-importar-desktop.png" alt="Boas-vindas importar, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/15-boas-vindas-importar-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/15-boas-vindas-importar-desktop.png" alt="Boas-vindas importar, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/15-boas-vindas-importar-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/15-boas-vindas-importar-celular.png" alt="Boas-vindas importar, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/15-boas-vindas-importar-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/15-boas-vindas-importar-celular.png" alt="Boas-vindas importar, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t16">
+  <h2>16 · Boas-vindas contratos</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/16-boas-vindas-contratos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/16-boas-vindas-contratos-desktop.png" alt="Boas-vindas contratos, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/16-boas-vindas-contratos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/16-boas-vindas-contratos-desktop.png" alt="Boas-vindas contratos, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/16-boas-vindas-contratos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/16-boas-vindas-contratos-celular.png" alt="Boas-vindas contratos, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/16-boas-vindas-contratos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/16-boas-vindas-contratos-celular.png" alt="Boas-vindas contratos, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t17">
+  <h2>17 · Boas-vindas convencoes</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/17-boas-vindas-convencoes-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/17-boas-vindas-convencoes-desktop.png" alt="Boas-vindas convencoes, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/17-boas-vindas-convencoes-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/17-boas-vindas-convencoes-desktop.png" alt="Boas-vindas convencoes, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/17-boas-vindas-convencoes-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/17-boas-vindas-convencoes-celular.png" alt="Boas-vindas convencoes, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/17-boas-vindas-convencoes-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/17-boas-vindas-convencoes-celular.png" alt="Boas-vindas convencoes, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t18">
+  <h2>18 · Boas-vindas pronto</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/18-boas-vindas-pronto-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/18-boas-vindas-pronto-desktop.png" alt="Boas-vindas pronto, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/18-boas-vindas-pronto-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/18-boas-vindas-pronto-desktop.png" alt="Boas-vindas pronto, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/18-boas-vindas-pronto-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/18-boas-vindas-pronto-celular.png" alt="Boas-vindas pronto, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/18-boas-vindas-pronto-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/18-boas-vindas-pronto-celular.png" alt="Boas-vindas pronto, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t19">
+  <h2>19 · Carteira</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/19-carteira-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/19-carteira-desktop.png" alt="Carteira, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/19-carteira-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/19-carteira-desktop.png" alt="Carteira, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/19-carteira-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/19-carteira-celular.png" alt="Carteira, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/19-carteira-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/19-carteira-celular.png" alt="Carteira, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t20">
+  <h2>20 · Carteira prazo 60 dias</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/20-carteira-prazo-60-dias-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/20-carteira-prazo-60-dias-desktop.png" alt="Carteira prazo 60 dias, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/20-carteira-prazo-60-dias-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/20-carteira-prazo-60-dias-desktop.png" alt="Carteira prazo 60 dias, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/20-carteira-prazo-60-dias-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/20-carteira-prazo-60-dias-celular.png" alt="Carteira prazo 60 dias, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/20-carteira-prazo-60-dias-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/20-carteira-prazo-60-dias-celular.png" alt="Carteira prazo 60 dias, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t21">
+  <h2>21 · Cadastrar contrato</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/21-cadastrar-contrato-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/21-cadastrar-contrato-desktop.png" alt="Cadastrar contrato, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/21-cadastrar-contrato-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/21-cadastrar-contrato-desktop.png" alt="Cadastrar contrato, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/21-cadastrar-contrato-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/21-cadastrar-contrato-celular.png" alt="Cadastrar contrato, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/21-cadastrar-contrato-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/21-cadastrar-contrato-celular.png" alt="Cadastrar contrato, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t22">
+  <h2>22 · Contrato resumo</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/22-contrato-resumo-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/22-contrato-resumo-desktop.png" alt="Contrato resumo, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/22-contrato-resumo-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/22-contrato-resumo-desktop.png" alt="Contrato resumo, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/22-contrato-resumo-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/22-contrato-resumo-celular.png" alt="Contrato resumo, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/22-contrato-resumo-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/22-contrato-resumo-celular.png" alt="Contrato resumo, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t23">
+  <h2>23 · Contrato prazos</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/23-contrato-prazos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/23-contrato-prazos-desktop.png" alt="Contrato prazos, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/23-contrato-prazos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/23-contrato-prazos-desktop.png" alt="Contrato prazos, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/23-contrato-prazos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/23-contrato-prazos-celular.png" alt="Contrato prazos, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/23-contrato-prazos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/23-contrato-prazos-celular.png" alt="Contrato prazos, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t24">
+  <h2>24 · Contrato pedidos</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/24-contrato-pedidos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/24-contrato-pedidos-desktop.png" alt="Contrato pedidos, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/24-contrato-pedidos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/24-contrato-pedidos-desktop.png" alt="Contrato pedidos, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/24-contrato-pedidos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/24-contrato-pedidos-celular.png" alt="Contrato pedidos, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/24-contrato-pedidos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/24-contrato-pedidos-celular.png" alt="Contrato pedidos, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t25">
+  <h2>25 · Contrato documentos</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/25-contrato-documentos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/25-contrato-documentos-desktop.png" alt="Contrato documentos, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/25-contrato-documentos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/25-contrato-documentos-desktop.png" alt="Contrato documentos, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/25-contrato-documentos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/25-contrato-documentos-celular.png" alt="Contrato documentos, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/25-contrato-documentos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/25-contrato-documentos-celular.png" alt="Contrato documentos, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t26">
+  <h2>26 · Contrato historico</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/26-contrato-historico-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/26-contrato-historico-desktop.png" alt="Contrato historico, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/26-contrato-historico-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/26-contrato-historico-desktop.png" alt="Contrato historico, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/26-contrato-historico-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/26-contrato-historico-celular.png" alt="Contrato historico, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/26-contrato-historico-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/26-contrato-historico-celular.png" alt="Contrato historico, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t27">
+  <h2>27 · Decisao de prorrogacao</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/27-decisao-de-prorrogacao-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/27-decisao-de-prorrogacao-desktop.png" alt="Decisao de prorrogacao, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/27-decisao-de-prorrogacao-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/27-decisao-de-prorrogacao-desktop.png" alt="Decisao de prorrogacao, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/27-decisao-de-prorrogacao-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/27-decisao-de-prorrogacao-celular.png" alt="Decisao de prorrogacao, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/27-decisao-de-prorrogacao-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/27-decisao-de-prorrogacao-celular.png" alt="Decisao de prorrogacao, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t28">
+  <h2>28 · Lista de pedidos</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/28-lista-de-pedidos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/28-lista-de-pedidos-desktop.png" alt="Lista de pedidos, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/28-lista-de-pedidos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/28-lista-de-pedidos-desktop.png" alt="Lista de pedidos, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/28-lista-de-pedidos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/28-lista-de-pedidos-celular.png" alt="Lista de pedidos, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/28-lista-de-pedidos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/28-lista-de-pedidos-celular.png" alt="Lista de pedidos, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t29">
+  <h2>29 · Novo pedido</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/29-novo-pedido-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/29-novo-pedido-desktop.png" alt="Novo pedido, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/29-novo-pedido-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/29-novo-pedido-desktop.png" alt="Novo pedido, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/29-novo-pedido-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/29-novo-pedido-celular.png" alt="Novo pedido, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/29-novo-pedido-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/29-novo-pedido-celular.png" alt="Novo pedido, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t30">
+  <h2>30 · Pedido passo 1</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/30-pedido-passo-1-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/30-pedido-passo-1-desktop.png" alt="Pedido passo 1, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/30-pedido-passo-1-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/30-pedido-passo-1-desktop.png" alt="Pedido passo 1, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/30-pedido-passo-1-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/30-pedido-passo-1-celular.png" alt="Pedido passo 1, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/30-pedido-passo-1-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/30-pedido-passo-1-celular.png" alt="Pedido passo 1, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t31">
+  <h2>31 · Pedido passo 2</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/31-pedido-passo-2-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/31-pedido-passo-2-desktop.png" alt="Pedido passo 2, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/31-pedido-passo-2-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/31-pedido-passo-2-desktop.png" alt="Pedido passo 2, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/31-pedido-passo-2-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/31-pedido-passo-2-celular.png" alt="Pedido passo 2, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/31-pedido-passo-2-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/31-pedido-passo-2-celular.png" alt="Pedido passo 2, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t32">
+  <h2>32 · Pedido passo 3</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/32-pedido-passo-3-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/32-pedido-passo-3-desktop.png" alt="Pedido passo 3, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/32-pedido-passo-3-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/32-pedido-passo-3-desktop.png" alt="Pedido passo 3, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/32-pedido-passo-3-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/32-pedido-passo-3-celular.png" alt="Pedido passo 3, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/32-pedido-passo-3-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/32-pedido-passo-3-celular.png" alt="Pedido passo 3, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t33">
+  <h2>33 · Pedido passo 4</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/33-pedido-passo-4-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/33-pedido-passo-4-desktop.png" alt="Pedido passo 4, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/33-pedido-passo-4-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/33-pedido-passo-4-desktop.png" alt="Pedido passo 4, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/33-pedido-passo-4-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/33-pedido-passo-4-celular.png" alt="Pedido passo 4, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/33-pedido-passo-4-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/33-pedido-passo-4-celular.png" alt="Pedido passo 4, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t34">
+  <h2>34 · Pedido passo 5</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/34-pedido-passo-5-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/34-pedido-passo-5-desktop.png" alt="Pedido passo 5, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/34-pedido-passo-5-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/34-pedido-passo-5-desktop.png" alt="Pedido passo 5, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/34-pedido-passo-5-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/34-pedido-passo-5-celular.png" alt="Pedido passo 5, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/34-pedido-passo-5-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/34-pedido-passo-5-celular.png" alt="Pedido passo 5, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t35">
+  <h2>35 · Memoria de calculo</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/35-memoria-de-calculo-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/35-memoria-de-calculo-desktop.png" alt="Memoria de calculo, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/35-memoria-de-calculo-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/35-memoria-de-calculo-desktop.png" alt="Memoria de calculo, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/35-memoria-de-calculo-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/35-memoria-de-calculo-celular.png" alt="Memoria de calculo, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/35-memoria-de-calculo-celular-parte1.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/35-memoria-de-calculo-celular-parte1.png" alt="Memoria de calculo, depois, celular"></a><a href="depois/35-memoria-de-calculo-celular-parte2.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/35-memoria-de-calculo-celular-parte2.png" alt="Memoria de calculo, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t36">
+  <h2>36 · Pedido protocolado</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/36-pedido-protocolado-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/36-pedido-protocolado-desktop.png" alt="Pedido protocolado, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/36-pedido-protocolado-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/36-pedido-protocolado-desktop.png" alt="Pedido protocolado, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/36-pedido-protocolado-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/36-pedido-protocolado-celular.png" alt="Pedido protocolado, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/36-pedido-protocolado-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/36-pedido-protocolado-celular.png" alt="Pedido protocolado, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t37">
+  <h2>37 · Pedido deferido</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/37-pedido-deferido-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/37-pedido-deferido-desktop.png" alt="Pedido deferido, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/37-pedido-deferido-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/37-pedido-deferido-desktop.png" alt="Pedido deferido, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/37-pedido-deferido-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/37-pedido-deferido-celular.png" alt="Pedido deferido, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/37-pedido-deferido-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/37-pedido-deferido-celular.png" alt="Pedido deferido, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t38">
+  <h2>38 · A receber</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/38-a-receber-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/38-a-receber-desktop.png" alt="A receber, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/38-a-receber-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/38-a-receber-desktop.png" alt="A receber, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/38-a-receber-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/38-a-receber-celular.png" alt="A receber, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/38-a-receber-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/38-a-receber-celular.png" alt="A receber, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t39">
+  <h2>39 · Convencoes</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/39-convencoes-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/39-convencoes-desktop.png" alt="Convencoes, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/39-convencoes-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/39-convencoes-desktop.png" alt="Convencoes, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/39-convencoes-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/39-convencoes-celular.png" alt="Convencoes, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/39-convencoes-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/39-convencoes-celular.png" alt="Convencoes, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t40">
+  <h2>40 · Avisos</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/40-avisos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/40-avisos-desktop.png" alt="Avisos, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/40-avisos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/40-avisos-desktop.png" alt="Avisos, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/40-avisos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/40-avisos-celular.png" alt="Avisos, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/40-avisos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/40-avisos-celular.png" alt="Avisos, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t41">
+  <h2>41 · Busca</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/41-busca-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/41-busca-desktop.png" alt="Busca, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/41-busca-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/41-busca-desktop.png" alt="Busca, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/41-busca-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/41-busca-celular.png" alt="Busca, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/41-busca-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/41-busca-celular.png" alt="Busca, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t42">
+  <h2>42 · Menu da conta</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/42-menu-da-conta-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/42-menu-da-conta-desktop.png" alt="Menu da conta, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/42-menu-da-conta-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/42-menu-da-conta-desktop.png" alt="Menu da conta, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/42-menu-da-conta-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/42-menu-da-conta-celular.png" alt="Menu da conta, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/42-menu-da-conta-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/42-menu-da-conta-celular.png" alt="Menu da conta, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t43">
+  <h2>43 · Config empresa</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/43-config-empresa-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/43-config-empresa-desktop.png" alt="Config empresa, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/43-config-empresa-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/43-config-empresa-desktop.png" alt="Config empresa, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/43-config-empresa-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/43-config-empresa-celular.png" alt="Config empresa, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/43-config-empresa-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/43-config-empresa-celular.png" alt="Config empresa, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t44">
+  <h2>44 · Config pessoas</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/44-config-pessoas-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/44-config-pessoas-desktop.png" alt="Config pessoas, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/44-config-pessoas-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/44-config-pessoas-desktop.png" alt="Config pessoas, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/44-config-pessoas-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/44-config-pessoas-celular.png" alt="Config pessoas, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/44-config-pessoas-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/44-config-pessoas-celular.png" alt="Config pessoas, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t45">
+  <h2>45 · Config avisos</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/45-config-avisos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/45-config-avisos-desktop.png" alt="Config avisos, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/45-config-avisos-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/45-config-avisos-desktop.png" alt="Config avisos, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/45-config-avisos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/45-config-avisos-celular.png" alt="Config avisos, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/45-config-avisos-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/45-config-avisos-celular.png" alt="Config avisos, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t46">
+  <h2>46 · Config cobranca</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/46-config-cobranca-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/46-config-cobranca-desktop.png" alt="Config cobranca, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/46-config-cobranca-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/46-config-cobranca-desktop.png" alt="Config cobranca, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/46-config-cobranca-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/46-config-cobranca-celular.png" alt="Config cobranca, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/46-config-cobranca-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/46-config-cobranca-celular.png" alt="Config cobranca, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t47">
+  <h2>47 · Config seguranca</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/47-config-seguranca-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/47-config-seguranca-desktop.png" alt="Config seguranca, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/47-config-seguranca-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/47-config-seguranca-desktop.png" alt="Config seguranca, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/47-config-seguranca-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/47-config-seguranca-celular.png" alt="Config seguranca, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/47-config-seguranca-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/47-config-seguranca-celular.png" alt="Config seguranca, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t48">
+  <h2>48 · Config dados</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/48-config-dados-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/48-config-dados-desktop.png" alt="Config dados, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/48-config-dados-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/48-config-dados-desktop.png" alt="Config dados, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/48-config-dados-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/48-config-dados-celular.png" alt="Config dados, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/48-config-dados-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/48-config-dados-celular.png" alt="Config dados, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t49">
+  <h2>49 · Assessoria clientes vazio</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/49-assessoria-clientes-vazio-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/49-assessoria-clientes-vazio-desktop.png" alt="Assessoria clientes vazio, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/49-assessoria-clientes-vazio-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/49-assessoria-clientes-vazio-desktop.png" alt="Assessoria clientes vazio, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/49-assessoria-clientes-vazio-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/49-assessoria-clientes-vazio-celular.png" alt="Assessoria clientes vazio, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/49-assessoria-clientes-vazio-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/49-assessoria-clientes-vazio-celular.png" alt="Assessoria clientes vazio, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t50">
+  <h2>50 · Assessoria clientes</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/50-assessoria-clientes-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/50-assessoria-clientes-desktop.png" alt="Assessoria clientes, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/50-assessoria-clientes-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/50-assessoria-clientes-desktop.png" alt="Assessoria clientes, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/50-assessoria-clientes-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/50-assessoria-clientes-celular.png" alt="Assessoria clientes, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/50-assessoria-clientes-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/50-assessoria-clientes-celular.png" alt="Assessoria clientes, depois, celular"></a></div>
+  </div>
+</section>
+<section id="t51">
+  <h2>51 · Demonstracao</h2>
+  <div class="par so-desktop">
+    <div class="lado"><h3>Antes</h3><a href="antes/51-demonstracao-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/51-demonstracao-desktop.png" alt="Demonstracao, antes, desktop"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/51-demonstracao-desktop.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/51-demonstracao-desktop.png" alt="Demonstracao, depois, desktop"></a></div>
+  </div>
+  <div class="par so-celular">
+    <div class="lado"><h3>Antes</h3><a href="antes/51-demonstracao-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="antes/51-demonstracao-celular.png" alt="Demonstracao, antes, celular"></a></div>
+    <div class="lado"><h3>Depois</h3><a href="depois/51-demonstracao-celular.png" target="_blank" rel="noopener"><img loading="lazy" src="depois/51-demonstracao-celular.png" alt="Demonstracao, depois, celular"></a></div>
+  </div>
+</section>
+</main>
+<script>
+  document.querySelectorAll(".abas button").forEach((b) => b.addEventListener("click", () => {
+    document.body.dataset.tam = b.dataset.t;
+    document.querySelectorAll(".abas button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+</script>
+</body>
+</html>

@@ -116,10 +116,25 @@ async function foto(page, num, titulo, url, tam, acao) {
   if (url) await page.goto(BASE + url, { waitUntil: "networkidle" });
   if (acao) await acao(page);
   if (tam.nome === "celular") await page.addStyleTag({ content: ".app-inferior{position:static!important}" });
+  // Captura de página inteira não pinta seções com content-visibility fora da tela; para a foto, desliga.
+  await page.addStyleTag({ content: ".revelar.secao{content-visibility:visible!important}" });
   await page.waitForTimeout(600);
   const arquivo = `${num}-${titulo.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/-$/, "")}-${tam.nome}.png`;
-  await page.screenshot({ path: path.join(SAIDA, arquivo), fullPage: true });
-  lista.push({ num, titulo, tamanho: tam.nome, arquivo });
+  // O navegador não captura mais de ~16 mil pixels de altura de uma vez (no celular, com densidade 2,
+  // isso dá 8 mil px de página). Páginas mais altas saem em partes: -parte1, -parte2…
+  const altura = await page.evaluate(() => document.documentElement.scrollHeight);
+  const largura = tam.viewport.width;
+  const maximo = Math.floor(15000 / (tam.deviceScaleFactor ?? 1));
+  if (altura <= maximo) {
+    await page.screenshot({ path: path.join(SAIDA, arquivo), fullPage: true });
+    lista.push({ num, titulo, tamanho: tam.nome, arquivo });
+  } else {
+    for (let i = 0, y = 0; y < altura; i++, y += maximo) {
+      const parte = arquivo.replace(/\.png$/, `-parte${i + 1}.png`);
+      await page.screenshot({ path: path.join(SAIDA, parte), fullPage: true, clip: { x: 0, y, width: largura, height: Math.min(maximo, altura - y) } });
+      lista.push({ num, titulo: `${titulo} (parte ${i + 1})`, tamanho: tam.nome, arquivo: parte });
+    }
+  }
 }
 
 async function entrar(page, email, senha) {
