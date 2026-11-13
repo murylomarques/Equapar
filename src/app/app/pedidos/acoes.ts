@@ -7,7 +7,7 @@ import { contratoDaConta, exigir, pedidoDaConta, registrarHistorico } from "@/li
 import { db } from "@/lib/db";
 import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/acao";
 import { registrarEvento } from "@/lib/eventos";
-import { hora, hojeUTC, lerData, lerDinheiro, dataLocal } from "@/lib/format";
+import { data, hora, hojeUTC, lerData, lerDinheiro, dataLocal } from "@/lib/format";
 import { avisarDeferido, avisarProtocolo } from "@/lib/avisos";
 import { calcularPedido } from "@/lib/pedido";
 import { validarPlanilha } from "@/lib/calculo/motor";
@@ -15,7 +15,9 @@ import { clonarPlanilha, planilhaModelo } from "@/lib/calculo/modelo";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
 import { iaAtiva, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
-import { apagarArquivo, salvarArquivo } from "@/lib/storage";
+import { apagarArquivo, gravarArquivo, lerArquivo, salvarArquivo } from "@/lib/storage";
+import crypto from "node:crypto";
+import path from "node:path";
 import { oportunidade } from "@/lib/prazos";
 import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendenciasParaGerar, totaisGravados, type DadosAprovacaoDesfeita, type Pendencia } from "@/lib/pedido-regras";
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
@@ -569,4 +571,83 @@ export async function descartarPedido(_: Resultado, fd: FormData): Promise<Resul
   });
   if (r.erro) return r;
   redirect("/app/pedidos");
+}
+
+// ---------------------------------------------------------------------------
+// 5.5: depois do indeferimento
+// ---------------------------------------------------------------------------
+
+/** Registra o recurso: data em que foi apresentado (se já foi) e o prazo, que entra nos prazos e no histórico. */
+export async function registrarRecurso(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigir("editar_pedidos");
+    const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
+    if (p.estado !== "INDEFERIDO") return { erro: "O recurso é para pedidos indeferidos." };
+    const recursoData = lerData(fd.get("recursoData"));
+    const recursoPrazo = lerData(fd.get("recursoPrazo"));
+    if (!recursoPrazo) return { erro: "Falta o prazo do recurso.", campos: { recursoPrazo: "Digite o prazo do recurso." } };
+    if (p.respostaData && recursoData && recursoData < p.respostaData) return { erro: "A data do recurso é anterior ao indeferimento.", campos: { recursoData: "Confira a data." } };
+    await db.pedido.update({ where: { id: p.id }, data: { recursoData, recursoPrazo } });
+    await registrarHistorico(ctx, recursoData ? `Registrou o recurso, apresentado em ${data(recursoData)}, prazo ${data(recursoPrazo)}` : `Registrou o prazo do recurso: ${data(recursoPrazo)}`, {
+      pedidoId: p.id,
+      contratoId: p.contratoId,
+    });
+    revalidatePath(`/app/pedidos/${p.id}/pronto`);
+    return { ok: "Recurso registrado. O prazo aparece em Hoje e no contrato." };
+  });
+}
+
+/** Começa um novo pedido a partir de um indeferido: reaproveita as planilhas, o motivo e cópias dos documentos. */
+export async function novoPedidoAPartirDe(_: Resultado, fd: FormData): Promise<Resultado> {
+  let novoId = "";
+  const r = await tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigir("editar_pedidos");
+    const o = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
+    if (o.estado !== "INDEFERIDO") return { erro: "Só um pedido indeferido pode ser refeito a partir dele." };
+    const aberto = await db.pedido.findFirst({ where: { contratoId: o.contratoId, estado: { in: ["EM_ANALISE", "CALCULO_VALIDADO"] }, pedidoOrigemId: o.id } });
+    if (aberto) {
+      novoId = aberto.id;
+      return;
+    }
+    const docs = await db.documento.findMany({ where: { pedidoId: o.id } });
+    const novo = await db.pedido.create({
+      data: {
+        contratoId: o.contratoId,
+        pedidoOrigemId: o.id,
+        gatilho: o.gatilho,
+        convencaoId: o.convencaoId,
+        dataBase: o.dataBase,
+        dataDeposito: o.dataDeposito,
+        descricaoGatilho: o.descricaoGatilho,
+        jornadaAntes: o.jornadaAntes,
+        jornadaDepois: o.jornadaDepois,
+        horasCobertura: o.horasCobertura,
+        inicioJornada: o.inicioJornada,
+        cenarioJornada: o.cenarioJornada,
+        retroContarAte: o.retroContarAte,
+        retroMesIncompleto: o.retroMesIncompleto,
+        planilhaAntes: o.planilhaAntes ? json(o.planilhaAntes) : undefined,
+        planilhaAgora: o.planilhaAgora ? json(o.planilhaAgora) : undefined,
+        checklist: o.checklist ? json(o.checklist) : undefined,
+        passoAtual: o.planilhaAgora ? 3 : o.planilhaAntes ? 2 : 1,
+      },
+    });
+    // cópia de cada arquivo: descartar o pedido novo não pode apagar os arquivos do indeferido
+    for (const d of docs) {
+      try {
+        const buf = await lerArquivo(d.caminho);
+        const caminho = `${ctx.conta.id}/${Date.now()}-${crypto.randomBytes(6).toString("hex")}${path.extname(d.caminho)}`;
+        await gravarArquivo(caminho, buf, d.mime);
+        await db.documento.create({ data: { pedidoId: novo.id, contratoId: d.contratoId, tipo: d.tipo, nome: d.nome, mime: d.mime, tamanho: d.tamanho, caminho, enviadoPor: d.enviadoPor } });
+      } catch (e) {
+        console.error("[novo pedido] arquivo não copiado", d.caminho, e);
+      }
+    }
+    await registrarHistorico(ctx, "Começou um novo pedido a partir do indeferido", { pedidoId: o.id, contratoId: o.contratoId });
+    await registrarHistorico(ctx, "Pedido criado a partir de um pedido indeferido (planilhas e documentos reaproveitados)", { pedidoId: novo.id, contratoId: o.contratoId });
+    await registrarEvento("pedido_iniciado", { emLote: false });
+    novoId = novo.id;
+  });
+  if (r.erro) return r;
+  redirect(`/app/pedidos/${novoId}`);
 }

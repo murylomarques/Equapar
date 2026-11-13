@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acoesDoContrato, contratosComPrazoEm, oportunidade } from "./prazos";
+import { acoesDoContrato, contratosComPrazoEm, oportunidade, prazosDoContrato } from "./prazos";
 
 const hoje = new Date(Date.UTC(2026, 10, 12));
 const dia = (n: number) => new Date(hoje.getTime() + n * 86_400_000);
@@ -30,5 +30,16 @@ describe("5.1: o pedido da jornada não esconde a repactuação da convenção",
     c.pedidos = [{ id: "pj", estado: "EM_ANALISE", gatilho: "JORNADA_EC141", dataBase: dia(34) }];
     const comJornada = oportunidade(c as never, dia(30));
     expect(comJornada?.pedidoAberto).toBeNull();
+  });
+});
+
+describe("5.5: recurso depois do indeferimento", () => {
+  it("o prazo do recurso entra nos prazos e em Precisa de você", () => {
+    const c = contrato("R", dia(400)) as unknown as { pedidos: unknown[] };
+    c.pedidos = [{ id: "pr", estado: "INDEFERIDO", gatilho: "NOVA_CONVENCAO", dataBase: dia(-60), recursoPrazo: dia(10), recursoData: null }];
+    expect(prazosDoContrato(c as never, hoje).some((p) => p.tipo === "recurso" && p.titulo === "Prazo para apresentar o recurso")).toBe(true);
+    expect(acoesDoContrato(c as never, hoje).some((a) => a.chave === "recurso:pr")).toBe(true);
+    c.pedidos = [{ id: "pr", estado: "INDEFERIDO", gatilho: "NOVA_CONVENCAO", dataBase: dia(-60), recursoPrazo: dia(10), recursoData: dia(-1) }];
+    expect(acoesDoContrato(c as never, hoje).some((a) => a.chave === "recurso:pr")).toBe(false);
   });
 });

@@ -107,7 +107,7 @@ export interface Prazo {
   data: Date;
   titulo: string;
   regra?: (typeof FONTES)[keyof typeof FONTES];
-  tipo: "pedir" | "fim" | "database" | "resposta";
+  tipo: "pedir" | "fim" | "database" | "resposta" | "recurso";
 }
 
 export function prazosDoContrato(c: ContratoComRel, hoje = hojeUTC()): Prazo[] {
@@ -124,6 +124,9 @@ export function prazosDoContrato(c: ContratoComRel, hoje = hojeUTC()): Prazo[] {
   for (const p of c.pedidos) {
     const r = p.estado === "PROTOCOLADO" ? prazoResposta(p) : null;
     if (r) lista.push({ data: r, titulo: "Prazo preferencial de resposta do órgão", regra: FONTES.resposta, tipo: "resposta" });
+    // 5.5: recurso registrado depois do indeferimento
+    if (p.estado === "INDEFERIDO" && p.recursoPrazo)
+      lista.push({ data: p.recursoPrazo, titulo: p.recursoData ? "Prazo do recurso (decisão do órgão)" : "Prazo para apresentar o recurso", tipo: "recurso" });
   }
   return lista.sort((a, b) => a.data.getTime() - b.data.getTime());
 }
@@ -185,6 +188,8 @@ export function acoesDoContrato(c: ContratoComRel, hoje = hojeUTC()): Acao[] {
       out.push({ ...base, chave: `apost:${p.id}`, titulo: "Cobrar o apostilamento", limite: null, detalhe: `deferido ${emDias(diasAte(p.deferidoEm))}, sem apostilamento`, botao: "Abrir", href: `/app/a-receber`, tom: "carimbo" });
     } else if (p.estado === "DEFERIDO" && p.apostiladoEm) {
       out.push({ ...base, chave: `fat:${p.id}`, titulo: "Faturar a diferença", limite: null, detalhe: "apostilado, falta a nota da diferença retroativa", botao: "Gerar cobrança", href: `/app/a-receber`, tom: "verde" });
+    } else if (p.estado === "INDEFERIDO" && p.recursoPrazo && !p.recursoData && p.recursoPrazo >= hoje) {
+      out.push({ ...base, chave: `recurso:${p.id}`, titulo: "Apresentar o recurso", limite: p.recursoPrazo, detalhe: `prazo ${emDias(diasAte(p.recursoPrazo))}`, botao: "Abrir pedido", href: `/app/pedidos/${p.id}/pronto`, tom: "carimbo" });
     } else if (p.estado === "CALCULO_VALIDADO" && !p.protocoloNumero) {
       out.push({ ...base, chave: `prot:${p.id}`, titulo: "Protocolar o pedido", limite: c.vigenciaFim, detalhe: "pedido pronto, falta registrar o protocolo", botao: "Abrir pedido", href: `/app/pedidos/${p.id}/pronto`, tom: "ambar" });
     }

@@ -13,7 +13,7 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { FonteRegra } from "@/components/fonte-regra";
 import { CampoData, CampoDinheiro, CampoTexto, RadiosCartao, TextoLongo } from "@/components/ui/campos";
 import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
-import { gerarCobranca, marcarRecebido, registrarApostilamento, registrarProtocolo, registrarResposta } from "../../acoes";
+import { gerarCobranca, marcarRecebido, novoPedidoAPartirDe, registrarApostilamento, registrarProtocolo, registrarRecurso, registrarResposta } from "../../acoes";
 import { HistoricoOrgao } from "@/components/historico-orgao";
 
 export const metadata: Metadata = { title: "Pedido | Equapar" };
@@ -292,6 +292,34 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
             <SeloSimples texto={`Indeferido em ${data(p.respostaData)}`} tom="carimbo" icone="alerta" />
             {p.respostaResumo && <p className="mt-16">{p.respostaResumo}</p>}
             <p className="secundario mt-16">Se o pedido foi negado por falta de prova, revise os documentos e a memória com um especialista antes de um novo pedido ou recurso.</p>
+            {/* 5.5: recurso e novo pedido a partir deste */}
+            {p.recursoPrazo && (
+              <p className="mt-16 mb-0">
+                <strong>Recurso:</strong> {p.recursoData ? `apresentado em ${data(p.recursoData)}, ` : "ainda não apresentado, "}prazo {data(p.recursoPrazo)}.
+              </p>
+            )}
+            {pode(ctx.papel, "editar_pedidos") && (
+              <>
+                <hr className="regua" />
+                <h3>Registrar recurso</h3>
+                <FormAcao action={registrarRecurso} className="pilha-8">
+                  <input type="hidden" name="pedidoId" value={p.id} />
+                  <div className="linha-form">
+                    <CampoData nome="recursoData" rotulo="Data em que o recurso foi apresentado" opcional valorInicial={p.recursoData ? paraInputData(p.recursoData) : null} mostrarRelativo={false} ajuda="Deixe em branco se ainda não apresentou." />
+                    <CampoData nome="recursoPrazo" rotulo="Prazo do recurso" valorInicial={p.recursoPrazo ? paraInputData(p.recursoPrazo) : null} ajuda="Entra nos prazos do contrato e em Hoje." />
+                  </div>
+                  <BotaoEnvio className="btn">Registrar recurso</BotaoEnvio>
+                </FormAcao>
+                <hr className="regua" />
+                <FormAcao action={novoPedidoAPartirDe}>
+                  <input type="hidden" name="pedidoId" value={p.id} />
+                  <BotaoEnvio className="btn" pendente="Copiando planilhas e documentos…">
+                    Começar um novo pedido a partir deste
+                  </BotaoEnvio>
+                  <p className="legenda mt-8 mb-0">Reaproveita o motivo, as planilhas e cópias dos documentos. Você revisa tudo antes de gerar de novo.</p>
+                </FormAcao>
+              </>
+            )}
           </section>
           {arquivos}
         </div>
