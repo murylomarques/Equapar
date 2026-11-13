@@ -1,9 +1,7 @@
 import "server-only";
 import JSZip from "jszip";
-import fs from "node:fs/promises";
-import path from "node:path";
 import { db } from "./db";
-import { caminhoAbsoluto, lerArquivo } from "./storage";
+import { gravarArquivo, lerArquivo } from "./storage";
 
 /** Monta o ZIP "Exportar tudo" (LGPD): dados da conta em JSON + arquivos enviados. */
 export async function montarExportacao(contaId: string) {
@@ -38,10 +36,8 @@ export async function montarExportacao(contaId: string) {
 export async function executarExportacao(trabalhoId: string, contaId: string) {
   try {
     const buf = await montarExportacao(contaId);
-    const rel = path.join(contaId, "exportacoes", `${trabalhoId}.zip`);
-    const abs = caminhoAbsoluto(rel);
-    await fs.mkdir(/*turbopackIgnore: true*/ path.dirname(abs), { recursive: true });
-    await fs.writeFile(/*turbopackIgnore: true*/ abs, buf);
+    const rel = `${contaId}/exportacoes/${trabalhoId}.zip`;
+    await gravarArquivo(rel, buf, "application/zip");
     await db.trabalhoFundo.update({ where: { id: trabalhoId }, data: { status: "PRONTO", caminho: rel, concluidoEm: new Date() } });
   } catch (e) {
     console.error("[exportação]", e);

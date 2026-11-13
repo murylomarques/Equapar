@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L10 e L12 feitos (L7 sem o teste de navegador); L11 bloqueado (decisão do dono); L13 parcial; L14 feito; **Fase 0 concluída** (o dono aprovou seguir, com a opção 1: migrações L11 e L17). Verificação no navegador feita no build de produção: C1–C4, C6, C7, S1–S4, S11, S12, L7, fluxo completo (computador e celular, 23 etapas cada), assessoria + duas etapas, teclado e axe (0 graves em 93). Limpezas continuam só em simulação. **Próximo: fase 1.** Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L10 e L12 feitos (L7 sem o teste de navegador); L11 bloqueado (decisão do dono); L13 parcial; L14 feito; **Fase 0 concluída** (o dono aprovou seguir, com a opção 1: migrações L11 e L17). Verificação no navegador feita no build de produção: C1–C4, C6, C7, S1–S4, S11, S12, L7, fluxo completo (computador e celular, 23 etapas cada), assessoria + duas etapas, teclado e axe (0 graves em 93). Limpezas continuam só em simulação. **Fase 1 em andamento.** Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -102,3 +102,12 @@ Nenhuma de produção. (Desenvolvimento, do redesenho: `axe-core`, `lighthouse`.
 - **S3 (regressão minha):** `/esqueci-senha` e os 4 guias são gerados no build, mas recebiam a CSP com nonce, que bloqueava os scripts (o formulário não respondia). Agora entram na lista de páginas estáticas, e o teste `s3-cabecalhos.mjs` lê `.next/prerender-manifest.json`: página estática nova sem a CSP certa faz o teste falhar.
 - **L11:** o seletor novo tinha o mesmo rótulo do campo de data ("Contar a diferença até"); virou "Data final da contagem".
 - **Testes:** as cópias da demonstração isolada (C6.2) também têm o contrato fictício 45/2025; os testes passaram a usar só a conta modelo (`demo: false`). O utilitário dos testes não mostra mais "Tudo certo" quando o teste para antes de verificar.
+
+## Fase 1: pronto para cobrar e operar
+
+| Item | Situação | Prova | Pendente |
+| --- | --- | --- | --- |
+| 4.3 Instalação (`npm ci`) | parcial | `package-lock.json` regenerado; `packageManager: npm@11.6.2` e `engines` no `package.json`. Commit "Fase 1 (4.3): npm ci" | Conferir `npm ci` num container limpo (aqui há dois servidores usando o `node_modules`) |
+| 4.3 Testes de navegador com Chromium | feito | `e2e/*.mjs`: Chromium do Playwright por padrão; `NAVEGADOR=msedge` opcional | Instalar o navegador: `npx playwright install chromium` (no README) |
+| 4.3 `.env.example` versionado | feito | Todas as variáveis lidas no código, com obrigatória/opcional; exceção no `.gitignore` | Somar as próximas desta fase |
+| 4.1.2 Armazenamento (disco e S3) | feito | `src/lib/armazenamento.test.ts`: disco (grava, lê, apaga, apaga pasta da conta) e S3 com cliente falso (Put cifrado AES256 no bucket privado, Get, apagar prefixo em páginas, link assinado de 5 min). Todo arquivo passa pela interface; download com S3 redireciona para o link assinado depois de conferir a permissão. Commit "4.1.2" | Escolher o provedor e criar o bucket (item 6 da seção 8). Scripts de limpeza ainda leem só o disco |

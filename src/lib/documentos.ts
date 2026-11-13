@@ -4,7 +4,6 @@ import { nomeAbaUnico } from "./excel-nomes";
 import { aprovacaoValida } from "./pedido-regras";
 import JSZip from "jszip";
 import { AlignmentType, Document, Packer, Paragraph, TextRun } from "docx";
-import fs from "node:fs/promises";
 import { db } from "./db";
 import { brl, calcularPlanilha, pct, dec } from "./calculo/motor";
 import { MODULOS, type PlanilhaCustos } from "./calculo/tipos";
@@ -14,7 +13,7 @@ import { data, dataLocal, dataPorExtenso, hojeUTC } from "./format";
 import { COR, hexParaRgb, Pdf } from "./pdf";
 import type { ResultadoRaioX } from "./pncp";
 import { seloVigencia } from "./prazos";
-import { caminhoAbsoluto } from "./storage";
+import { lerArquivo } from "./storage";
 import { ErroUsuario } from "./acao";
 
 async function carregar(pedidoId: string, contaId: string) {
@@ -43,7 +42,7 @@ function marca(d: Dados) {
 async function logoDe(caminho: string | null) {
   if (!caminho) return null;
   try {
-    const bytes = new Uint8Array(await fs.readFile(/*turbopackIgnore: true*/ caminhoAbsoluto(caminho)));
+    const bytes = new Uint8Array(await lerArquivo(caminho));
     return { bytes, tipo: caminho.toLowerCase().endsWith(".png") ? ("png" as const) : ("jpg" as const) };
   } catch {
     return null;
@@ -328,7 +327,7 @@ export async function pacoteZip(pedidoId: string, contaId: string) {
   let i = 4;
   for (const doc of docs) {
     try {
-      zip.file(`${String(i++).padStart(2, "0")}-anexo-${doc.nome}`, await fs.readFile(/*turbopackIgnore: true*/ caminhoAbsoluto(doc.caminho)));
+      zip.file(`${String(i++).padStart(2, "0")}-anexo-${doc.nome}`, await lerArquivo(doc.caminho));
     } catch {
       /* arquivo removido do disco: segue sem ele */
     }
