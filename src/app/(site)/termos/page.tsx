@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
+import { identificacaoEmpresa } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Termos de uso | Equapar" };
 
 export default function Termos() {
+  const empresa = identificacaoEmpresa();
   return (
     <article className="site-largura secao guia">
       <h1>Termos de uso</h1>
-      <p className="aviso-caixa">Minuta. Revise com um profissional antes de publicar.</p>
+      <p className="aviso-caixa">MINUTA. Revise com um profissional antes de publicar.</p>
+      <h2>Quem presta o serviço</h2>
+      <p>
+        {empresa.texto}. Contato: <a href={`mailto:${empresa.canal}`}>{empresa.canal}</a>.
+      </p>
       <h2>O que a Equapar faz</h2>
       <p>
         A Equapar é um software que organiza prazos, cálculos e documentos de repactuação de contratos públicos. Ela não é escritório de advocacia nem de contabilidade e não protocola pedidos em nome do cliente.

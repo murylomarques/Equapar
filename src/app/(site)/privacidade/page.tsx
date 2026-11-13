@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { SITE, dadoSite } from "@/lib/site";
+import { identificacaoEmpresa } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Política de privacidade | Equapar" };
 
 export default function Privacidade() {
+  const empresa = identificacaoEmpresa();
   return (
     <article className="site-largura secao guia">
       <h1>Política de privacidade</h1>
-      <p className="aviso-caixa">Minuta. Revise com um profissional antes de publicar.</p>
+      <p className="aviso-caixa">MINUTA. Revise com um profissional antes de publicar.</p>
       <h2>Quem somos</h2>
       <p>
-        {[dadoSite(SITE.razaoSocial) ?? "Equapar", dadoSite(SITE.cnpj) && `CNPJ ${dadoSite(SITE.cnpj)}`, dadoSite(SITE.endereco)].filter(Boolean).join(", ")}. Contato do encarregado: {SITE.email}.
+        {empresa.texto}. Canal do titular de dados e do encarregado: <a href={`mailto:${empresa.canal}`}>{empresa.canal}</a>.
       </p>
       <h2>Que dados tratamos e por quê</h2>
       <ul>
