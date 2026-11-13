@@ -22,6 +22,7 @@
     "e2e": "node e2e/fluxo.mjs desktop && node e2e/fluxo.mjs celular && node e2e/assessoria-2fa.mjs && node e2e/sem-rolagem-lateral.mjs",
     "e2e:a11y": "node e2e/acessibilidade.mjs",
     "e2e:teclado": "node e2e/teclado.mjs",
+    "e2e:producao": "node e2e/producao.mjs",
     "db:seed:demo": "tsx --env-file=.env prisma/seed-demo.ts",
     "db:seed:demo:prod": "tsx --tsconfig tsconfig.worker.json prisma/seed-demo.ts",
     "test:db": "node --env-file=.env -e \"process.env.TESTE_BANCO=1;require('child_process').execSync('npx vitest run --dir src',{stdio:'inherit',env:process.env})\"",
