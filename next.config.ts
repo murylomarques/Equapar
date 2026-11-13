@@ -1,10 +1,11 @@
 import type { NextConfig } from "next";
-import { camposFaltando } from "./src/lib/site";
+import { camposFaltando, dadosEmpresa } from "./src/lib/site";
 
-// 5.2: aviso no build quando o site ainda tem dados [PREENCHER] (em produção esses campos ficam escondidos)
+// B1: aviso no build sobre os dados da empresa (SITE_*). Só nomes, nunca valores. Em produção, o que falta não aparece no site.
 if (process.argv.includes("build")) {
   const faltam = camposFaltando();
-  if (faltam.length) console.warn(`⚠ Site: faltam dados em src/lib/site.ts (${faltam.join(", ")}). Em produção esses campos ficam escondidos.`);
+  if (faltam.length) console.warn(`⚠ Site: variáveis vazias (o site esconde ou usa o padrão): ${faltam.join(", ")}.`);
+  if (dadosEmpresa().cnpjInvalido) console.warn("⚠ Site: SITE_CNPJ inválido; o CNPJ não aparece no site.");
 }
 
 // S3: cabeçalhos de segurança em todas as respostas (a CSP vem do src/proxy.ts, com nonce por requisição).

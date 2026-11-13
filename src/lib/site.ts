@@ -1,41 +1,49 @@
 /**
- * Dados institucionais que aparecem no site. PREENCHA antes de publicar:
- * os campos marcados com [PREENCHER] ainda não existem nos documentos (empresa a constituir).
+ * B1. Dados institucionais do site: SÓ pelo ambiente (variáveis SITE_*). Nenhum valor real fica no código,
+ * nos testes ou no relatório (trava 11). Cada campo vazio tem um comportamento definido (ver .env.example).
  */
+import { cnpjValido, formatarCnpj, normalizarCnpj } from "./cnpj";
+
+const env = (k: string) => process.env[k]?.trim() || "";
+
+/** Fato público da faixa de fatos (Produto e experiência, seção 3). Método em /metodo/levantamento-limpeza. */
 export const SITE = {
-  razaoSocial: "[PREENCHER] Equapar Tecnologia Ltda.",
-  cnpj: "[PREENCHER] 00.000.000/0000-00",
-  endereco: "[PREENCHER] Endereço da sede",
-  email: "contato@equapar.com.br",
-  whatsapp: "[PREENCHER] (00) 00000-0000",
-  fundador: {
-    nome: "[PREENCHER] Nome do fundador",
-    /** Caminho de uma foto real em /public (ex.: "/fundador.jpg"). Vazio mostra o espaço reservado. */
-    foto: "",
-  },
-  /** Fato público da faixa de fatos (Produto e experiência, seção 3). Atualize com novo levantamento. */
   levantamentoLimpeza: { empresas: "1.447", data: "10/11/2026" },
 };
 
-/**
- * 5.2: campo ainda com [PREENCHER] não aparece em produção (devolve null; a tela esconde o campo).
- * Em desenvolvimento aparece, para lembrar de preencher.
- */
-export function dadoSite(v: string): string | null {
-  if (!v.includes("[PREENCHER]")) return v;
-  return process.env.NODE_ENV === "production" ? null : v;
+/** As variáveis SITE_* que o site usa (SITE_AGENDA_URL é opcional e não entra na lista do que falta). */
+export const VARIAVEIS_SITE = ["SITE_EMAIL_CONTATO", "SITE_WHATSAPP", "SITE_FUNDADOR_NOME", "SITE_FUNDADOR_FOTO", "SITE_RAZAO_SOCIAL", "SITE_CNPJ", "SITE_ENDERECO", "SITE_CIDADE"] as const;
+
+/** Dados da empresa como devem aparecer, já com o comportamento de cada campo vazio. */
+export function dadosEmpresa() {
+  const cnpjBruto = env("SITE_CNPJ");
+  const cnpj = cnpjBruto && cnpjValido(cnpjBruto) ? formatarCnpj(normalizarCnpj(cnpjBruto)) : null;
+  const cidade = env("SITE_CIDADE") || null;
+  return {
+    /** sem CNPJ, a empresa aparece como "em constituição" (B5) */
+    razaoSocial: cnpj ? env("SITE_RAZAO_SOCIAL") || "Equapar" : env("SITE_RAZAO_SOCIAL") || "Equapar (empresa em constituição)",
+    emConstituicao: !cnpj,
+    cnpj,
+    cnpjInvalido: !!cnpjBruto && !cnpj,
+    endereco: env("SITE_ENDERECO") || null,
+    cidade,
+    /** endereço completo; sem ele, só a cidade */
+    local: env("SITE_ENDERECO") || cidade,
+    fundadorNome: env("SITE_FUNDADOR_NOME") || null,
+    fundadorFoto: env("SITE_FUNDADOR_FOTO") || null,
+  };
 }
 
-/** Nomes dos campos que ainda faltam (para o aviso no build). */
+/** B6: quais SITE_* estão vazias (nomes, nunca valores). CNPJ inválido conta como faltando. */
 export function camposFaltando(): string[] {
-  const f: string[] = [];
-  const ver = (nome: string, v: string) => v.includes("[PREENCHER]") && f.push(nome);
-  ver("razaoSocial", SITE.razaoSocial);
-  ver("cnpj", SITE.cnpj);
-  ver("endereco", SITE.endereco);
-  ver("whatsapp", SITE.whatsapp);
-  ver("fundador.nome", SITE.fundador.nome);
-  return f;
+  const d = dadosEmpresa();
+  return VARIAVEIS_SITE.filter((k) => (k === "SITE_CNPJ" ? !d.cnpj : !env(k)));
+}
+
+/** Telefone do WhatsApp para exibir: "+55 (11) 90000-0000" (dígitos com DDI 55). */
+export function telefoneFormatado(digitos: string) {
+  const m = /^55(\d{2})(\d{4,5})(\d{4})$/.exec(digitos);
+  return m ? `+55 (${m[1]}) ${m[2]}-${m[3]}` : `+${digitos}`;
 }
 
 /** Conta de demonstração (papel Leitura, dados fictícios), criada pelo seed. */
@@ -60,4 +68,27 @@ export function contatoSite() {
 /** A4: o site só promete WhatsApp quando a integração existe (WHATSAPP_TOKEN). */
 export function canaisDeAviso() {
   return process.env.WHATSAPP_TOKEN ? "Avisos por e-mail e WhatsApp" : "Avisos por e-mail";
+}
+
+/**
+ * B5: como termos e privacidade identificam a empresa. Sem SITE_CNPJ: "Equapar, empresa em constituição",
+ * com o fundador como responsável, o e-mail como canal do titular e a cidade como local. Com o CNPJ preenchido,
+ * razão social, CNPJ e endereço, sem nova programação.
+ */
+export function identificacaoEmpresa() {
+  const e = dadosEmpresa();
+  const c = contatoSite();
+  if (e.cnpj)
+    return {
+      texto: [e.razaoSocial, `CNPJ ${e.cnpj}`, e.local].filter(Boolean).join(", "),
+      responsavel: e.fundadorNome,
+      canal: c.email,
+      local: e.local,
+    };
+  return {
+    texto: ["Equapar, empresa em constituição", e.fundadorNome && `sob a responsabilidade de ${e.fundadorNome}`, e.cidade].filter(Boolean).join(", "),
+    responsavel: e.fundadorNome,
+    canal: c.email,
+    local: e.cidade,
+  };
 }

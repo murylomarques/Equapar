@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { SITE, dadoSite } from "@/lib/site";
+import { contatoSite, dadosEmpresa, telefoneFormatado } from "@/lib/site";
 import { MenuSite } from "@/components/menu-site";
 import "./site.css";
 import { modoPiloto } from "@/lib/chaves";
@@ -10,6 +10,8 @@ import { modoPiloto } from "@/lib/chaves";
 export const revalidate = 60;
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
+  const empresa = dadosEmpresa();
+  const contato = contatoSite();
   return (
     <>
       {/* 5.1: faixa da jornada. Liga com SITE_FAIXA_JORNADA=true depois que o dono aprovar o texto */}
@@ -53,12 +55,12 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <nav aria-label="Rodapé" className="pilha-8">
               <Link href="/privacidade">Política de privacidade</Link>
               <Link href="/termos">Termos de uso</Link>
-              <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
-              {dadoSite(SITE.whatsapp) && <span>WhatsApp {dadoSite(SITE.whatsapp)}</span>}
+              <a href={contato.emailLink}>{contato.email}</a>
+              {contato.whatsapp && contato.whatsappLink && <a href={contato.whatsappLink}>WhatsApp {telefoneFormatado(contato.whatsapp)}</a>}
             </nav>
           </div>
           <p className="legenda mt-24" style={{ color: "#b9b6ae" }}>
-            {[dadoSite(SITE.razaoSocial), dadoSite(SITE.cnpj) && `CNPJ ${dadoSite(SITE.cnpj)}`, dadoSite(SITE.endereco)].filter(Boolean).join(" · ")}
+            {[empresa.razaoSocial, empresa.cnpj && `CNPJ ${empresa.cnpj}`, empresa.local].filter(Boolean).join(" · ")}
           </p>
         </div>
       </footer>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { FormCnpjServidor } from "@/components/form-cnpj-servidor";
 import { PreviaCarteira, PreviaHoje, PreviaMemoria, PreviaPronto, PreviaReceber } from "@/components/previas";
 import { Revelar } from "@/components/revelar";
-import { SITE, dadoSite } from "@/lib/site";
+import { SITE, dadosEmpresa } from "@/lib/site";
 import { TabelaPlanos } from "@/components/planos";
 import { FONTES } from "@/lib/prazos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
@@ -251,25 +251,8 @@ export default function Landing() {
       </Revelar>
       )}
 
-      {/* 10. Quem faz (5.2: sem o nome do fundador preenchido, a seção não aparece em produção) */}
-      {dadoSite(SITE.fundador.nome) && (
-      <Revelar className="secao">
-        <div className="site-largura">
-          <div className="fundador">
-            {SITE.fundador.foto ? (
-              <img src={SITE.fundador.foto} alt={`Foto de ${SITE.fundador.nome}`} width={160} height={160} style={{ borderRadius: 6, objectFit: "cover" }} />
-            ) : (
-              <div className="foto-vaga">Espaço para a foto real do fundador (configure em src/lib/site.ts)</div>
-            )}
-            <blockquote style={{ margin: 0 }}>
-              <p style={{ fontFamily: "var(--fonte-serif)", fontSize: 24, lineHeight: 1.3 }}>
-                Sou {SITE.fundador.nome}, desenvolvedor. Criei a Equapar depois de ver empresas de limpeza perderem repactuações por prazo e por conta mal documentada. Respondo pessoalmente as mensagens do piloto.
-              </p>
-            </blockquote>
-          </div>
-        </div>
-      </Revelar>
-      )}
+      {/* 10. Quem faz (B1: nome e foto pelo ambiente; sem nome, só a empresa; sem foto, espaço neutro) */}
+      <QuemFaz />
 
       {/* 11. Perguntas */}
       <Revelar className="secao">
@@ -307,5 +290,30 @@ export default function Landing() {
         </div>
       </Revelar>
     </>
+  );
+}
+
+/** B1: bloco "quem faz". Sem SITE_FUNDADOR_NOME, fala só da empresa; sem SITE_FUNDADOR_FOTO, espaço neutro. */
+function QuemFaz() {
+  const e = dadosEmpresa();
+  return (
+    <Revelar className="secao">
+      <div className="site-largura">
+        <div className="fundador">
+          {e.fundadorNome && e.fundadorFoto ? (
+            <img src={e.fundadorFoto} alt={`Foto de ${e.fundadorNome}`} width={160} height={160} style={{ borderRadius: 6, objectFit: "cover" }} />
+          ) : (
+            <div className="foto-vaga" aria-hidden />
+          )}
+          <blockquote style={{ margin: 0 }}>
+            <p style={{ fontFamily: "var(--fonte-serif)", fontSize: 24, lineHeight: 1.3 }}>
+              {e.fundadorNome
+                ? `Sou ${e.fundadorNome}. Criei a Equapar depois de ver empresas de limpeza perderem repactuações por prazo e por conta mal documentada. Respondo pessoalmente as mensagens do piloto.`
+                : "A Equapar nasceu de ver empresas de limpeza perderem repactuações por prazo e por conta mal documentada. As mensagens do piloto são respondidas por quem constrói o sistema."}
+            </p>
+          </blockquote>
+        </div>
+      </div>
+    </Revelar>
   );
 }
