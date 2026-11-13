@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/acao";
 import { cnpjValido } from "@/lib/cnpj";
 import { registrarEvento } from "@/lib/eventos";
-import { data, lerData, lerDinheiro } from "@/lib/format";
+import { data, hojeUTC, lerData, lerDinheiro } from "@/lib/format";
 import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
 import { salvarArquivo } from "@/lib/storage";
 import { vigenciaAoImportar } from "@/lib/pncp-vigencia";
@@ -16,6 +16,7 @@ import { limiteDoPlano } from "@/lib/planos";
 import { proximaVersao } from "@/lib/versao-documento";
 import { modoPiloto } from "@/lib/chaves";
 import { normalizarCnpj } from "@/lib/mascaras";
+import { avaliarProrrogacao } from "@/lib/prorrogacao";
 
 // ---------------------------------------------------------------------------
 // Sessão
@@ -292,8 +293,9 @@ export async function registrarProrrogacao(_: Resultado, fd: FormData): Promise<
     await registrarHistorico(ctx, `Registrou a prorrogação até ${data(novoFim)} (termo de ${data(dataTermo)}, ${comRessalva ? "com" : "sem"} ressalva)`, { contratoId: c.id });
     const completo = await db.contrato.findUnique({ where: { id: c.id }, include: { convencao: true, pedidos: true } });
     revalidatePath(`/app/contratos/${c.id}`);
-    if (completo && riscoPreclusao({ dataTermo: dataTermo!, comRessalva }, completo))
-      return { ok: "Prorrogação registrada.", dados: { preclusao: true } };
+    // C5: alerta com grau (o caso "Confirmado" é o mesmo riscoPreclusao de antes)
+    const alerta = completo ? avaliarProrrogacao({ dataTermo: dataTermo!, comRessalva, hoje: hojeUTC() }, completo) : null;
+    if (alerta) return { ok: "Prorrogação registrada.", dados: { alerta: JSON.stringify(alerta), preclusao: completo ? riscoPreclusao({ dataTermo: dataTermo!, comRessalva }, completo) : false } };
     return { ok: "Prorrogação registrada." };
   });
 }
