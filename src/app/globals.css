@@ -1811,3 +1811,35 @@ mark {
 .form-passo1 .so-jornada { display: none; }
 .form-passo1:has(input[name="gatilho"][value="JORNADA_EC141"]:checked) .so-jornada { display: block; }
 .form-passo1:has(input[name="gatilho"][value="JORNADA_EC141"]:checked) .so-convencao { display: none; }
+
+/* 5.2: no celular, os números de Hoje viram uma faixa compacta e "Precisa de você" aparece na primeira tela */
+.cartao-numero .rotulo-curto {
+  display: none;
+}
+@media (max-width: 720px) {
+  .faixa-numeros {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .faixa-numeros a.cartao-numero {
+    padding: 10px 12px;
+  }
+  .faixa-numeros .rotulo-longo,
+  .faixa-numeros .det-n,
+  .faixa-numeros .rotulo-n svg {
+    display: none;
+  }
+  .faixa-numeros .rotulo-curto {
+    display: inline;
+  }
+  .faixa-numeros .rotulo-n {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .faixa-numeros .valor-n {
+    font-size: 22px;
+    line-height: 28px;
+    margin: 4px 0 0;
+  }
+}

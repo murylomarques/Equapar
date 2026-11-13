@@ -37,6 +37,7 @@ export function CartaoNumero({
   valor,
   detalhe,
   tom,
+  rotuloCurto,
 }: {
   href: string;
   icone: React.ComponentType<{ size?: number; strokeWidth?: number; "aria-hidden"?: boolean }>;
@@ -44,6 +45,8 @@ export function CartaoNumero({
   valor: React.ReactNode;
   detalhe?: React.ReactNode;
   tom?: "carimbo" | "azul" | "verde";
+  /** 5.2: rótulo da faixa compacta do celular */
+  rotuloCurto?: string;
 }) {
   const cor = tom === "carimbo" ? "var(--carimbo)" : tom === "azul" ? "var(--selo-azul-tx)" : tom === "verde" ? "var(--verde)" : "var(--grafite)";
   return (
@@ -52,7 +55,14 @@ export function CartaoNumero({
         <span style={{ color: cor, display: "inline-flex" }}>
           <I size={18} strokeWidth={1.5} aria-hidden />
         </span>
-        {rotulo}
+        {rotuloCurto ? (
+          <>
+            <span className="rotulo-longo">{rotulo}</span>
+            <span className="rotulo-curto">{rotuloCurto}</span>
+          </>
+        ) : (
+          rotulo
+        )}
       </span>
       <span className="valor-n" style={{ display: "block" }}>
         {valor}

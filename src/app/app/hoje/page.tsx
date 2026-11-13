@@ -87,11 +87,12 @@ export default async function Hoje() {
         </p>
       </div>
 
-      <div className="cartoes-numero">
+      <div className="cartoes-numero faixa-numeros">
         <CartaoNumero
           href="/app/carteira?filtro=prazo30"
           icone={CalendarClock}
           rotulo="Contratos com prazo em 30 dias"
+          rotuloCurto="Prazo em 30 dias"
           valor={prazos30}
           detalhe={prazos30 ? "Ver os contratos" : "Nenhum prazo próximo"}
           tom={prazos30 ? "carimbo" : undefined}
@@ -100,6 +101,7 @@ export default async function Hoje() {
           href="/app/pedidos?estado=PROTOCOLADO"
           icone={Hourglass}
           rotulo="Aguardando o órgão"
+          rotuloCurto="No órgão"
           valor={aguardando.length}
           detalhe={plural(aguardando.length, "pedido protocolado", "pedidos protocolados")}
           tom="azul"
