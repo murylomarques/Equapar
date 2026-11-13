@@ -42,3 +42,17 @@ export function camposFaltando(): string[] {
 export const EMAIL_DEMO = "demonstracao@equapar.local";
 /** 5.2: conta modelo da demonstração de assessoria (vários clientes fictícios), criada pelo seed. Ninguém entra nela. */
 export const EMAIL_DEMO_ASSESSORIA = "demonstracao-assessoria@equapar.local";
+
+/** B4: canais de contato a partir do ambiente (valores reais nunca ficam no código). */
+export const MENSAGEM_WHATSAPP = "Olá! Vim pelo site da Equapar e quero saber mais.";
+export function contatoSite() {
+  const email = process.env.SITE_EMAIL_CONTATO?.trim() || "contato@equapar.com";
+  const whatsapp = (process.env.SITE_WHATSAPP ?? "").replace(/\D/g, "");
+  return {
+    email,
+    emailLink: `mailto:${email}`,
+    whatsapp: whatsapp || null,
+    whatsappLink: whatsapp ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(MENSAGEM_WHATSAPP)}` : null,
+    agendaUrl: process.env.SITE_AGENDA_URL?.trim() || null,
+  };
+}

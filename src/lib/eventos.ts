@@ -3,6 +3,8 @@ import { db } from "./db";
 /** Eventos de produto (Produto e experiência, Métricas). Nunca levar dado pessoal em props. */
 export type NomeEvento =
   | "raiox_consultado"
+  | "demo_limite_ip"
+  | "demo_limite_global"
   | "raiox_resultado"
   | "relatorio_pedido"
   | "conta_criada"

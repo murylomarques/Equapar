@@ -41,3 +41,41 @@ Teste incluído em `npm run e2e`. Captura: `capturas/A1-carteira-1-1440.png`.
 ### A2. Painel interno invade o cartão vizinho (feito)
 
 Antes: `FALHA 390px /app/interno: largura 481 ≤ 390` (acima). Correção: filhos das grades com `min-width: 0` e tabelas do painel rolando dentro do próprio cartão. Depois: incluído no mesmo teste, "Tudo certo". Captura: `capturas/A2-interno-1-390.png`.
+
+### A3. A demonstração cria contas sem limite (feito)
+
+Antes (`node e2e/demo-limite.mjs`, o script A.1 do prompt, só com `BASE_URL` configurável):
+
+```
+10 visitas em 11.4 s: contas demo 20 -> 30; contratos de demonstração 100 -> 150
+saída: 1
+```
+
+Correção:
+- cota por IP: no máximo 3 demonstrações por IP por hora (`usarCota` em `src/lib/limite.ts`, chave `demo:<ip>`, IP de `ipConfiavel`, com trava no banco para acessos em paralelo);
+- limite global: `DEMO_MAX_ATIVAS` (padrão 300) demonstrações ativas; contagem e criação na mesma transação, com `pg_advisory_xact_lock`;
+- os dois limites mostram "Você já abriu demonstrações demais agora. Tente de novo em uma hora ou fale com a gente", com o botão de contato, e registram o evento (`demo_limite_ip`, `demo_limite_global`);
+- Turnstile no botão quando `TURNSTILE_SECRET_KEY` existe (mesmo padrão do Raio-X), também no botão de `/assessorias`;
+- limpeza agendada: o worker chama `limparDemos` de hora em hora só com `LIMPEZA_DEMOS_AUTOMATICA=true` (padrão desligado). Entram só contas com `demo = true` e mais de 4 horas; as contas modelo nunca entram.
+
+Depois (servidor com `TRUSTED_PROXY_HEADER=x-forwarded-for`, que o `next start` preenche com o IP de quem conectou):
+
+```
+10 visitas em 218.8 s: contas demo 30 -> 33; contratos de demonstração 150 -> 165
+saída: 0
+```
+
+(As 7 visitas recusadas esperam os 30 s do script pela tela do app, por isso o tempo.) Teste no banco: `src/lib/limite-demo.db.test.ts` (6 pedidos em paralelo, só 3 passam; a simulação não inclui conta de cliente nem modelo).
+
+Simulação da limpeza (trava 2, nada apagado):
+
+```
+$ npx tsx --tsconfig tsconfig.worker.json --env-file=.env scripts/limpar-demos.ts
+SIMULAÇÃO: nada foi apagado.
+{ "modo": "simulacao", "contas": 20, "contratos": 100, "pedidos": 42, "visitantes": 20,
+  "contasDeClienteNaLista": 0, "modelosNaLista": 0, "contasDeClienteNoBanco": 6 }
+```
+
+Captura do aviso: `capturas/A3-limite-1-390.png`.
+
+**Atenção para a produção:** sem `TRUSTED_PROXY_HEADER`, a cota por IP fica desligada (só vale o limite global). O `verificar:producao` (G2) avisa.

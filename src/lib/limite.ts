@@ -59,3 +59,20 @@ export async function limparTentativas(email: string) {
 export async function limparChave(chave: string) {
   await db.tentativaAcesso.deleteMany({ where: { chave } });
 }
+
+/**
+ * A3. Cota por janela (ex.: 3 demonstrações por IP por hora), na mesma tabela das tentativas.
+ * Devolve true e conta o uso se ainda cabe; false se a cota da janela acabou.
+ */
+export async function usarCota(chave: string, limite: number, janelaMs: number, agora = new Date()): Promise<boolean> {
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${chave}))`;
+    const atual = await tx.tentativaAcesso.findUnique({ where: { chave } });
+    const dentro = atual && atual.janelaAte > agora;
+    const usos = dentro ? atual.falhas : 0;
+    if (usos >= limite) return false;
+    const janelaAte = dentro ? atual.janelaAte : new Date(agora.getTime() + janelaMs);
+    await tx.tentativaAcesso.upsert({ where: { chave }, create: { chave, falhas: 1, janelaAte, bloqueadoAte: null }, update: { falhas: usos + 1, janelaAte } });
+    return true;
+  });
+}

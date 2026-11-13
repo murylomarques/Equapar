@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PreviaPronto } from "@/components/previas";
 import { SITE } from "@/lib/site";
 import { entrarNaDemonstracao } from "../demonstracao/acoes";
+import { Captcha } from "@/components/captcha";
 
 // 5.2: conversa de 20 minutos (link de agenda opcional em SITE_AGENDA_URL; sem ele, e-mail)
 const agenda = process.env.SITE_AGENDA_URL || `mailto:${SITE.email}?subject=${encodeURIComponent("Conversa de 20 minutos sobre a Equapar para assessorias")}`;
@@ -35,6 +36,7 @@ export default function Assessorias() {
           <div className="fileira">
             <form action={entrarNaDemonstracao}>
               <input type="hidden" name="tipo" value="assessoria" />
+              <Captcha />
               <button type="submit" className="btn btn-primario">
                 Ver a demonstração com 3 clientes
               </button>

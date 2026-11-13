@@ -22,6 +22,18 @@ async function contaModelo(tipo: "EMPRESA" | "ASSESSORIA") {
 }
 
 /** Copia a conta modelo para um visitante e devolve o usuário e a conta novos. */
+/** A3: no máximo DEMO_MAX_ATIVAS demonstrações ativas ao mesmo tempo (padrão 300). */
+export function maxDemosAtivas() {
+  const n = Number(process.env.DEMO_MAX_ATIVAS);
+  return Number.isInteger(n) && n > 0 ? n : 300;
+}
+
+export class LimiteDemonstracoes extends Error {
+  constructor() {
+    super("Limite de demonstrações ativas atingido.");
+  }
+}
+
 export async function criarContaDemo(tipo: "EMPRESA" | "ASSESSORIA" = "EMPRESA") {
   const modeloId = await contaModelo(tipo);
   if (!modeloId) return null;
@@ -32,6 +44,10 @@ export async function criarContaDemo(tipo: "EMPRESA" | "ASSESSORIA" = "EMPRESA")
   const sufixo = crypto.randomBytes(6).toString("hex");
   return db.$transaction(
     async (tx) => {
+      // A3: contar e criar na mesma transação, com trava, para acessos simultâneos não passarem do limite
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('equapar:demo-ativas'))`;
+      const ativas = await tx.conta.count({ where: { demo: true, demoExpiraEm: { gt: new Date() } } });
+      if (ativas >= maxDemosAtivas()) throw new LimiteDemonstracoes();
       const conta = await tx.conta.create({
         data: {
           ...sem(m, "id", "criadoEm", "empresas", "convencoes", "tarefas", "marcaLogo"),

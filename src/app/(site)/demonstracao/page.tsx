@@ -2,10 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ehDemo, sessaoAtual } from "@/lib/auth";
 import { entrarNaDemonstracao } from "./acoes";
+import { Captcha } from "@/components/captcha";
+import { Contato } from "@/components/contato";
+import { AvisoLimiteDemo } from "./limite";
 
 export const metadata: Metadata = { title: "Demonstração | Equapar" };
 
-export default async function Demonstracao() {
+export default async function Demonstracao({ searchParams }: { searchParams: Promise<{ limite?: string; captcha?: string }> }) {
+  const sp = await searchParams;
   const s = await sessaoAtual();
   const real = s && !s.pendente2fa && !ehDemo(s);
   return (
@@ -29,11 +33,20 @@ export default async function Demonstracao() {
               Uma empresa fictícia de limpeza com contratos, prazos, pedidos e valores a receber. Você navega por todas as telas; nada do que aparece é de uma empresa
               real, e a demonstração não envia e-mail nem WhatsApp.
             </p>
+            {sp.limite && <AvisoLimiteDemo />}
+            {sp.captcha && (
+              <p className="erro-texto" role="alert">
+                Não conseguimos confirmar que você não é um robô. Tente de novo.
+              </p>
+            )}
             <form action={entrarNaDemonstracao} className="mt-24">
-              <button type="submit" className="btn btn-primario">
+              <Captcha />
+              <button type="submit" className="btn btn-primario mt-8">
                 Entrar na demonstração
               </button>
             </form>
+            <p className="legenda mt-24">Prefere conversar antes?</p>
+            <Contato />
           </>
         )}
       </div>
