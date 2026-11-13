@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acoesDoContrato, contratosComPrazoEm } from "./prazos";
+import { acoesDoContrato, contratosComPrazoEm, oportunidade } from "./prazos";
 
 const hoje = new Date(Date.UTC(2026, 10, 12));
 const dia = (n: number) => new Date(hoje.getTime() + n * 86_400_000);
@@ -19,5 +19,16 @@ describe("L1: um conjunto só de contratos com prazo", () => {
     const acoes30 = cs.flatMap((c) => acoesDoContrato(c, hoje)).filter((a) => a.limite && (a.limite.getTime() - hoje.getTime()) / 86_400_000 <= 30).length;
     const filtro30 = contratosComPrazoEm(cs, 30, hoje).length;
     expect(acoes30).not.toBe(filtro30); // a divergência que o L1 elimina: agora os dois usam contratosComPrazoEm
+  });
+});
+
+describe("5.1: o pedido da jornada não esconde a repactuação da convenção", () => {
+  it("convenção nova a pedir continua aparecendo com um pedido de jornada aberto", () => {
+    const c = contrato("J", dia(400)) as unknown as { pedidos: unknown[] };
+    const base = oportunidade(c as never, dia(30));
+    expect(base).not.toBeNull();
+    c.pedidos = [{ id: "pj", estado: "EM_ANALISE", gatilho: "JORNADA_EC141", dataBase: dia(34) }];
+    const comJornada = oportunidade(c as never, dia(30));
+    expect(comJornada?.pedidoAberto).toBeNull();
   });
 });

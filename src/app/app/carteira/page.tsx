@@ -12,6 +12,7 @@ import { EstadoVazio } from "@/components/ui/apresentacao";
 import { importarPncp } from "../acoes";
 import { iniciarPedidosEmLote } from "../pedidos/acoes";
 import { TabelaCarteira, type LinhaCarteira } from "./tabela-carteira";
+import { JORNADA, afetadoPelaJornada } from "@/lib/jornada";
 
 export const metadata: Metadata = { title: "Carteira | Equapar" };
 
@@ -29,6 +30,8 @@ const FILTROS: { id: string; nome: string; teste: (c: ContratoCompleto) => boole
     teste: (c) => contratosComPrazoEm([c], 60).length > 0,
   },
   { id: "semconvencao", nome: "Sem convenção informada", teste: (c) => c.maoDeObraDedicada && c.tipoReajuste === "REPACTUACAO" && !c.convencao },
+  // 5.1: contratos de mão de obra dedicada que seguem vigentes quando a nova jornada começar
+  { id: "jornada", nome: "Afetados pela jornada de 40 horas", teste: (c) => afetadoPelaJornada(c) },
   { id: "pedido", nome: "Pedido em andamento", teste: (c) => c.pedidos.some((p) => !["RECEBIDO", "INDEFERIDO"].includes(p.estado)) },
 ];
 
@@ -86,6 +89,7 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
     };
   });
   const n = (f: (c: ContratoCompleto) => boolean) => todos.filter(f).length;
+  const semPedidoJornada = todos.filter((c) => afetadoPelaJornada(c) && !c.pedidos.some((p) => p.gatilho === "JORNADA_EC141" && p.estado !== "INDEFERIDO"));
 
   return (
     <>
@@ -134,6 +138,27 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
               A mesma planilha e a mesma convenção servem para todos. Você revisa cada pedido depois.
             </Alerta>
           ))}
+
+      {podeLote && sp.filtro === "jornada" && semPedidoJornada.length > 0 && (
+        <Alerta
+          tipo="atencao"
+          className="mb-16"
+          titulo={`${plural(semPedidoJornada.length, "contrato afetado", "contratos afetados")} pela jornada sem pedido de reequilíbrio`}
+          acao={
+            <FormAcao action={iniciarPedidosEmLote}>
+              <input type="hidden" name="motivo" value="JORNADA" />
+              {semPedidoJornada.map((c) => (
+                <input key={c.id} type="hidden" name="contratoId" value={c.id} />
+              ))}
+              <BotaoEnvio className="btn btn-pequeno" pendente="Montando os pedidos…">
+                <Layers size={16} strokeWidth={1.5} aria-hidden /> Montar os pedidos destes {semPedidoJornada.length} contratos
+              </BotaoEnvio>
+            </FormAcao>
+          }
+        >
+          A nova jornada começa em {data(JORNADA.inicio42())} (42 horas) e {data(JORNADA.inicio40())} (40 horas), datas a confirmar com o jurídico. Cada pedido escolhe o cenário: manter ou reduzir as horas.
+        </Alerta>
+      )}
 
       <nav className="filtros" aria-label="Filtros rápidos">
         <Link href={link({ filtro: undefined })} className="filtro" aria-current={!sp.filtro ? "true" : undefined}>

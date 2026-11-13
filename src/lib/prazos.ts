@@ -72,8 +72,10 @@ export function oportunidade(c: ContratoComRel, hoje = hojeUTC()) {
   const db = ultimaDataBase(c.convencao, hoje);
   const referencia = c.dataProposta ?? c.vigenciaInicio;
   if (db <= referencia) return null;
-  const pedidoCobre = c.pedidos.some((p) => p.estado !== "INDEFERIDO" && p.dataBase && p.dataBase >= db);
-  const pedidoAberto = c.pedidos.find((p) => (ABERTOS as readonly string[]).includes(p.estado) && (!p.dataBase || p.dataBase >= db));
+  // 5.1: o pedido da jornada (EC 141) não cobre a convenção nova
+  const daConvencao = c.pedidos.filter((p) => p.gatilho !== "JORNADA_EC141");
+  const pedidoCobre = daConvencao.some((p) => p.estado !== "INDEFERIDO" && p.dataBase && p.dataBase >= db);
+  const pedidoAberto = daConvencao.find((p) => (ABERTOS as readonly string[]).includes(p.estado) && (!p.dataBase || p.dataBase >= db));
   if (pedidoCobre && !pedidoAberto) return null;
   return { dataBase: db, pedirAte: c.vigenciaFim, pedidoAberto: pedidoAberto ?? null };
 }

@@ -22,6 +22,7 @@ import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { limiteDoPlano } from "@/lib/planos";
 import { planilhaDoCenario, type Cenario } from "@/lib/jornada";
+import { JORNADA } from "@/lib/jornada";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -29,9 +30,13 @@ const json = (v: unknown) => v as Prisma.InputJsonValue;
 // Início
 // ---------------------------------------------------------------------------
 
-async function criarPedido(ctx: Awaited<ReturnType<typeof exigir>>, contratoId: string) {
+async function criarPedido(ctx: Awaited<ReturnType<typeof exigir>>, contratoId: string, motivo: "CONVENCAO" | "JORNADA" = "CONVENCAO") {
   const c = await contratoDaConta(ctx, contratoId);
-  const aberto = await db.pedido.findFirst({ where: { contratoId: c.id, estado: { in: ["EM_ANALISE", "CALCULO_VALIDADO"] } } });
+  const jornada = motivo === "JORNADA";
+  // 5.1: o pedido da jornada corre ao lado do pedido da convenção; cada um tem o seu
+  const aberto = await db.pedido.findFirst({
+    where: { contratoId: c.id, estado: { in: ["EM_ANALISE", "CALCULO_VALIDADO"] }, gatilho: jornada ? "JORNADA_EC141" : { not: "JORNADA_EC141" } },
+  });
   if (aberto) return aberto;
   const completo = await db.contrato.findUnique({ where: { id: c.id }, include: { convencao: true, pedidos: true } });
   const op = completo ? oportunidade(completo) : null;
@@ -40,16 +45,30 @@ async function criarPedido(ctx: Awaited<ReturnType<typeof exigir>>, contratoId: 
     where: { contratoId: c.id, estado: { in: ["DEFERIDO", "FATURADO", "RECEBIDO"] }, planilhaAgora: { not: Prisma.AnyNull } },
     orderBy: { criadoEm: "desc" },
   });
+  // depois do início das 40 horas, o pedido novo é da segunda etapa (42 para 40)
+  const de40 = jornada && hojeUTC() >= JORNADA.inicio40();
+  const inicio = jornada ? (de40 ? JORNADA.inicio40() : JORNADA.inicio42()) : null;
   const p = await db.pedido.create({
-    data: {
-      contratoId: c.id,
-      convencaoId: c.convencaoId,
-      dataBase: op?.dataBase ?? null,
-      dataDeposito: c.convencao?.dataDeposito ?? null,
-      planilhaAntes: anterior?.planilhaAgora ? json(anterior.planilhaAgora) : undefined,
-    },
+    data: jornada
+      ? {
+          contratoId: c.id,
+          gatilho: "JORNADA_EC141",
+          dataBase: inicio,
+          inicioJornada: inicio,
+          jornadaAntes: de40 ? 42 : 44,
+          jornadaDepois: de40 ? 40 : 42,
+          horasCobertura: "44.00",
+          planilhaAntes: anterior?.planilhaAgora ? json(anterior.planilhaAgora) : undefined,
+        }
+      : {
+          contratoId: c.id,
+          convencaoId: c.convencaoId,
+          dataBase: op?.dataBase ?? null,
+          dataDeposito: c.convencao?.dataDeposito ?? null,
+          planilhaAntes: anterior?.planilhaAgora ? json(anterior.planilhaAgora) : undefined,
+        },
   });
-  await registrarHistorico(ctx, "Iniciou o pedido de repactuação", { contratoId: c.id, pedidoId: p.id });
+  await registrarHistorico(ctx, jornada ? "Iniciou o pedido de reequilíbrio da jornada (EC 141/2026)" : "Iniciou o pedido de repactuação", { contratoId: c.id, pedidoId: p.id });
   await registrarEvento("pedido_iniciado", { emLote: false });
   return p;
 }
@@ -70,7 +89,8 @@ export async function iniciarPedidosEmLote(_: Resultado, fd: FormData): Promise<
     const ctx = await exigir("editar_pedidos");
     const ids = fd.getAll("contratoId").map(String);
     if (!ids.length) return { erro: "Nenhum contrato selecionado." };
-    for (const id of ids) await criarPedido(ctx, id);
+    const motivo = texto(fd, "motivo") === "JORNADA" ? "JORNADA" : "CONVENCAO";
+    for (const id of ids) await criarPedido(ctx, id, motivo);
   });
   if (r.erro) return r;
   redirect("/app/pedidos?estado=EM_ANALISE");
