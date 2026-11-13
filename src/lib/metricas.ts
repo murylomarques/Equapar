@@ -140,3 +140,36 @@ export function resultadoSeanEllis(respostas: { resposta: string }[]) {
 export function mostrarPesquisa(conta: { demo: boolean; pesquisaDispensadaEm: Date | null }, primeiroDossie: Date | null, agora = new Date()) {
   return !conta.demo && !conta.pesquisaDispensadaEm && !!primeiroDossie && agora.getTime() - primeiroDossie.getTime() >= 7 * 86_400_000;
 }
+
+// ---------------------------------------------------------------------------
+// F2: ativação. Conta ativada = pelo menos 1 contrato com prazo calculado e pelo menos 1 pedido com o
+// cálculo pronto. A data da ativação é a mais tardia das duas.
+// ---------------------------------------------------------------------------
+
+export interface ContaAtivacao {
+  id: string;
+  criadoEm: Date;
+  primeiroContrato: Date | null;
+  primeiroCalculo: Date | null;
+}
+
+export function ativadaEm(c: ContaAtivacao): Date | null {
+  if (!c.primeiroContrato || !c.primeiroCalculo) return null;
+  return c.primeiroContrato > c.primeiroCalculo ? c.primeiroContrato : c.primeiroCalculo;
+}
+
+export function ativacaoDoMes(contas: ContaAtivacao[], m: string, agora = new Date()) {
+  const doMes = contas.filter((c) => mes(c.criadoEm) === m);
+  const ativadas = doMes.filter((c) => ativadaEm(c));
+  const dias = ativadas.map((c) => (ativadaEm(c)!.getTime() - c.criadoEm.getTime()) / 86_400_000).sort((a, b) => a - b);
+  const meio = Math.floor(dias.length / 2);
+  const mediana = dias.length ? (dias.length % 2 ? dias[meio] : (dias[meio - 1] + dias[meio]) / 2) : null;
+  return {
+    criadas: doMes.length,
+    ativadas: ativadas.length,
+    pct: doMes.length ? Math.round((ativadas.length / doMes.length) * 1000) / 10 : null,
+    medianaDias: mediana == null ? null : Math.round(mediana * 10) / 10,
+    // para o dono telefonar: criadas há mais de 3 dias e ainda não ativadas (todas, não só as do mês)
+    paraLigar: contas.filter((c) => !ativadaEm(c) && agora.getTime() - c.criadoEm.getTime() > 3 * 86_400_000).map((c) => c.id),
+  };
+}

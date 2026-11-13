@@ -4,6 +4,7 @@ import { contexto } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hojeUTC, paraInputData, reais, somarReais } from "@/lib/format";
 import {
+  ativacaoDoMes,
   custoPorAquisicao,
   margemEmReais,
   medianaDiasMontagem,
@@ -74,6 +75,26 @@ export default async function PainelInterno() {
   const planoDe = new Map(contas.map((c) => [c.id, c.plano as string]));
   const tempo = tempoPorPlano(registros, planoDe, mesAtual);
   const ellis = resultadoSeanEllis(await db.respostaPesquisa.findMany({ select: { resposta: true } }));
+  // F2: ativação (contas reais: sem demonstração e sem as contas só com empresas de exemplo)
+  const contasReais = await db.conta.findMany({
+    // conta nova sem empresa ainda conta; contas só com empresas de exemplo (modelos do seed) ficam fora
+    where: { demo: false, OR: [{ empresas: { none: {} } }, { empresas: { some: { exemplo: false } } }] },
+    select: {
+      id: true,
+      nome: true,
+      criadoEm: true,
+      membros: { where: { papel: "DONO" }, select: { usuario: { select: { email: true } } }, take: 1 },
+      empresas: { select: { contratos: { select: { criadoEm: true, pedidos: { where: { diferencaMensal: { not: null } }, select: { geradoEm: true, atualizadoEm: true } } } } } },
+    },
+  });
+  const paraAtivacao = contasReais.map((c) => {
+    const contratos = c.empresas.flatMap((e) => e.contratos);
+    const calculos = contratos.flatMap((k) => k.pedidos.map((x) => x.geradoEm ?? x.atualizadoEm));
+    const min = (ds: Date[]) => (ds.length ? new Date(Math.min(...ds.map((d) => d.getTime()))) : null);
+    return { id: c.id, criadoEm: c.criadoEm, primeiroContrato: min(contratos.map((k) => k.criadoEm)), primeiroCalculo: min(calculos) };
+  });
+  const ativacao = ativacaoDoMes(paraAtivacao, mesAtual, hoje);
+  const ligar = contasReais.filter((c) => ativacao.paraLigar.includes(c.id));
   return (
     <>
       {avisosOperacao().map((a) => (
@@ -140,6 +161,41 @@ export default async function PainelInterno() {
             </tbody>
           </table>
           <p className="legenda mb-0">Sobre as faturas pagas. Fica completa quando a cobrança (4.2) estiver ligada.</p>
+        </section>
+        <section className="cartao">
+          <h2>Ativação ({mesAtual})</h2>
+          <table className="tabela">
+            <tbody>
+              <tr>
+                <td>Contas criadas no mês (sem demonstrações)</td>
+                <td className="num">{ativacao.criadas}</td>
+              </tr>
+              <tr>
+                <td>Ativadas</td>
+                <td className="num">
+                  {ativacao.ativadas}
+                  {ativacao.pct != null ? ` (${String(ativacao.pct).replace(".", ",")}%)` : ""}
+                </td>
+              </tr>
+              <tr>
+                <td>Mediana entre criar a conta e ativar</td>
+                <td className="num">{ativacao.medianaDias == null ? "—" : `${String(ativacao.medianaDias).replace(".", ",")} dias`}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="legenda">Ativada = pelo menos 1 contrato com prazo calculado e 1 pedido com o cálculo pronto.</p>
+          <h3>Para ligar: criadas há mais de 3 dias e ainda não ativadas ({ligar.length})</h3>
+          {ligar.length ? (
+            <ul className="lista-limpa pilha-8">
+              {ligar.map((c) => (
+                <li key={c.id}>
+                  {c.nome} · criada em {c.criadoEm.toISOString().slice(0, 10)} · {c.membros[0]?.usuario.email ?? "sem dono"}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="secundario mb-0">Nenhuma.</p>
+          )}
         </section>
         <section className="cartao">
           <h2>Custo de aquisição e margem</h2>

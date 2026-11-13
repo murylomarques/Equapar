@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { custoPorAquisicao, margemEmReais, medianaDiasMontagem, mostrarPesquisa, novasPagantes, podeVerPainel, recuperadoNoPrazoPorMes, resultadoSeanEllis, retencao, tempoPorPlano } from "./metricas";
+import { ativacaoDoMes, custoPorAquisicao, margemEmReais, medianaDiasMontagem, mostrarPesquisa, novasPagantes, podeVerPainel, recuperadoNoPrazoPorMes, resultadoSeanEllis, retencao, tempoPorPlano } from "./metricas";
 
 const d = (s: string) => new Date(`${s}T12:00:00Z`);
 
@@ -90,5 +90,25 @@ describe("5.5: tempo humano e Sean Ellis", () => {
     expect(mostrarPesquisa(conta, new Date("2026-11-06T12:00:00Z"), agora)).toBe(true); // 7 dias
     expect(mostrarPesquisa({ ...conta, pesquisaDispensadaEm: agora }, new Date("2026-10-01T00:00:00Z"), agora)).toBe(false);
     expect(mostrarPesquisa({ ...conta, demo: true }, new Date("2026-10-01T00:00:00Z"), agora)).toBe(false);
+  });
+});
+
+
+describe("F2: ativação", () => {
+  const d = (s: string) => new Date(`${s}T12:00:00Z`);
+  it("conta ativada com contrato e cálculo pronto; mediana; lista para ligar", () => {
+    const r = ativacaoDoMes(
+      [
+        { id: "a", criadoEm: d("2026-11-01"), primeiroContrato: d("2026-11-01"), primeiroCalculo: d("2026-11-03") }, // 2 dias
+        { id: "b", criadoEm: d("2026-11-02"), primeiroContrato: d("2026-11-06"), primeiroCalculo: d("2026-11-04") }, // 4 dias
+        { id: "c", criadoEm: d("2026-11-05"), primeiroContrato: d("2026-11-05"), primeiroCalculo: null }, // sem cálculo
+        { id: "d", criadoEm: d("2026-11-12"), primeiroContrato: null, primeiroCalculo: null }, // nova: 1 dia
+        { id: "e", criadoEm: d("2026-10-20"), primeiroContrato: null, primeiroCalculo: null }, // outubro
+      ],
+      "2026-11",
+      d("2026-11-13"),
+    );
+    expect(r).toMatchObject({ criadas: 4, ativadas: 2, pct: 50, medianaDias: 3 });
+    expect(r.paraLigar.sort()).toEqual(["c", "e"]);
   });
 });
