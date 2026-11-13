@@ -683,3 +683,29 @@
     font-size: 13px;
   }
 }
+
+/* 5.2: no celular, o "⋯" fica na linha do título; as outras ações descem para a linha de baixo */
+.cabecalho-acao {
+  display: contents;
+}
+@media (max-width: 720px) {
+  .cabecalho-linha {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+  .cabecalho-acoes {
+    display: contents;
+  }
+  .cabecalho-menu {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .cabecalho-acao {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

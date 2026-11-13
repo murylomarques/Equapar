@@ -150,11 +150,11 @@ export function CabecalhoPagina({
         </div>
         {(acao || menu) && (
           <div className="fileira cabecalho-acoes">
-            {acao}
+            {acao && <div className="cabecalho-acao">{acao}</div>}
             {menu && (
-              <MenuSuspenso rotulo="Mais ações">
-                {menu}
-              </MenuSuspenso>
+              <div className="cabecalho-menu">
+                <MenuSuspenso rotulo="Mais ações">{menu}</MenuSuspenso>
+              </div>
             )}
           </div>
         )}
