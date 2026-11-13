@@ -1872,3 +1872,15 @@ mark {
 .tabela .sem-quebra {
   white-space: nowrap;
 }
+
+/* 5.2: abas no celular com rolagem visível e sombra na borda quando há mais abas */
+@media (max-width: 720px) {
+  .abas {
+    scrollbar-width: thin;
+    background:
+      linear-gradient(to right, var(--papel) 40%, rgba(244, 241, 234, 0)) left / 32px 100% no-repeat local,
+      linear-gradient(to left, var(--papel) 40%, rgba(244, 241, 234, 0)) right / 32px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgba(29, 27, 22, 0.22), transparent) left / 12px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgba(29, 27, 22, 0.22), transparent) right / 12px 100% no-repeat scroll;
+  }
+}
