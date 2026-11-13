@@ -115,6 +115,11 @@ model Conta {
   marcaLogo               String? // assessoria: caminho do logo (PNG/JPG) no armazenamento
   mostrarValoresWhatsapp  Boolean   @default(false)
   pilotoInicio            DateTime?
+  planoPendente           Plano? // 4.2: plano escolhido, vale quando o pagamento for confirmado
+  ciclo                   String    @default("MENSAL") // 4.2: MENSAL ou ANUAL
+  situacaoCobranca        String    @default("EM_DIA") // 4.2: EM_DIA, ATRASADA, CARENCIA, SOMENTE_LEITURA
+  carenciaAte             DateTime? // 4.2: fim da carência antes de virar somente leitura
+  gatewayClienteId        String? // 4.2: id do cliente no gateway de pagamento
   criadoEm                DateTime  @default(now())
   demo                    Boolean   @default(false) // C6: conta de demonstração de um visitante
   demoExpiraEm            DateTime? // C6: quando a conta de demonstração vence
@@ -348,6 +353,13 @@ model Fatura {
   valor      Decimal  @db.Decimal(12, 2)
   postos     Int?
   pagaEm     DateTime?
+  status        String    @default("ABERTA") // 4.2: ABERTA, PAGA, FALHOU, CANCELADA
+  vencimento    DateTime?
+  tentativas    Int       @default(0)
+  metodo        String? // PIX, BOLETO, CARTAO
+  gatewayId     String?   @unique
+  linkPagamento String?
+  notaFiscalUrl String?
   criadoEm   DateTime @default(now())
 }
 
@@ -428,4 +440,30 @@ model Prorrogacao {
   criadoEm      DateTime @default(now())
 
   @@index([contratoId])
+}
+
+/// 4.1.1: fila de tarefas no próprio PostgreSQL (worker separado: npm run worker)
+model TarefaFila {
+  id            String    @id @default(cuid())
+  tipo          String // AVISOS, PNCP_RETENTAR, EXPORTAR, LER_PDF, GERAR_ZIP, ENVIAR_MENSAGEM
+  dados         Json?
+  chave         String?   @unique // evita a mesma tarefa duas vezes (ex.: "avisos:2026-11-12T15")
+  status        String    @default("PENDENTE") // PENDENTE, RODANDO, FEITA, FALHOU
+  tentativas    Int       @default(0)
+  maxTentativas Int       @default(5)
+  proximaEm     DateTime  @default(now())
+  travadaAte    DateTime?
+  travadaPor    String?
+  erro          String?
+  criadaEm      DateTime  @default(now())
+  concluidaEm   DateTime?
+
+  @@index([status, proximaEm])
+}
+
+/// 4.2: eventos recebidos do gateway (cada um processado uma vez só)
+model EventoCobranca {
+  id         String   @id // id do evento no gateway
+  tipo       String
+  recebidoEm DateTime @default(now())
 }
