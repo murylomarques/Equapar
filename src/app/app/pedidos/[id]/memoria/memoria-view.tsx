@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, MessageSquare, Printer } from "lucide-react";
 import { brl, pct } from "@/lib/calculo/motor";
 import type { Comparacao, Retroativo } from "@/lib/calculo/motor";
@@ -34,6 +34,11 @@ export function MemoriaView({
 }) {
   const mudaram = comp.linhas.filter((l) => l.variacao !== "0.00").length;
   const [soMudou, setSoMudou] = useState(false);
+  // 5.2: no celular, "Só as linhas com valor diferente" vem ligado e a memória mostra um módulo por vez
+  const [moduloCelular, setModuloCelular] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 720px)").matches && mudaram > 0) setSoMudou(true);
+  }, [mudaram]);
   const [fechados, setFechados] = useState<Set<string>>(new Set());
   const [comentando, setComentando] = useState<string | null>(null);
   const nomeModulo = (m: string) => MODULOS.find((x) => x.id === m)?.nome ?? m;
@@ -67,7 +72,63 @@ export function MemoriaView({
                 {brl(posto.porPostoAntes)} → <strong>{brl(posto.porPostoAgora)}</strong> por posto
               </span>
             </div>
-            <div className="tabela-rolagem" style={{ border: 0, borderTop: "1px solid var(--linha)", borderRadius: 0, boxShadow: "none" }}>
+            {modulos.length > 0 && (
+              <div className="so-celular memoria-celular">
+                <div className="campo mb-0" style={{ padding: "0 16px 12px" }}>
+                  <label htmlFor={`mod-${posto.id}`}>Módulo</label>
+                  <select
+                    id={`mod-${posto.id}`}
+                    value={(modulos as string[]).includes(moduloCelular[posto.id]) ? moduloCelular[posto.id] : modulos[0]}
+                    onChange={(e) => setModuloCelular((m) => ({ ...m, [posto.id]: e.target.value }))}
+                  >
+                    {modulos.map((m) => (
+                      <option key={m} value={m}>
+                        {nomeModulo(m)} ({linhas.filter((l) => l.modulo === m).length})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <ul className="lista-limpa">
+                  {linhas
+                    .filter((l) => l.modulo === ((modulos as string[]).includes(moduloCelular[posto.id]) ? moduloCelular[posto.id] : modulos[0]))
+                    .map((l) => {
+                      const delta = Number(l.variacao);
+                      return (
+                        <li key={l.id} className="memoria-cartao">
+                          <strong style={{ fontWeight: 500 }}>{l.descricao}</strong>
+                          <div className="entre tnum">
+                            <span>
+                              {brl(l.antes)} → <strong>{brl(l.agora)}</strong>
+                            </span>
+                            {delta === 0 ? (
+                              <span className="secundario">sem mudança</span>
+                            ) : (
+                              <span style={{ fontWeight: 600, color: delta < 0 ? "var(--erro)" : "var(--verde)" }}>
+                                {delta > 0 ? "+" : ""}
+                                {brl(l.variacao)}
+                                {l.variacaoPct ? ` (${delta > 0 ? "+" : ""}${pct(l.variacaoPct)})` : ""}
+                              </span>
+                            )}
+                          </div>
+                          <div className="legenda">{l.contaAgora}</div>
+                          {l.fonte && (
+                            <div className="legenda">
+                              Fonte: {linkConvencao && /cl[aá]usula|cct|conven/i.test(l.fonte) ? <a href={linkConvencao}>{l.fonte}</a> : l.fonte}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                </ul>
+                <div className="entre memoria-cartao" style={{ fontWeight: 600 }}>
+                  <span>Total mensal</span>
+                  <span className="tnum">
+                    {brl(posto.mensalAntes)} → {brl(posto.mensalAgora)}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div className="tabela-rolagem so-desktop-memoria" style={{ border: 0, borderTop: "1px solid var(--linha)", borderRadius: 0, boxShadow: "none" }}>
               <table className="tabela">
                 <thead>
                   <tr>

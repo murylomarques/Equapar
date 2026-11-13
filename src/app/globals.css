@@ -1917,3 +1917,25 @@ mark {
     border-radius: 3px;
   }
 }
+
+/* 5.2: memória de cálculo no celular: cartão por linha, um módulo por vez */
+.memoria-cartao {
+  padding: 12px 16px;
+  border-top: 1px solid var(--linha);
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 720px) {
+  .so-desktop-memoria {
+    display: none;
+  }
+}
+@media print {
+  .memoria-celular {
+    display: none !important;
+  }
+  .so-desktop-memoria {
+    display: block !important;
+  }
+}
