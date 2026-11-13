@@ -14,6 +14,7 @@ import { FonteRegra } from "@/components/fonte-regra";
 import { CampoData, CampoDinheiro, CampoTexto, RadiosCartao, TextoLongo } from "@/components/ui/campos";
 import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
 import { gerarCobranca, marcarRecebido, registrarApostilamento, registrarProtocolo, registrarResposta } from "../../acoes";
+import { HistoricoOrgao } from "@/components/historico-orgao";
 
 export const metadata: Metadata = { title: "Pedido | Equapar" };
 
@@ -295,6 +296,10 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
           {arquivos}
         </div>
       )}
+
+      <div className="mt-24">
+        <HistoricoOrgao contaId={ctx.conta.id} orgao={p.contrato.orgao} orgaoCnpj={p.contrato.orgaoCnpj} />
+      </div>
 
       <section className="cartao mt-24" aria-labelledby="hist">
         <h2 id="hist">Histórico</h2>

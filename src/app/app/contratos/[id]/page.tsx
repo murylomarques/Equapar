@@ -34,6 +34,7 @@ import { enviarDocumentoContrato, usarVigenciaPncp } from "../../acoes";
 import { divergenciaPncp } from "@/lib/pncp-vigencia";
 import { EditarContrato } from "./editar-contrato";
 import { ItemArquivar } from "./arquivar";
+import { HistoricoOrgao } from "@/components/historico-orgao";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -242,6 +243,11 @@ export default async function ContratoPagina({ params, searchParams }: { params:
               </>
             )}
           </dl>
+        </div>
+      )}
+      {aba === "resumo" && (
+        <div className="mt-16">
+          <HistoricoOrgao contaId={ctx.conta.id} orgao={c.orgao} orgaoCnpj={c.orgaoCnpj} />
         </div>
       )}
 
