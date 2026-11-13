@@ -25,7 +25,7 @@ try {
   await db.pedido.update({ where: { id: alvo.id }, data: { planilhaAntes: comPlanilha.planilhaAntes, planilhaAgora: null } });
   await p.goto(`${BASE}/app/pedidos/${alvo.id}/passo/1`);
   conferir(await p.getByRole("radio", { name: /jornada \(EC 141\/2026\)/ }).isChecked(), "passo 1 vem com o motivo jornada marcado");
-  conferir(await p.getByLabel("Início da nova jornada").isVisible(), "campos da jornada aparecem");
+  conferir(await p.getByLabel("Etapa da jornada").isVisible(), "campos da jornada aparecem (etapa presa à data)");
   conferir(!(await p.getByText("Data do depósito da convenção").isVisible()), "campos da convenção ficam escondidos");
   await p.getByRole("button", { name: "Continuar" }).click();
   await p.waitForURL(/passo\/2/);

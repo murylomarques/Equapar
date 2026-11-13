@@ -55,4 +55,7 @@ describe("D2/D7: jornada sem inflar o salário", () => {
     expect(etapaNaData(d("2027-12-15"))?.id).toBe("44-42");
     expect(etapaNaData(d("2027-12-16"))?.id).toBe("42-40");
   });
+  // D7: o preço completo do posto (com encargos, insumos, custos indiretos, lucro e tributos) entra quando
+  // chegar a planilha completa do caso C1 assinada pelo contador.
+  it.todo("caso C1: preço completo do posto, conferido com a planilha assinada pelo contador");
 });
