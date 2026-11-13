@@ -1444,9 +1444,7 @@ dialog.painel-lateral::backdrop {
 }
 
 /* Revelar ao rolar: nunca esconde; só anima a entrada quando o bloco chega pela rolagem */
-.revelar.entrando {
-  animation: revelar-entra 200ms ease-out 1;
-}
+/* A5: a entrada animada ao rolar saiu (custava JavaScript e cálculo de estilo no celular); os blocos só aparecem */
 @keyframes revelar-entra {
   from {
     opacity: 0;

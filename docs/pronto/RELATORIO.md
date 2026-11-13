@@ -79,3 +79,36 @@ SIMULAÇÃO: nada foi apagado.
 Captura do aviso: `capturas/A3-limite-1-390.png`.
 
 **Atenção para a produção:** sem `TRUSTED_PROXY_HEADER`, a cota por IP fica desligada (só vale o limite global). O `verificar:producao` (G2) avisa.
+
+### A4. Textos que prometem o que não existe (feito)
+
+Antes (build anterior, `curl` das páginas):
+- landing: "Ver a tela por dentro (2 min)"; prévia com "R$ 48,3 mil" e o deferido no contrato 12/2024, enquanto a demonstração mostra R$ 31,5 mil no 07/2025;
+- preços: "Avisos por e-mail e WhatsApp" e "WhatsApp" no plano Carteira sem a integração; "Exemplo: 375 postos dão R$ 1.500 por mês. Revisão de especialista é cobrada à parte." (a revisão está desligada).
+
+Correção:
+- "Ver a demonstração";
+- WhatsApp só com `WHATSAPP_TOKEN` (`canaisDeAviso()`); sem ele, "Avisos por e-mail";
+- prévia e demonstração saem do mesmo conjunto fictício (`src/lib/exemplo-demo.ts`, usado pela prévia e pelo seed): R$ 31,5 mil, contratos 45/2025, 12/2024 e 07/2025, 18 e 21 dias;
+- linha de apoio: "Software e apoio operacional para a repactuação de contratos elegíveis: a Equapar organiza documentos e prazos, consolida os dados e gera a memória de cálculo e os arquivos editáveis que demonstram a variação de custos. Você confere e protocola." (base: texto C3);
+- Carteira: "74 postos = R$ 297 (mínimo); 75 postos = R$ 300"; Piloto com o botão de contato; revisão de especialista só aparece se ligada; desconto anual segue 0%. Assessoria e jornada: ver A6 e D0.
+
+Prova: `src/lib/a4-textos.test.ts` (74 → R$ 297, 75 → R$ 300; WhatsApp só com token; prévia e demonstração com o mesmo valor). Capturas: `capturas/A4-antes-1-1440.png`, `capturas/A4-antes-2-1440.png` e as do depois na verificação final.
+
+### A5. Velocidade no celular (parcial: meta não atingida de forma estável nesta máquina)
+
+Medição: `node scripts/lighthouse.mjs http://localhost:3100/ 3` (Lighthouse 12.8.2, celular simulado, 3 rodadas, mediana; Edge como navegador). CSP intacta.
+
+| Etapa | Mediana LCP | FCP | TBT | CLS |
+| --- | --- | --- | --- | --- |
+| Antes (build da v2) | 2,78 s | 0,91 s | 529 ms | 0 |
+| Formulário do CNPJ no servidor, "Revelar" sem JavaScript, "Entrar" como link comum | 2,75 s | 0,93 s | 412 ms | 0 |
+| Toasts e confirmações só no app, no login e no Raio-X (fora da landing) | 2,69 s | 1,23 s* | 197 ms | 0 |
+| CSS em arquivo em vez de embutido (o HTML caiu de 179 KB para 66 KB: o CSS ia duas vezes, no `<style>` e de novo no RSC) | 2,63 s | 0,95 s | 377 ms | 0 |
+| Menu do celular com `<details>` nativo (a landing não tem mais nenhum componente de cliente nosso) | **2,60 s** | 0,92 s | 266 ms | 0 |
+
+\* nesta rodada as fontes não eram pré-carregadas; voltou o pré-carregamento, e a fonte do texto passou a `display: "optional"`.
+
+O que foi feito: o formulário do CNPJ da landing e dos guias é renderizado no servidor e funciona sem JavaScript (a página do Raio-X valida e mantém a máscara); a animação de entrada ao rolar saiu; "Entrar" virou link comum (quem já tem sessão é levado ao app pela própria `/entrar`); o provedor de toasts saiu da landing; o CSS deixou de ser embutido; o menu do celular não usa JavaScript.
+
+**Resultado honesto:** as rodadas boas ficam entre 2,54 e 2,60 s, mas a mediana de 3 rodadas não fica de forma estável abaixo de 2,5 s neste computador. O LCP observado (sem simulação) é 0,5 a 0,8 s. O que sobra no caminho é o próprio React e o roteador do Next (cerca de 390 KB sem compressão, executados antes da primeira pintura porque o servidor local entrega tudo em menos de 100 ms). A máquina de medição é lenta para o fator 4x do Lighthouse (`benchmarkIndex` 687), o que infla a parte de CPU da simulação. Recomendação: repetir `node scripts/lighthouse.mjs https://equapar.com/ 3` contra a produção, com rede real. Não mudei o fator de CPU para melhorar o número.

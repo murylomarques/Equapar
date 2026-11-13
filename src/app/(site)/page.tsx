@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { FormCnpj } from "@/components/form-cnpj";
+import { FormCnpjServidor } from "@/components/form-cnpj-servidor";
 import { PreviaCarteira, PreviaHoje, PreviaMemoria, PreviaPronto, PreviaReceber } from "@/components/previas";
 import { Revelar } from "@/components/revelar";
 import { SITE, dadoSite } from "@/lib/site";
@@ -33,7 +33,7 @@ export default function Landing() {
               Software e apoio operacional para a repactuação de contratos elegíveis: a Equapar organiza documentos e prazos, consolida os dados e gera a memória de cálculo e os arquivos editáveis que demonstram a variação de custos. Você confere e protocola.
             </p>
             <div className="mt-24">
-              <FormCnpj id="cnpj-abertura" />
+              <FormCnpjServidor id="cnpj-abertura" />
               <p className="legenda" style={{ marginTop: 10 }}>
                 Grátis. Usa só dados públicos do PNCP. Sem senha e sem cadastro.
               </p>
@@ -172,7 +172,7 @@ export default function Landing() {
           <h2 className="titulo-secao">Comece pelo que já é público.</h2>
           <p style={{ color: "#cfccc4" }}>Digite o CNPJ e veja os contratos vigentes da sua empresa e quando cada um termina.</p>
           <div className="raiox-escuro">
-            <FormCnpj id="cnpj-meio" escuro />
+            <FormCnpjServidor id="cnpj-meio" escuro />
           </div>
         </div>
       </Revelar>
@@ -298,7 +298,7 @@ export default function Landing() {
       <Revelar className="secao">
         <div className="site-largura" style={{ maxWidth: 760 }}>
           <h2 className="titulo-secao">Seus contratos já estão no PNCP. Veja os prazos agora.</h2>
-          <FormCnpj id="cnpj-final" />
+          <FormCnpjServidor id="cnpj-final" />
         </div>
       </Revelar>
     </>

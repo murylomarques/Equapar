@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { FormCnpj } from "@/components/form-cnpj";
+import { FormCnpjServidor } from "@/components/form-cnpj-servidor";
 import { GUIAS } from "@/lib/guias";
 
 export function generateStaticParams() {
@@ -55,7 +55,7 @@ export default async function GuiaPagina({ params }: { params: Promise<{ slug: s
         <div className="cartao mt-24">
           <h2 className="mt-0">Veja os prazos dos seus contratos</h2>
           <p className="secundario">Digite o CNPJ e veja os contratos vigentes da sua empresa no PNCP e quando cada um termina.</p>
-          <FormCnpj id="cnpj-guia" />
+          <FormCnpjServidor id="cnpj-guia" />
         </div>
       </div>
     </article>

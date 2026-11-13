@@ -1,4 +1,6 @@
 import { Logo } from "@/components/logo";
+// A5: toasts e confirmações só onde há formulários do produto (fora da landing)
+import { Provedores } from "@/components/ui/provedores";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,7 +9,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div style={{ marginBottom: 28 }}>
           <Logo largura={128} />
         </div>
-        {children}
+        <Provedores>{children}</Provedores>
       </div>
     </main>
   );

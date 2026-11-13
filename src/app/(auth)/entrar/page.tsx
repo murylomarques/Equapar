@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { FormEntrar } from "../formularios";
+import { sessaoAtual } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Entrar | Equapar" };
 
 export default async function Entrar({ searchParams }: { searchParams: Promise<{ destino?: string; erro?: string; redefinida?: string }> }) {
   const { destino, erro, redefinida } = await searchParams;
+  // A5: o site não consulta a sessão no navegador; quem já entrou e clica em "Entrar" vai direto ao app
+  const s = await sessaoAtual();
+  if (s && !s.pendente2fa && !erro) redirect(destino?.startsWith("/app") ? destino : "/app/hoje");
   return (
     <div className="cartao">
       <h1>Entrar</h1>

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { SITE, dadoSite } from "@/lib/site";
-import { LinkEntrar } from "@/components/link-entrar";
 import { MenuSite } from "@/components/menu-site";
 import "./site.css";
 
@@ -28,7 +27,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <Link href="/guias">Guias</Link>
           </nav>
           <div className="fileira">
-            <LinkEntrar />
+            <Link href="/entrar" className="btn btn-texto">
+              Entrar
+            </Link>
             <Link href="/raio-x" className="btn btn-primario so-desktop">
               Fazer o Raio-X grátis
             </Link>

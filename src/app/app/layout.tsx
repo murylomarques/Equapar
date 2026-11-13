@@ -13,6 +13,7 @@ import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { reenviarConfirmacao } from "./acoes";
 import "./app.css";
+import { Provedores } from "@/components/ui/provedores";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const demo = ehDemo(ctx);
   const totalContas = demo ? 1 : await db.membro.count({ where: { usuarioId: ctx.usuario.id } }); // L14
   return (
+    <Provedores>
     <div className="app">
       <aside className="app-lateral" aria-label="Navegação do produto">
         <div style={{ padding: "0 12px" }}>
@@ -158,5 +160,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </LinkNav>
       </nav>
     </div>
+    </Provedores>
   );
 }

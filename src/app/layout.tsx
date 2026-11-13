@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
-import { Provedores } from "@/components/ui/provedores";
 
-const sans = Instrument_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-sans", display: "swap" });
+// A5: a fonte do texto usa "optional": se não chegar a tempo na primeira visita, o texto fica na fonte de reserva
+// (ajustada para não deslocar a página) e não espera o download; nas visitas seguintes ela já está em cache.
+const sans = Instrument_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-sans", display: "optional" });
 const serif = Instrument_Serif({ subsets: ["latin"], weight: ["400"], variable: "--font-serif", display: "swap" });
 
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a className="pular" href="#conteudo">
           Pular para o conteúdo
         </a>
-        <Provedores>{children}</Provedores>
+        {children}
       </body>
     </html>
   );
