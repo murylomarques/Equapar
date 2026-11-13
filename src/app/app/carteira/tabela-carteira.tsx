@@ -83,7 +83,8 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
           </button>
         </div>
       )}
-      <div className="tabela-rolagem so-desktop">
+      {/* 5.2: cinco colunas, sem quebrar órgão e convenção em várias linhas; cabeçalho fixo; linha inteira clicável */}
+      <div className="tabela-rolagem so-desktop cab-fixo">
         <table className="tabela">
           <caption className="sr-only">Contratos da carteira. Clique no cabeçalho para ordenar.</caption>
           <thead>
@@ -98,14 +99,11 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
                   />
                 </th>
               )}
-              {cab("numero", "Contrato")}
-              {cab("orgao", "Órgão")}
-              {cab("postos", "Postos", true)}
+              {cab("orgao", "Contrato e órgão")}
+              <th scope="col">Situação</th>
+              {cab("prazoData", "Próximo prazo")}
               {cab("valorMensal", "Valor mensal", true)}
               {cab("convencao", "Convenção")}
-              {cab("fim", "Fim da vigência", true)}
-              {cab("prazoData", "Próximo prazo")}
-              <th scope="col">Situação</th>
             </tr>
           </thead>
           <tbody>
@@ -128,26 +126,33 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
                     />
                   </td>
                 )}
-                <td>
+                <td className="col-contrato">
                   <Link className="linha-link" href={`/app/contratos/${l.id}`}>
-                    {l.numero}
+                    Contrato {l.numero}
                   </Link>
-                  {mostrarEmpresa && <div className="legenda">{l.empresa}</div>}
-                </td>
-                <td>
-                  {l.orgao}
-                  <div className="legenda">{l.local}</div>
-                </td>
-                <td className="num">{l.postos ?? "—"}</td>
-                <td className="num">{l.valorMensalTxt}</td>
-                <td style={{ maxWidth: 220 }}>{l.convencao ?? <span className="secundario">—</span>}</td>
-                <td className="num">{l.fimTxt}</td>
-                <td>
-                  {l.prazoTxt}
-                  <div className="legenda">{l.prazoTitulo}</div>
+                  <div className="uma-linha" title={l.orgao}>
+                    {l.orgao}
+                  </div>
+                  <div className="legenda uma-linha">
+                    {[mostrarEmpresa ? l.empresa : null, l.local, `fim ${l.fimTxt}`, l.postos ? plural(l.postos, "posto", "postos") : null].filter(Boolean).join(" · ")}
+                  </div>
                 </td>
                 <td>
                   <Selo selo={l.selo} />
+                </td>
+                <td className="sem-quebra">
+                  {l.prazoTxt}
+                  <div className="legenda">{l.prazoTitulo}</div>
+                </td>
+                <td className="num">{l.valorMensalTxt}</td>
+                <td>
+                  {l.convencao ? (
+                    <span className="uma-linha col-convencao" title={l.convencao}>
+                      {l.convencao}
+                    </span>
+                  ) : (
+                    <span className="secundario">—</span>
+                  )}
                 </td>
               </tr>
             ))}

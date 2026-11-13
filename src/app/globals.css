@@ -1843,3 +1843,32 @@ mark {
     margin: 4px 0 0;
   }
 }
+
+/* 5.2: Carteira no desktop */
+.tabela-rolagem.cab-fixo {
+  overflow: visible;
+}
+.cab-fixo .tabela th {
+  top: 60px; /* abaixo da barra superior fixa */
+}
+.cab-fixo .tabela th:first-child {
+  border-top-left-radius: var(--raio-cartao);
+}
+.cab-fixo .tabela th:last-child {
+  border-top-right-radius: var(--raio-cartao);
+}
+.tabela .uma-linha {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tabela .col-contrato {
+  max-width: 420px;
+}
+.tabela .col-convencao {
+  max-width: 200px;
+}
+.tabela .sem-quebra {
+  white-space: nowrap;
+}
