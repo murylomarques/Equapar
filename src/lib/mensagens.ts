@@ -8,6 +8,7 @@ import type { CanalAviso, StatusAviso } from "@prisma/client";
 import { db } from "./db";
 import { normalizarTelefoneBR } from "./telefone";
 import { ErroUsuario } from "./acao";
+import { remetentePadrao } from "./site";
 
 export function emailAtivo() {
   return !!process.env.SMTP_URL;
@@ -71,7 +72,7 @@ interface Envio {
 async function enviarEmail(para: string, assunto: string, texto: string, html?: string) {
   const nodemailer = await import("nodemailer");
   const t = nodemailer.createTransport(process.env.SMTP_URL!);
-  await t.sendMail({ from: process.env.EMAIL_FROM ?? "Equapar Avisos <avisos@equapar.com.br>", to: para, subject: assunto, text: texto, html });
+  await t.sendMail({ from: remetentePadrao(), to: para, subject: assunto, text: texto, html });
 }
 
 async function enviarWhatsapp(para: string, modelo: ModeloWhatsapp, params: Record<string, string>) {

@@ -34,11 +34,11 @@ describe("4.4: métricas do painel interno", () => {
     expect(medianaDiasMontagem([])).toBeNull();
   });
   it("painel só para os e-mails configurados", () => {
-    vi.stubEnv("PAINEL_EMAILS", "Dono@Equapar.com.br, socio@equapar.com.br");
-    expect(podeVerPainel("dono@equapar.com.br")).toBe(true);
+    vi.stubEnv("PAINEL_EMAILS", "Dono@Exemplo.local, socio@exemplo.local");
+    expect(podeVerPainel("dono@exemplo.local")).toBe(true);
     expect(podeVerPainel("cliente@empresa.com.br")).toBe(false);
     vi.stubEnv("PAINEL_EMAILS", "");
-    expect(podeVerPainel("dono@equapar.com.br")).toBe(false);
+    expect(podeVerPainel("dono@exemplo.local")).toBe(false);
   });
 });
 

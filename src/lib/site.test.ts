@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { camposFaltando, contatoSite, dadosEmpresa, identificacaoEmpresa, telefoneFormatado, VARIAVEIS_SITE } from "./site";
+import { agentePncp, camposFaltando, contatoSite, dadosEmpresa, identificacaoEmpresa, remetentePadrao, telefoneFormatado, VARIAVEIS_SITE } from "./site";
 
 // B1/B4/B5/B6: dados da empresa só pelo ambiente. Valores FICTÍCIOS (trava 11).
 const limpar = () => {
@@ -48,5 +48,14 @@ describe("B1: dados da empresa pelo ambiente", () => {
     vi.stubEnv("SITE_RAZAO_SOCIAL", "Empresa Exemplo Ltda.");
     vi.stubEnv("SITE_ENDERECO", "Rua Exemplo, 1, Cidade Exemplo/UF");
     expect(identificacaoEmpresa().texto).toBe("Empresa Exemplo Ltda., CNPJ 11.222.333/0001-81, Rua Exemplo, 1, Cidade Exemplo/UF");
+  });
+  it("B2: domínio equapar.com derivado do ambiente (remetente e identificação no PNCP)", () => {
+    limpar();
+    vi.stubEnv("EMAIL_FROM", "");
+    vi.stubEnv("APP_URL", "https://equapar.com");
+    expect(remetentePadrao()).toBe("Equapar Avisos <avisos@equapar.com>");
+    expect(agentePncp()).toContain("+https://equapar.com; contato@equapar.com");
+    vi.stubEnv("EMAIL_FROM", "Equapar Avisos <avisos@exemplo.local>");
+    expect(remetentePadrao()).toBe("Equapar Avisos <avisos@exemplo.local>");
   });
 });

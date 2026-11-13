@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "./db";
 import { hojeUTC } from "./format";
 import { normalizarCnpj } from "./mascaras";
+import { agentePncp } from "./site";
 
 /**
  * Consulta pública ao PNCP (somente leitura). Usa a busca do portal, filtrando pelo CNPJ do fornecedor.
@@ -51,7 +52,7 @@ async function buscarPagina(cnpj: string, pagina: number, sinal: AbortSignal) {
   // O firewall do PNCP derruba conexões sem User-Agent (ECONNRESET). Cliente genérico, sem dado pessoal.
   const r = await fetch(url, {
     signal: sinal,
-    headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (compatible; EquaparBot/1.0; +https://equapar.com.br)" },
+    headers: { accept: "application/json", "user-agent": agentePncp() },
     cache: "no-store",
   });
   if (!r.ok) throw new PncpIndisponivel(`PNCP respondeu ${r.status}`);

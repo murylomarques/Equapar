@@ -5,7 +5,7 @@ describe("S8: cookie de sessão", () => {
   afterEach(() => vi.unstubAllEnvs());
   it("produção em HTTPS: prefixo __Host-, Secure, path / e sem Domain", () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("APP_URL", "https://app.equapar.com.br");
+    vi.stubEnv("APP_URL", "https://app.equapar.com");
     expect(opcoesCookieSessao()).toEqual({ nome: "__Host-eq_sessao", secure: true });
   });
   it("desenvolvimento ou HTTP local: nome simples (o navegador recusaria __Host- sem HTTPS)", () => {

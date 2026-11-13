@@ -92,3 +92,20 @@ export function identificacaoEmpresa() {
     local: e.cidade,
   };
 }
+
+/** B2: domínio público (equapar.com) derivado do ambiente, nunca fixo no código. */
+export function dominioPublico() {
+  const email = contatoSite().email;
+  return email.includes("@") ? email.split("@")[1] : "equapar.com";
+}
+
+/** Remetente dos e-mails: EMAIL_FROM; sem ele, "Equapar Avisos <avisos@<domínio do contato>>". */
+export function remetentePadrao() {
+  return process.env.EMAIL_FROM?.trim() || `Equapar Avisos <avisos@${dominioPublico()}>`;
+}
+
+/** Identificação enviada ao PNCP (o firewall derruba conexões sem User-Agent): site e contato público. */
+export function agentePncp() {
+  const site = process.env.APP_URL?.trim() || `https://${dominioPublico()}`;
+  return `Mozilla/5.0 (compatible; EquaparBot/1.0; +${site}; ${contatoSite().email})`;
+}
