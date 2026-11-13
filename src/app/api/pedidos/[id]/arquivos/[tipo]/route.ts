@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { contexto, pedidoDaConta } from "@/lib/auth";
-import { memoriaPdf, oficioDocx, oficioPdf, pacoteZip, planilhaXlsx } from "@/lib/documentos";
+import { memoriaPdf, minutaAditivoPdf, oficioDocx, oficioPdf, pacoteZip, planilhaXlsx } from "@/lib/documentos";
 import { cabecalhoAnexo } from "@/lib/arquivo-tipo";
 import { ErroUsuario } from "@/lib/acao";
 
@@ -9,6 +9,7 @@ const TIPOS = {
   "oficio.pdf": { fn: oficioPdf, mime: "application/pdf", nome: "oficio" },
   "planilha.xlsx": { fn: planilhaXlsx, mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", nome: "planilha" },
   "memoria.pdf": { fn: memoriaPdf, mime: "application/pdf", nome: "memoria-de-calculo" },
+  "aditivo.pdf": { fn: minutaAditivoPdf, mime: "application/pdf", nome: "minuta-aditivo" },
   "pacote.zip": { fn: pacoteZip, mime: "application/zip", nome: "pedido-completo" },
 } as const;
 

@@ -62,7 +62,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
     <section className="cartao" aria-labelledby="arquivos">
       <h2 id="arquivos">Arquivos do pedido</h2>
       <ul className="lista-limpa pilha-8">
-        {ARQUIVOS.map((a) => (
+        {[...ARQUIVOS.slice(0, -1), ...(p.gatilho === "JORNADA_EC141" ? [{ href: "aditivo.pdf", nome: "Minuta do termo aditivo (PDF)", icone: FileText }] : []), ARQUIVOS[ARQUIVOS.length - 1]].map((a) => (
           <li key={a.href}>
             <a href={`/api/pedidos/${p.id}/arquivos/${a.href}`} className="cartao-linha fileira" style={{ boxShadow: "none" }} download>
               <a.icone size={18} strokeWidth={1.5} aria-hidden /> {a.nome}

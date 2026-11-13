@@ -15,6 +15,7 @@ import type { ResultadoRaioX } from "./pncp";
 import { seloVigencia } from "./prazos";
 import { lerArquivo } from "./storage";
 import { ErroUsuario } from "./acao";
+import { horasReduzidas } from "./jornada";
 
 async function carregar(pedidoId: string, contaId: string) {
   const p = await db.pedido.findFirst({
@@ -67,6 +68,7 @@ function textoOficio(d: Dados) {
   const dataExtenso = dataPorExtenso();
   const anexos = situacaoChecklist(p, p.documentos).filter((i) => i.situacao === "ANEXADO").map((i) => i.nome);
   const retro = calc.retroativo;
+  const jornada = p.gatilho === "JORNADA_EC141";
   return {
     cabecalho: [e.razaoSocial, `CNPJ ${formatarCnpj(e.cnpj)}`],
     linhas: [
@@ -76,11 +78,14 @@ function textoOficio(d: Dados) {
       `Ao(À) ${c.orgao}`,
       "A/C Gestor(a) e Fiscal do Contrato",
       "",
-      `Assunto: Pedido de repactuação do Contrato nº ${c.numero}`,
+      jornada ? `Assunto: Pedido de reequilíbrio econômico-financeiro do Contrato nº ${c.numero}` : `Assunto: Pedido de repactuação do Contrato nº ${c.numero}`,
       "",
       "Senhor(a) Gestor(a),",
       "",
-      `${e.razaoSocial}, inscrita no CNPJ sob o nº ${formatarCnpj(e.cnpj)}, contratada por meio do Contrato nº ${c.numero}, cujo objeto é ${c.objeto.replace(/\.$/, "")}, vem, respeitosamente, requerer a REPACTUAÇÃO dos preços contratados, em razão de ${NOME_GATILHO[p.gatilho].toLowerCase()}${conv ? ` (${conv.nome}${conv.registroMte ? `, registro ${conv.registroMte}` : ""}${p.dataDeposito ? `, depositada em ${data(p.dataDeposito)}` : ""})` : ""}${p.descricaoGatilho ? `: ${p.descricaoGatilho}` : ""}, com data-base em ${data(p.dataBase)}.`,
+      ...(jornada ? linhasJornada(d) : []),
+      ...(jornada
+        ? []
+        : [`${e.razaoSocial}, inscrita no CNPJ sob o nº ${formatarCnpj(e.cnpj)}, contratada por meio do Contrato nº ${c.numero}, cujo objeto é ${c.objeto.replace(/\.$/, "")}, vem, respeitosamente, requerer a REPACTUAÇÃO dos preços contratados, em razão de ${NOME_GATILHO[p.gatilho].toLowerCase()}${conv ? ` (${conv.nome}${conv.registroMte ? `, registro ${conv.registroMte}` : ""}${p.dataDeposito ? `, depositada em ${data(p.dataDeposito)}` : ""})` : ""}${p.descricaoGatilho ? `: ${p.descricaoGatilho}` : ""}, com data-base em ${data(p.dataBase)}.`,
       "",
       `Em atenção ao art. 135, § 6º, da Lei nº 14.133/2021, segue a demonstração analítica da variação dos custos, na planilha de custos e formação de preços e na memória de cálculo anexas, linha a linha, com a indicação da cláusula da convenção que fundamenta cada valor.`,
       "",
@@ -90,6 +95,7 @@ function textoOficio(d: Dados) {
       `a) a repactuação do valor mensal do contrato para ${brl(comp.mensalAgora)}, com efeitos financeiros a partir de ${data(p.dataBase)};`,
       "b) o apostilamento da repactuação;",
       "c) o pagamento das diferenças retroativas, a serem faturadas em nota fiscal própria após o apostilamento.",
+          ]),
       "",
       "Anexos:",
       ...anexos.map((a, i) => `${i + 1}. ${a}`),
@@ -102,6 +108,30 @@ function textoOficio(d: Dados) {
       "Representante legal",
     ],
   };
+}
+
+// 5.1: texto do pedido da jornada. O fundamento jurídico fica para o advogado preencher.
+const FUNDAMENTO = "[fundamento indicado pelo advogado]";
+
+function linhasJornada(d: Dados): string[] {
+  const { p, comp, calc } = d;
+  const c = p.contrato;
+  const e = c.empresa;
+  const manter = p.cenarioJornada === "MANTER_HORAS";
+  const retro = calc.retroativo;
+  return [
+    `${e.razaoSocial}, inscrita no CNPJ sob o nº ${formatarCnpj(e.cnpj)}, contratada por meio do Contrato nº ${c.numero}, cujo objeto é ${c.objeto.replace(/\.$/, "")}, vem, respeitosamente, requerer o REEQUILÍBRIO ECONÔMICO-FINANCEIRO do contrato, em razão da redução da jornada semanal de trabalho de ${p.jornadaAntes} para ${p.jornadaDepois} horas, decorrente da Emenda Constitucional nº 141/2026, a partir de ${data(p.inicioJornada ?? p.dataBase)}, com fundamento em ${FUNDAMENTO}.`,
+    "",
+    manter
+      ? `Para manter as ${Number(p.horasCobertura)} horas semanais de cobertura de cada posto, o custo de cada posto aumenta na proporção de ${p.jornadaAntes} ÷ ${p.jornadaDepois}. A planilha de custos e a memória de cálculo anexas demonstram a variação, linha a linha. O valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, uma diferença de ${brl(comp.diferencaMensal)} por mês${comp.variacaoPct ? ` (${pct(comp.variacaoPct)})` : ""}.${retro ? ` A diferença acumulada desde ${data(p.dataBase)} até ${data(calc.dataReferencia)} soma ${brl(retro.total)} (${calc.regraRetroativo}).` : ""}`
+      : `Mantido o valor mensal de ${brl(comp.mensalAgora)}, propõe-se a redução das horas de serviço de cada posto de ${Number(p.horasCobertura)} para ${horasReduzidas(Number(p.horasCobertura), p.jornadaAntes!, p.jornadaDepois!).toString().replace(".", ",")} horas semanais, na proporção da nova jornada.`,
+    "",
+    "Diante do exposto, requer:",
+    manter
+      ? `a) a celebração de termo aditivo de reequilíbrio, com o valor mensal do contrato em ${brl(comp.mensalAgora)}, com efeitos a partir de ${data(p.dataBase)};`
+      : "a) a celebração de termo aditivo que registre a redução das horas de serviço, mantido o valor mensal;",
+    manter ? "b) o pagamento das diferenças desde o início da nova jornada, a serem faturadas em nota fiscal própria após o aditivo." : "b) a adequação das ordens de serviço à nova carga horária.",
+  ];
 }
 
 export async function oficioDocx(pedidoId: string, contaId: string) {
@@ -171,6 +201,11 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
     `Gatilho: ${NOME_GATILHO[p.gatilho]}${conv ? ` · ${conv.nome}` : ""} · data-base ${data(p.dataBase)}${p.dataDeposito ? ` · depósito ${data(p.dataDeposito)}` : ""}`,
     { cor: COR.grafite, espaco: 2 },
   );
+  if (p.gatilho === "JORNADA_EC141")
+    pdf.texto(
+      `Jornada de ${p.jornadaAntes} para ${p.jornadaDepois} horas semanais · cobertura de ${Number(p.horasCobertura)} horas por posto · cenário: ${p.cenarioJornada === "MANTER_HORAS" ? `manter as horas (linhas em R$ × ${p.jornadaAntes} ÷ ${p.jornadaDepois})` : "reduzir as horas, valor mensal mantido"}. Regra nova, a confirmar com o jurídico.`,
+      { cor: COR.grafite, espaco: 2 },
+    );
   pdf.texto(
     `Estrutura: IN SEGES/MP 05/2017, Anexo VII-D · Regra ${calc.versaoRegra} · arredondamento de cada linha a 2 casas, meio para cima · tributos calculados por dentro.`,
     { tam: 8.5, cor: COR.grafite, espaco: 8 },
@@ -325,6 +360,7 @@ export async function pacoteZip(pedidoId: string, contaId: string) {
   zip.file(`03-memoria-de-calculo-contrato-${n}.pdf`, await memoriaPdf(pedidoId, contaId));
   const docs = [...d.p.documentos];
   let i = 4;
+  if (d.p.gatilho === "JORNADA_EC141") zip.file(`${String(i++).padStart(2, "0")}-minuta-aditivo-contrato-${n}.pdf`, await minutaAditivoPdf(pedidoId, contaId));
   for (const doc of docs) {
     try {
       zip.file(`${String(i++).padStart(2, "0")}-anexo-${doc.nome}`, await lerArquivo(doc.caminho));
@@ -333,6 +369,40 @@ export async function pacoteZip(pedidoId: string, contaId: string) {
     }
   }
   return zip.generateAsync({ type: "nodebuffer" });
+}
+
+// ---------------------------------------------------------------------------
+// 5.1: minuta do termo aditivo do pedido da jornada (texto jurídico novo: MINUTA)
+// ---------------------------------------------------------------------------
+
+export async function minutaAditivoPdf(pedidoId: string, contaId: string) {
+  const d = await carregar(pedidoId, contaId);
+  const { p, comp } = d;
+  if (p.gatilho !== "JORNADA_EC141") throw new ErroUsuario("A minuta do aditivo é só do pedido da jornada.");
+  const c = p.contrato;
+  const e = c.empresa;
+  const m = marca(d);
+  const manter = p.cenarioJornada === "MANTER_HORAS";
+  const pdf = await Pdf.criar(`Minuta de termo aditivo · Contrato ${c.numero} · gerada por ${m.nome}`, m.cor, await logoDe(m.logo));
+  pdf.selo("MINUTA, revise com seu jurídico", COR.carimbo);
+  pdf.titulo(`Termo aditivo nº ____ ao Contrato nº ${c.numero}`);
+  const blocos = [
+    `CONTRATANTE: ${c.orgao}${c.orgaoCnpj ? `, CNPJ ${formatarCnpj(c.orgaoCnpj)}` : ""}.`,
+    `CONTRATADA: ${e.razaoSocial}, CNPJ ${formatarCnpj(e.cnpj)}.`,
+    `FUNDAMENTO: Emenda Constitucional nº 141/2026 e ${FUNDAMENTO}.`,
+    `CLÁUSULA PRIMEIRA. DO OBJETO. Este termo aditivo trata do reequilíbrio econômico-financeiro do contrato em razão da redução da jornada semanal de trabalho de ${p.jornadaAntes} para ${p.jornadaDepois} horas.`,
+    manter
+      ? `CLÁUSULA SEGUNDA. DO VALOR. Mantidas as ${Number(p.horasCobertura)} horas semanais de cobertura por posto, o valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, conforme a planilha de custos e a memória de cálculo anexas.`
+      : `CLÁUSULA SEGUNDA. DA CARGA HORÁRIA. Mantido o valor mensal de ${brl(comp.mensalAgora)}, as horas de serviço de cada posto passam de ${Number(p.horasCobertura)} para ${horasReduzidas(Number(p.horasCobertura), p.jornadaAntes!, p.jornadaDepois!).toString().replace(".", ",")} horas semanais.`,
+    `CLÁUSULA TERCEIRA. DOS EFEITOS. Os efeitos deste termo valem a partir de ${data(p.inicioJornada ?? p.dataBase)}.`,
+    "CLÁUSULA QUARTA. DA RATIFICAÇÃO. Ficam mantidas as demais cláusulas do contrato que não conflitem com este termo.",
+    `${c.municipio ?? "________"}, ____ de ____________ de ______.`,
+  ];
+  for (const b of blocos) pdf.texto(b, { tam: 10.5, espaco: 8 });
+  pdf.y -= 20;
+  pdf.texto("______________________________________          ______________________________________", { tam: 10 });
+  pdf.texto(`${c.orgao}          ${e.razaoSocial}`, { tam: 9, cor: COR.grafite });
+  return pdf.bytes();
 }
 
 // ---------------------------------------------------------------------------
