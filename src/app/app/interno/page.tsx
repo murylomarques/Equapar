@@ -16,11 +16,12 @@ import {
   tempoPorPlano,
   TIPOS_TEMPO,
 } from "@/lib/metricas";
-import { CabecalhoPagina } from "@/components/ui/estrutura";
+import { Alerta, CabecalhoPagina } from "@/components/ui/estrutura";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { CampoData, CampoSelect, CampoTexto } from "@/components/ui/campos";
 import { registrarTempo, salvarMetricaMensal } from "./acoes";
+import { avisosOperacao, TEXTO_AVISO } from "@/lib/avisos-operacao";
 
 export const metadata: Metadata = { title: "Painel interno | Equapar" };
 
@@ -75,6 +76,11 @@ export default async function PainelInterno() {
   const ellis = resultadoSeanEllis(await db.respostaPesquisa.findMany({ select: { resposta: true } }));
   return (
     <>
+      {avisosOperacao().map((a) => (
+        <Alerta key={a.codigo} tipo="atencao" className="mb-16" titulo={TEXTO_AVISO[a.codigo]}>
+          Faltam: {a.detalhe.join(", ")}.
+        </Alerta>
+      ))}
       <CabecalhoPagina titulo="Painel interno" subtitulo="Só para o dono. Contagens e valores, sem dado pessoal. Funil dos últimos 90 dias." />
       <div className="grade-2 painel-interno">
         <section className="cartao">

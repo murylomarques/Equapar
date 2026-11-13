@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { atrasoDaFila } from "@/lib/fila";
+import { avisosOperacao } from "@/lib/avisos-operacao";
 
 export const dynamic = "force-dynamic";
 
@@ -25,5 +26,7 @@ export async function GET() {
     fila = atrasoMin != null && atrasoMin > 30 ? "atrasada" : "ok";
   }
   const ok = banco === "ok" && fila !== "atrasada";
-  return NextResponse.json({ ok, banco, fila, atrasoMin, ms: Date.now() - inicio }, { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } });
+  // B6/G6: avisos de operação (dados da empresa, e-mail) não mudam o status: o sistema sobe sem eles
+  const avisos = avisosOperacao();
+  return NextResponse.json({ ok, banco, fila, atrasoMin, avisos, ms: Date.now() - inicio }, { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } });
 }
