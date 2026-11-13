@@ -16,7 +16,8 @@ import type { ResultadoRaioX } from "./pncp";
 import { seloVigencia } from "./prazos";
 import { lerArquivo } from "./storage";
 import { ErroUsuario } from "./acao";
-import { horasReduzidas } from "./jornada";
+import { fatorTexto, horasReduzidas, planilhaDoCenario, reducaoHorasPct } from "./jornada";
+import { jornadaEmSimulacao, MARCA_SIMULACAO_JORNADA } from "./jornada-acesso";
 
 async function carregar(pedidoId: string, contaId: string) {
   const p = await db.pedido.findFirst({
@@ -30,6 +31,11 @@ async function carregar(pedidoId: string, contaId: string) {
 }
 
 type Dados = Awaited<ReturnType<typeof carregar>>;
+
+/** D0: documento da jornada enquanto a chave mestra estiver desligada (só PAINEL_EMAILS chegam aqui). */
+function simulacaoJornada(d: Dados) {
+  return d.p.gatilho === "JORNADA_EC141" && jornadaEmSimulacao();
+}
 
 function marca(d: Dados) {
   const conta = d.p.contrato.empresa.conta;
@@ -114,6 +120,21 @@ function textoOficio(d: Dados) {
 // 5.1: texto do pedido da jornada. O fundamento jurídico fica para o advogado preencher.
 const FUNDAMENTO = "[fundamento indicado pelo advogado]";
 
+/** D5: as duas opções, com a preferência da empresa marcada. Calculadas da mesma planilha atual. */
+function cenariosLadoALado(d: Dados): string[] {
+  const { p } = d;
+  const atual = p.planilhaAntes as unknown as PlanilhaCustos;
+  const a = p.jornadaAntes!;
+  const b = p.jornadaDepois!;
+  const cob = Number(p.horasCobertura);
+  const manter = calcularPedido({ ...p, planilhaAgora: planilhaDoCenario(atual, "MANTER_HORAS", a, b) as never }).comparacao;
+  const pref = (c: string) => (p.cenarioJornada === c ? " [preferência da empresa]" : "");
+  return [
+    `(1) Manter as horas de serviço${pref("MANTER_HORAS")}: ${cob} horas semanais por posto; ${fatorTexto(a, b)} empregados equivalentes por posto; valor mensal ${manter ? brl(manter.mensalAgora) : "—"}.`,
+    `(2) Reduzir as horas de serviço${pref("REDUZIR_HORAS")}: ${horasReduzidas(cob, a, b).toString().replace(".", ",")} horas semanais por posto (redução de ${reducaoHorasPct(a, b).toFixed(3).replace(".", ",")}%); valor mensal ${manter ? brl(manter.mensalAntes) : "—"}, sem mudança.`,
+  ];
+}
+
 function linhasJornada(d: Dados): string[] {
   const { p, comp, calc } = d;
   const c = p.contrato;
@@ -123,9 +144,13 @@ function linhasJornada(d: Dados): string[] {
   return [
     `${e.razaoSocial}, inscrita no CNPJ sob o nº ${formatarCnpj(e.cnpj)}, contratada por meio do Contrato nº ${c.numero}, cujo objeto é ${c.objeto.replace(/\.$/, "")}, vem, respeitosamente, requerer o REEQUILÍBRIO ECONÔMICO-FINANCEIRO do contrato, em razão da redução da jornada semanal de trabalho de ${p.jornadaAntes} para ${p.jornadaDepois} horas, decorrente da Emenda Constitucional nº 141/2026, a partir de ${data(p.inicioJornada ?? p.dataBase)}, com fundamento em ${FUNDAMENTO}.`,
     "",
+    "Os dois cenários possíveis, lado a lado:",
+    ...cenariosLadoALado(d),
+    "A escolha do cenário e a formalização cabem ao órgão, pelo rito do contrato.",
+    "",
     manter
-      ? `Para manter as ${Number(p.horasCobertura)} horas semanais de cobertura de cada posto, o custo de cada posto aumenta na proporção de ${p.jornadaAntes} ÷ ${p.jornadaDepois}. A planilha de custos e a memória de cálculo anexas demonstram a variação, linha a linha. O valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, uma diferença de ${brl(comp.diferencaMensal)} por mês${comp.variacaoPct ? ` (${pct(comp.variacaoPct)})` : ""}.${retro ? ` A diferença acumulada desde ${data(p.dataBase)} até ${data(calc.dataReferencia)} soma ${brl(retro.total)} (${calc.regraRetroativo}).` : ""}`
-      : `Mantido o valor mensal de ${brl(comp.mensalAgora)}, propõe-se a redução das horas de serviço de cada posto de ${Number(p.horasCobertura)} para ${horasReduzidas(Number(p.horasCobertura), p.jornadaAntes!, p.jornadaDepois!).toString().replace(".", ",")} horas semanais, na proporção da nova jornada.`,
+      ? `No cenário preferido pela empresa (manter as horas), o salário e os demais valores por empregado ficam no valor da convenção, e cada posto passa a precisar de ${fatorTexto(p.jornadaAntes!, p.jornadaDepois!)} empregados equivalentes (${p.jornadaAntes} ÷ ${p.jornadaDepois}). A planilha de custos e a memória de cálculo anexas demonstram a variação, linha a linha. O valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, uma diferença de ${brl(comp.diferencaMensal)} por mês${comp.variacaoPct ? ` (${pct(comp.variacaoPct)})` : ""}.${retro ? ` A diferença acumulada desde ${data(p.jornadaInicioEfeitos ?? p.dataBase)} até ${data(calc.dataReferencia)} soma ${brl(retro.total)} (${calc.regraRetroativo}).` : ""}`
+      : `No cenário preferido pela empresa (reduzir as horas), mantido o valor mensal de ${brl(comp.mensalAgora)}, as horas de serviço de cada posto passam de ${Number(p.horasCobertura)} para ${horasReduzidas(Number(p.horasCobertura), p.jornadaAntes!, p.jornadaDepois!).toString().replace(".", ",")} horas semanais (redução de ${reducaoHorasPct(p.jornadaAntes!, p.jornadaDepois!).toFixed(3).replace(".", ",")}% das horas entregues).`,
     "",
     "Diante do exposto, requer:",
     manter
@@ -146,7 +171,10 @@ export async function oficioDocx(pedidoId: string, contaId: string) {
       {
         children: [
           new Paragraph({
-            children: [new TextRun({ text: "MINUTA — revise com seu jurídico antes de protocolar", italics: true, color: "B23A1C", size: 18 })],
+            children: [
+              ...(simulacaoJornada(d) ? [new TextRun({ text: `${MARCA_SIMULACAO_JORNADA} `, bold: true, color: "B23A1C", size: 22 })] : []),
+              new TextRun({ text: "MINUTA — revise com seu jurídico antes de protocolar", italics: true, color: "B23A1C", size: 18 }),
+            ],
           }),
           ...t.cabecalho.map((l, i) => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: l, bold: i === 0 })] })),
           new Paragraph({ text: "" }),
@@ -170,6 +198,7 @@ export async function oficioPdf(pedidoId: string, contaId: string) {
   const t = textoOficio(d);
   const m = marca(d);
   const pdf = await Pdf.criar(`Ofício · Contrato ${d.p.contrato.numero} · minuta gerada por ${m.nome}`, m.cor, await logoDe(m.logo));
+  if (simulacaoJornada(d)) pdf.selo(MARCA_SIMULACAO_JORNADA, COR.carimbo);
   pdf.texto("MINUTA — revise com seu jurídico antes de protocolar", { tam: 8, cor: COR.carimbo });
   for (const [i, l] of t.cabecalho.entries()) pdf.texto(l, { tam: i === 0 ? 12 : 10, negrito: i === 0, espaco: 0 });
   pdf.y -= 14;
@@ -195,6 +224,7 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
   const m = marca(d);
   const pdf = await Pdf.criar(`Memória de cálculo · Contrato ${c.numero} · ${m.nome} · regra ${calc.versaoRegra}`, m.cor, await logoDe(m.logo));
   if (aprovacaoValida(p)) pdf.selo("MEMÓRIA APROVADA", COR.verde);
+  if (simulacaoJornada(d)) pdf.selo(MARCA_SIMULACAO_JORNADA, COR.carimbo);
   pdf.titulo("Memória de cálculo da repactuação");
   pdf.texto(`Contrato ${c.numero} · ${c.orgao}`, { tam: 11, negrito: true, espaco: 2 });
   pdf.texto(`${c.empresa.razaoSocial} · CNPJ ${formatarCnpj(c.empresa.cnpj)}`, { cor: COR.grafite, espaco: 2 });
@@ -391,6 +421,7 @@ export async function minutaAditivoPdf(pedidoId: string, contaId: string) {
   const manter = p.cenarioJornada === "MANTER_HORAS";
   const pdf = await Pdf.criar(`Minuta de termo aditivo · Contrato ${c.numero} · gerada por ${m.nome}`, m.cor, await logoDe(m.logo));
   pdf.selo("MINUTA, revise com seu jurídico", COR.carimbo);
+  if (simulacaoJornada(d)) pdf.selo(MARCA_SIMULACAO_JORNADA, COR.carimbo);
   pdf.titulo(`Termo aditivo nº ____ ao Contrato nº ${c.numero}`);
   const blocos = [
     `CONTRATANTE: ${c.orgao}${c.orgaoCnpj ? `, CNPJ ${formatarCnpj(c.orgaoCnpj)}` : ""}.`,

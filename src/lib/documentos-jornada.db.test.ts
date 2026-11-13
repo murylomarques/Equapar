@@ -48,6 +48,12 @@ describe("5.1: documentos do pedido da jornada", () => {
     expect(xml).toContain("REEQUILÍBRIO ECONÔMICO-FINANCEIRO");
     expect(xml).toContain("[fundamento indicado pelo advogado]");
     expect(xml).not.toContain("REPACTUAÇÃO");
+    // D5: os dois cenários lado a lado, a preferência marcada e o rito do órgão
+    expect(xml).toContain("Manter as horas de serviço [preferência da empresa]");
+    expect(xml).toContain("Reduzir as horas de serviço");
+    expect(xml).toContain("A escolha do cenário e a formalização cabem ao órgão, pelo rito do contrato.");
+    // D0: marca de simulação enquanto a chave mestra está desligada
+    expect(xml).toContain("SIMULAÇÃO: regra em validação. Não protocolar.");
   });
   it("minuta do aditivo sai em PDF e entra no pacote", async () => {
     const pdf = await minutaAditivoPdf(pedidoId, contaId);
