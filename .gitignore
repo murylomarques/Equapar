@@ -46,3 +46,6 @@ storage/
 e2e/capturas/
 
 !.env.example
+
+# Capturas da verificação final (geradas por e2e/capturas.mjs; grandes demais para o repositório)
+docs/produto-pronto/depois/*.png

@@ -709,3 +709,20 @@
     gap: 8px;
   }
 }
+
+/* 5.2: contador da barra inferior em cima do ícone, sem empurrar o rótulo */
+.app-inferior a {
+  position: relative;
+}
+.app-inferior a .contador-nav {
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 6px);
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--selo-ambar-bg);
+  color: var(--selo-ambar-tx);
+  font: 600 11px/18px var(--fonte);
+  text-align: center;
+}

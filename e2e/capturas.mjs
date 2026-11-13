@@ -68,6 +68,7 @@ const ROTAS_SITE = [
   ["11", "Entrar", "/entrar"],
   ["12", "Criar conta", "/criar-conta"],
   ["13", "Nao encontrada", "/pagina-que-nao-existe"],
+  ["13b", "Guia jornada 40 horas", "/guias/jornada-40-horas-contratos-publicos"],
 ];
 const ROTAS_APP = [
   ["14", "Hoje", "/app/hoje"],
@@ -104,6 +105,10 @@ const ROTAS_APP = [
   ["46", "Config cobranca", "/app/configuracoes?aba=cobranca"],
   ["47", "Config seguranca", "/app/configuracoes?aba=seguranca"],
   ["48", "Config dados", "/app/configuracoes?aba=dados"],
+  ["49", "Mais (celular)", "/app/mais"],
+  ["50", "Recuperado com a Equapar", "/app/recuperado"],
+  ["51", "Pedido pronto de exemplo", "/app/pedido-exemplo"],
+  ["52", "Carteira jornada 40 horas", "/app/carteira?filtro=jornada"],
 ];
 
 const browser = await chromium.launch({ headless: true, ...(process.env.NAVEGADOR ? { channel: process.env.NAVEGADOR } : {}) });
