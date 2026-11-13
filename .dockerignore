@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+storage
+e2e/capturas
+docs/redesenho/antes
+docs/redesenho/depois
+docs/produto-pronto/depois
+.env
+.env.*
+!.env.example
+*.log
