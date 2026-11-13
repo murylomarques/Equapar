@@ -21,6 +21,7 @@ import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendencias
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { limiteDoPlano } from "@/lib/planos";
+import { planilhaDoCenario, type Cenario } from "@/lib/jornada";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -124,27 +125,54 @@ function recusarPorPendencias(pedidoId: string, pend: Pendencia[], titulo: strin
 export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
-    const gatilho = z.enum(["NOVA_CONVENCAO", "ACORDO_DISSIDIO", "OUTRO_CUSTO"]).parse(texto(fd, "gatilho") || "NOVA_CONVENCAO");
-    const convencaoId = texto(fd, "convencaoId") || null;
-    const dataBase = lerData(fd.get("dataBase"));
+    const gatilho = z.enum(["NOVA_CONVENCAO", "ACORDO_DISSIDIO", "OUTRO_CUSTO", "JORNADA_EC141"]).parse(texto(fd, "gatilho") || "NOVA_CONVENCAO");
+    const jornada = gatilho === "JORNADA_EC141";
+    const convencaoId = jornada ? null : texto(fd, "convencaoId") || null;
+    // 5.1: na jornada, a diferença conta a partir do início da nova jornada
+    const inicioJornada = jornada ? lerData(fd.get("inicioJornada")) : null;
+    const jornadaAntes = jornada ? Number(texto(fd, "jornadaAntes") || 44) : null;
+    const jornadaDepois = jornada ? Number(texto(fd, "jornadaDepois") || 0) : null;
+    const horasCobertura = jornada ? Number(texto(fd, "horasCobertura").replace(",", ".") || 0) : null;
+    const dataBase = jornada ? inicioJornada : lerData(fd.get("dataBase"));
     const dataDeposito = lerData(fd.get("dataDeposito"));
     const descricao = texto(fd, "descricaoGatilho") || null;
     const conv = convencaoId ? await db.convencao.findFirst({ where: { id: convencaoId, contaId: ctx.conta.id } }) : null;
     if (convencaoId && !conv) return { erro: "Convenção inválida." };
     const campos: Record<string, string> = {};
-    if (gatilho !== "OUTRO_CUSTO" && !convencaoId) campos.convencaoId = "Escolha a convenção. Se ela não estiver na lista, cadastre em Convenções.";
-    if (!dataBase) campos.dataBase = "Falta a data-base. Ela marca o início da diferença a receber.";
-    if (gatilho !== "OUTRO_CUSTO" && !dataDeposito) campos.dataDeposito = "Falta a data do depósito da convenção. Sem ela, o órgão pode devolver o pedido.";
+    if (jornada) {
+      if (!inicioJornada) campos.inicioJornada = "Digite a data de início da nova jornada.";
+      if (![42, 40].includes(jornadaDepois ?? 0)) campos.jornadaDepois = "Escolha a nova jornada: 42 ou 40 horas.";
+      if (!(jornadaAntes! > jornadaDepois!)) campos.jornadaAntes = "A jornada atual precisa ser maior que a nova.";
+      if (!(horasCobertura! > 0)) campos.horasCobertura = "Digite as horas semanais de cobertura que o contrato exige por posto (ex.: 44).";
+    }
+    if (gatilho !== "OUTRO_CUSTO" && !jornada && !convencaoId) campos.convencaoId = "Escolha a convenção. Se ela não estiver na lista, cadastre em Convenções.";
+    if (!dataBase && !jornada) campos.dataBase = "Falta a data-base. Ela marca o início da diferença a receber.";
+    if (gatilho !== "OUTRO_CUSTO" && !jornada && !dataDeposito) campos.dataDeposito = "Falta a data do depósito da convenção. Sem ela, o órgão pode devolver o pedido.";
     if (gatilho === "OUTRO_CUSTO" && !descricao) campos.descricaoGatilho = "Descreva qual custo mudou.";
     if (Object.keys(campos).length) throw new ErroCampos(campos);
     const mudou: string[] = [];
     if (p.gatilho !== gatilho) mudou.push("o motivo");
     if ((p.convencaoId ?? null) !== convencaoId) mudou.push("a convenção");
     if (p.dataBase?.getTime() !== dataBase?.getTime()) mudou.push("a data-base");
+    if (p.jornadaAntes !== jornadaAntes || p.jornadaDepois !== jornadaDepois || Number(p.horasCobertura ?? 0) !== Number(horasCobertura ?? 0)) mudou.push("os dados da jornada");
     const invalidar = mudou.length ? await invalidarAprovacao(ctx, p, `Alterou ${mudou.join(", ")}`) : {};
     await db.pedido.update({
       where: { id: p.id },
-      data: { ...invalidar, ...totaisGravados({ ...p, dataBase }), gatilho, convencaoId, dataBase, dataDeposito, descricaoGatilho: descricao, passoAtual: Math.max(p.passoAtual, 2) },
+      data: {
+        ...invalidar,
+        ...totaisGravados({ ...p, dataBase }),
+        gatilho,
+        convencaoId,
+        dataBase,
+        dataDeposito: jornada ? null : dataDeposito,
+        descricaoGatilho: descricao,
+        jornadaAntes,
+        jornadaDepois,
+        horasCobertura: horasCobertura == null ? null : horasCobertura.toFixed(2),
+        inicioJornada,
+        ...(jornada ? {} : { cenarioJornada: null }),
+        passoAtual: Math.max(p.passoAtual, 2),
+      },
     });
     // L5: a convenção é compartilhada pelos contratos. Vazia, preenche; diferente, só com a confirmação da pessoa.
     if (conv && dataDeposito && conv.dataDeposito?.getTime() !== dataDeposito.getTime()) {
@@ -266,15 +294,27 @@ export async function concluirPasso2(_: Resultado, fd: FormData): Promise<Result
 
 export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
-    const { ctx, p } = await pedidoEditavel(fd);
+    const editavel = await pedidoEditavel(fd);
+    const ctx = editavel.ctx;
+    let p = editavel.p;
+    const cenarioAnterior = p.cenarioJornada;
     const ref = lerData(fd.get("dataReferencia")) ?? hojeUTC();
+    // 5.1: no pedido da jornada, a planilha nova sai do cenário escolhido (escolha obrigatória, sem padrão)
+    let jornadaDados: { cenarioJornada?: Cenario; planilhaAgora?: Prisma.InputJsonValue } = {};
+    if (p.gatilho === "JORNADA_EC141") {
+      const cen = z.enum(["MANTER_HORAS", "REDUZIR_HORAS"]).safeParse(texto(fd, "cenarioJornada"));
+      if (!cen.success) return { erro: "Escolha o cenário: manter ou reduzir as horas de serviço.", campos: { cenarioJornada: "Escolha um cenário." } };
+      if (!p.planilhaAntes || !p.jornadaAntes || !p.jornadaDepois) return recusarPorPendencias(p.id, pendenciasParaGerar(p, [], 3), "Antes de continuar, resolva:");
+      jornadaDados = { cenarioJornada: cen.data, planilhaAgora: json(planilhaDoCenario(p.planilhaAntes as unknown as PlanilhaCustos, cen.data, p.jornadaAntes, p.jornadaDepois)) };
+      p = { ...p, cenarioJornada: cen.data, planilhaAgora: jornadaDados.planilhaAgora as Prisma.JsonValue };
+    }
     const pend = pendenciasParaGerar({ ...p, dataReferencia: ref }, [], 3);
     if (pend.length) return recusarPorPendencias(p.id, pend, "Antes de continuar, resolva:");
     // L11: regra do retroativo escolhida no pedido (padrão = regra original)
     const retroContarAte = z.enum(["DATA_INFORMADA", "DATA_PROTOCOLO", "DATA_APOSTILAMENTO"]).catch(p.retroContarAte).parse(texto(fd, "retroContarAte") || p.retroContarAte);
     const retroMesIncompleto = z.enum(["DIAS_CORRIDOS", "MES_30_DIAS"]).catch(p.retroMesIncompleto).parse(texto(fd, "retroMesIncompleto") || p.retroMesIncompleto);
     const calc = calcularPedido({ ...p, dataReferencia: ref, retroContarAte, retroMesIncompleto });
-    const mudouRegra = retroContarAte !== p.retroContarAte || retroMesIncompleto !== p.retroMesIncompleto;
+    const mudouRegra = retroContarAte !== p.retroContarAte || retroMesIncompleto !== p.retroMesIncompleto || (!!jornadaDados.cenarioJornada && jornadaDados.cenarioJornada !== cenarioAnterior);
     const invalidar =
       p.dataReferencia?.getTime() !== ref.getTime() || mudouRegra
         ? await invalidarAprovacao(ctx, p, mudouRegra ? "Alterou a regra da diferença retroativa" : "Alterou a data até onde a diferença é contada")
@@ -283,6 +323,7 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
       where: { id: p.id },
       data: {
         ...invalidar,
+        ...jornadaDados,
         retroContarAte,
         retroMesIncompleto,
         dataReferencia: ref,

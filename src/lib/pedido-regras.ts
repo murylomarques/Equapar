@@ -68,7 +68,7 @@ export function linhasSemFonte(antes: PlanilhaCustos, agora: PlanilhaCustos): Li
 type PedidoPend = Pick<
   Pedido,
   "gatilho" | "convencaoId" | "dataBase" | "dataDeposito" | "descricaoGatilho" | "planilhaAntes" | "planilhaAgora" | "dataReferencia" | "checklist" | "memoriaAprovadaEm"
-> & { hashCalculo?: string | null };
+> & { hashCalculo?: string | null } & Partial<Pick<Pedido, "jornadaAntes" | "jornadaDepois" | "horasCobertura" | "inicioJornada" | "cenarioJornada">>;
 
 /**
  * Tudo o que impede gerar o pedido, em ordem de passo. `ate` limita aos passos já percorridos
@@ -76,11 +76,13 @@ type PedidoPend = Pick<
  */
 export function pendenciasParaGerar(p: PedidoPend, documentos: { tipo: string }[], ate: 3 | 4 | 5 = 5): Pendencia[] {
   const r: Pendencia[] = [];
-  const conv = p.gatilho !== "OUTRO_CUSTO";
+  const jornada = p.gatilho === "JORNADA_EC141";
+  const conv = p.gatilho !== "OUTRO_CUSTO" && !jornada;
   if (!p.dataBase) r.push({ passo: 1, mensagem: "Falta a data-base." });
   if (conv && !p.convencaoId) r.push({ passo: 1, mensagem: "Falta escolher a convenção." });
   if (conv && !p.dataDeposito) r.push({ passo: 1, mensagem: "Falta a data do depósito da convenção." });
-  if (!conv && !p.descricaoGatilho) r.push({ passo: 1, mensagem: "Falta descrever qual custo mudou." });
+  if (p.gatilho === "OUTRO_CUSTO" && !p.descricaoGatilho) r.push({ passo: 1, mensagem: "Falta descrever qual custo mudou." });
+  if (jornada && (!p.jornadaAntes || !p.jornadaDepois || !p.horasCobertura || !p.inicioJornada)) r.push({ passo: 1, mensagem: "Faltam os dados da jornada (antes, depois, horas de cobertura e início)." });
 
   const antes = p.planilhaAntes as unknown as PlanilhaCustos | null;
   const agora = p.planilhaAgora as unknown as PlanilhaCustos | null;
@@ -94,7 +96,8 @@ export function pendenciasParaGerar(p: PedidoPend, documentos: { tipo: string }[
     const calc = calcularPedido(p);
     const c = calc.comparacao;
     if (c?.erros.length) r.push({ passo: 3, mensagem: c.erros[0] });
-    else if (c && Number(c.diferencaMensal) <= 0) r.push({ passo: 3, mensagem: "A planilha nova não aumenta o valor mensal." });
+    else if (jornada && !p.cenarioJornada) r.push({ passo: 3, mensagem: "Escolha o cenário da jornada: manter ou reduzir as horas de serviço." });
+    else if (c && Number(c.diferencaMensal) <= 0 && !(jornada && p.cenarioJornada === "REDUZIR_HORAS")) r.push({ passo: 3, mensagem: "A planilha nova não aumenta o valor mensal." });
     const sem = linhasSemFonte(antes, agora);
     if (sem.length)
       r.push({
@@ -146,6 +149,9 @@ type BaseCalculo = Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase" |
 /** SHA-256 de {planilhas, data-base, data de referência, gatilho, versão da regra}. */
 export function hashCalculo(p: BaseCalculo): string {
   const base: Record<string, unknown> = { planilhaAntes: p.planilhaAntes, planilhaAgora: p.planilhaAgora, dataBase: p.dataBase, dataReferencia: p.dataReferencia, gatilho: p.gatilho, versaoRegra: VERSAO_REGRA };
+  // 5.1: no pedido da jornada, os dados da jornada e o cenário fazem parte da base
+  const j = p as unknown as Record<string, unknown>;
+  if (p.gatilho === "JORNADA_EC141") for (const k of ["jornadaAntes", "jornadaDepois", "horasCobertura", "cenarioJornada"]) base[k] = j[k] == null ? null : String(j[k]);
   // L11: as opções do retroativo entram só quando diferem do padrão (assinaturas antigas continuam valendo)
   if (p.retroContarAte && p.retroContarAte !== "DATA_INFORMADA") base.retroContarAte = p.retroContarAte;
   if (p.retroMesIncompleto && p.retroMesIncompleto !== "DIAS_CORRIDOS") base.retroMesIncompleto = p.retroMesIncompleto;

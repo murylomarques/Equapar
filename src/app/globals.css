@@ -1806,3 +1806,8 @@ mark {
     opacity: 1;
   }
 }
+
+/* 5.1: no passo 1, os campos da jornada só aparecem com o motivo "jornada"; os da convenção somem */
+.form-passo1 .so-jornada { display: none; }
+.form-passo1:has(input[name="gatilho"][value="JORNADA_EC141"]:checked) .so-jornada { display: block; }
+.form-passo1:has(input[name="gatilho"][value="JORNADA_EC141"]:checked) .so-convencao { display: none; }

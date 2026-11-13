@@ -16,7 +16,8 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { FonteRegra } from "@/components/fonte-regra";
 import { SeloSimples } from "@/components/selo";
 import { AreaArquivo } from "@/components/ui/arquivo";
-import { CampoData, CampoSelect, Combobox, RadiosCartao, TextoLongo } from "@/components/ui/campos";
+import { CampoData, CampoInteiro, CampoSelect, Combobox, RadiosCartao, TextoLongo } from "@/components/ui/campos";
+import { JORNADA, empregadosPorPosto, horasReduzidas, planilhaDoCenario, type Cenario } from "@/lib/jornada";
 import { Alerta, Termo } from "@/components/ui/estrutura";
 import { aprovacaoValida } from "@/lib/pedido-regras";
 import { NOME_CONTAR_ATE, NOME_MES_INCOMPLETO } from "@/lib/pedido";
@@ -80,7 +81,7 @@ async function Passo1({ p, contaId, leitura }: { p: P; contaId: string; leitura:
   return (
     <div className="cartao" style={{ maxWidth: 760 }}>
       <h2>O que mudou?</h2>
-      <FormAcao action={salvarPasso1} semToast>
+      <FormAcao action={salvarPasso1} semToast className="form-passo1">
         <input type="hidden" name="pedidoId" value={p.id} />
         <fieldset disabled={leitura} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <RadiosCartao
@@ -91,8 +92,48 @@ async function Passo1({ p, contaId, leitura }: { p: P; contaId: string; leitura:
               { valor: "NOVA_CONVENCAO", titulo: NOME_GATILHO.NOVA_CONVENCAO, descricao: "O caso mais comum: novos pisos e benefícios da categoria." },
               { valor: "ACORDO_DISSIDIO", titulo: NOME_GATILHO.ACORDO_DISSIDIO, descricao: "Acordo coletivo ou sentença de dissídio." },
               { valor: "OUTRO_CUSTO", titulo: NOME_GATILHO.OUTRO_CUSTO, descricao: "Outra mudança de custo que precisa ser explicada." },
+              { valor: "JORNADA_EC141", titulo: NOME_GATILHO.JORNADA_EC141, descricao: "Redução da jornada semanal para 42 e depois 40 horas. Pedido de reequilíbrio por aditivo." },
             ]}
           />
+          <fieldset className="so-jornada" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+            <legend className="rotulo">Dados da jornada</legend>
+            {!JORNADA.confirmado() && (
+              <Alerta tipo="atencao" className="mb-16">
+                Datas e prazos da EC 141/2026 a confirmar com o jurídico. Padrões usados: 42 horas a partir de {data(JORNADA.inicio42())}, 40 horas a partir de {data(JORNADA.inicio40())}.{" "}
+                <a href={JORNADA.fonte.url} target="_blank" rel="noreferrer">
+                  Fonte
+                </a>
+              </Alerta>
+            )}
+            <div className="linha-form">
+              <CampoInteiro nome="jornadaAntes" rotulo="Jornada atual (horas por semana)" valorInicial={p.jornadaAntes ?? 44} />
+              <CampoSelect
+                nome="jornadaDepois"
+                rotulo="Nova jornada"
+                valorInicial={p.jornadaDepois ? String(p.jornadaDepois) : "42"}
+                opcoes={[
+                  { valor: "42", rotulo: "42 horas por semana" },
+                  { valor: "40", rotulo: "40 horas por semana" },
+                ]}
+              />
+            </div>
+            <div className="linha-form">
+              <CampoInteiro
+                nome="horasCobertura"
+                rotulo="Horas de cobertura por posto (por semana)"
+                valorInicial={p.horasCobertura != null ? Number(p.horasCobertura) : 44}
+                ajuda="Quantas horas por semana o contrato exige em cada posto."
+              />
+              <CampoData
+                nome="inicioJornada"
+                rotulo="Início da nova jornada"
+                valorInicial={paraInputData(p.inicioJornada ?? JORNADA.inicio42())}
+                mostrarRelativo={false}
+                ajuda="A diferença conta a partir desta data."
+              />
+            </div>
+          </fieldset>
+          <div className="so-convencao">
           <Combobox
             nome="convencaoId"
             rotulo="Convenção coletiva"
@@ -132,6 +173,7 @@ async function Passo1({ p, contaId, leitura }: { p: P; contaId: string; leitura:
               </span>
             </label>
           )}
+          </div>
           <TextoLongo nome="descricaoGatilho" rotulo="Descrição" opcional valorInicial={p.descricaoGatilho} limite={500} ajuda="Obrigatória quando o motivo for “Outro custo”." />
         </fieldset>
         <Rodape leitura={leitura} />
@@ -216,8 +258,81 @@ function Passo2({ p, leitura }: { p: P; leitura: boolean }) {
   );
 }
 
+function CenariosJornada({ p, leitura }: { p: P; leitura: boolean }) {
+  const antes = p.jornadaAntes ?? 44;
+  const depois = p.jornadaDepois ?? 42;
+  const cobertura = Number(p.horasCobertura ?? 44);
+  const atual = p.planilhaAntes as unknown as PlanilhaCustos;
+  const ref = p.dataReferencia ?? hojeUTC();
+  const cen = (c: Cenario) => calcularPedido({ ...p, dataReferencia: ref, planilhaAgora: planilhaDoCenario(atual, c, antes, depois) as never });
+  const manter = cen("MANTER_HORAS");
+  const reduzir = cen("REDUZIR_HORAS");
+  const linha = (rot: string, v: React.ReactNode) => (
+    <div className="entre">
+      <span className="secundario">{rot}</span>
+      <strong className="num">{v}</strong>
+    </div>
+  );
+  return (
+    <fieldset style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }} disabled={leitura}>
+      <legend className="rotulo mb-8">Escolha o cenário deste pedido (nenhum vem marcado)</legend>
+      <div className="grade-2">
+        <label className="cartao radio-cartao" style={{ display: "block" }}>
+          <span className="entre">
+            <strong>Manter as horas de serviço</strong>
+            <input type="radio" name="cenarioJornada" value="MANTER_HORAS" form="form-passo3" defaultChecked={p.cenarioJornada === "MANTER_HORAS"} required />
+          </span>
+          <span className="ajuda-texto" style={{ display: "block" }}>
+            O órgão continua recebendo {cobertura} horas por semana em cada posto. Empregados por posto: {empregadosPorPosto(cobertura, antes).toString().replace(".", ",")} → {empregadosPorPosto(cobertura, depois).toString().replace(".", ",")}.
+          </span>
+          <div className="pilha mt-8" style={{ gap: 4 }}>
+            {linha("Valor mensal hoje", brl(manter.comparacao?.mensalAntes ?? "0"))}
+            {linha("Valor mensal novo", brl(manter.comparacao?.mensalAgora ?? "0"))}
+            {linha("Diferença por mês", brl(manter.comparacao?.diferencaMensal ?? "0"))}
+            {manter.retroativo && linha("Diferença acumulada", brl(manter.retroativo.total))}
+          </div>
+        </label>
+        <label className="cartao radio-cartao" style={{ display: "block" }}>
+          <span className="entre">
+            <strong>Reduzir as horas de serviço</strong>
+            <input type="radio" name="cenarioJornada" value="REDUZIR_HORAS" form="form-passo3" defaultChecked={p.cenarioJornada === "REDUZIR_HORAS"} required />
+          </span>
+          <span className="ajuda-texto" style={{ display: "block" }}>
+            O valor mensal não muda. O órgão passa a receber {horasReduzidas(cobertura, antes, depois).toString().replace(".", ",")} horas por semana em cada posto, no lugar de {cobertura}. O aditivo registra a redução.
+          </span>
+          <div className="pilha mt-8" style={{ gap: 4 }}>
+            {linha("Valor mensal hoje", brl(reduzir.comparacao?.mensalAntes ?? "0"))}
+            {linha("Valor mensal novo", brl(reduzir.comparacao?.mensalAgora ?? "0"))}
+            {linha("Diferença por mês", brl(reduzir.comparacao?.diferencaMensal ?? "0"))}
+          </div>
+        </label>
+      </div>
+      <p className="legenda mt-8 mb-0">
+        Manter as horas: as linhas em reais da planilha atual são multiplicadas por {antes} ÷ {depois}; percentuais e tributos acompanham. Regra nova, a confirmar com o jurídico.{" "}
+        <a href={JORNADA.fonte.url} target="_blank" rel="noreferrer">
+          Fonte
+        </a>
+      </p>
+    </fieldset>
+  );
+}
+
 function Passo3({ p, leitura }: { p: P; leitura: boolean }) {
   if (!p.planilhaAntes || !p.planilhaAgora) redirect(`/app/pedidos/${p.id}/passo/2`);
+  if (p.gatilho === "JORNADA_EC141")
+    return (
+      <div className="pilha" style={{ gap: 16 }}>
+        <p className="secundario mb-0 leitura">
+          Jornada de {p.jornadaAntes} para {p.jornadaDepois} horas por semana. Compare os dois cenários e escolha um. A planilha nova é montada a partir da escolha.
+        </p>
+        <CenariosJornada p={p} leitura={leitura} />
+        <FormAcao action={concluirPasso3} id="form-passo3" semToast>
+          <input type="hidden" name="pedidoId" value={p.id} />
+          <input type="hidden" name="dataReferencia" value={paraInputData(p.dataReferencia ?? hojeUTC())} />
+          <Rodape voltar={`/app/pedidos/${p.id}/passo/2`} leitura={leitura} />
+        </FormAcao>
+      </div>
+    );
   return (
     <div className="pilha" style={{ gap: 16 }}>
       <p className="secundario mb-0 leitura">

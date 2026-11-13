@@ -9,6 +9,7 @@ export const NOME_GATILHO = {
   NOVA_CONVENCAO: "Nova convenção coletiva",
   ACORDO_DISSIDIO: "Novo acordo ou dissídio",
   OUTRO_CUSTO: "Outro custo",
+  JORNADA_EC141: "Mudança de lei: jornada (EC 141/2026)",
 } as const;
 
 /** Documentos que o órgão costuma pedir (Fluxo 3, passo 4). */
@@ -24,7 +25,7 @@ export const CHECKLIST = [
 
 export type SituacaoDoc = "ANEXADO" | "FALTA" | "OPCIONAL";
 
-export function situacaoChecklist(p: Pick<Pedido, "checklist" | "planilhaAgora" | "dataDeposito">, anexos: { tipo: string }[]) {
+export function situacaoChecklist(p: Pick<Pedido, "checklist" | "planilhaAgora" | "dataDeposito"> & { gatilho?: Pedido["gatilho"] }, anexos: { tipo: string }[]) {
   const marcado = (p.checklist as Record<string, SituacaoDoc> | null) ?? {};
   const tem = (tipo: string) => anexos.some((a) => a.tipo === tipo);
   return CHECKLIST.map((item) => {
@@ -33,7 +34,8 @@ export function situacaoChecklist(p: Pick<Pedido, "checklist" | "planilhaAgora" 
     else if (item.id === "planilha_atual" && tem("PLANILHA")) s = "ANEXADO";
     else if (item.id === "convencao_nova" && tem("CONVENCAO")) s = "ANEXADO";
     else if (marcado[item.id] === "ANEXADO") s = "ANEXADO";
-    else s = item.obrigatorio ? "FALTA" : "OPCIONAL";
+    // 5.1: no pedido da jornada (EC 141), a convenção não é o fundamento: fica opcional
+    else s = item.obrigatorio && !(p.gatilho === "JORNADA_EC141" && item.id === "convencao_nova") ? "FALTA" : "OPCIONAL";
     return { ...item, situacao: s };
   });
 }
