@@ -1,4 +1,4 @@
-import { Bell, CalendarClock, DollarSign, FileText, LayoutList, Scale, Search, Settings, Users, LogOut } from "lucide-react";
+import { Bell, CalendarClock, DollarSign, FileText, LayoutList, Menu, Scale, Search, Settings, Users, LogOut } from "lucide-react";
 import Link from "next/link";
 import { contexto, ehDemo, escopoContratos } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -146,11 +146,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <LinkNav href="/app/carteira" icone={<LayoutList size={22} strokeWidth={1.5} />}>
           Carteira
         </LinkNav>
+        <LinkNav href="/app/pedidos" icone={<FileText size={22} strokeWidth={1.5} />} contador={pedidosAbertos} rotuloContador="pedidos em andamento">
+          Pedidos
+        </LinkNav>
         <LinkNav href="/app/a-receber" icone={<DollarSign size={22} strokeWidth={1.5} />}>
           A receber
         </LinkNav>
-        <LinkNav href="/app/avisos" icone={<Bell size={22} strokeWidth={1.5} />}>
-          Avisos
+        {/* 5.2: Convenções, Avisos, Configurações e Clientes ficam em "Mais" */}
+        <LinkNav href="/app/mais" icone={<Menu size={22} strokeWidth={1.5} />} tambemEm={["/app/convencoes", "/app/avisos", "/app/configuracoes", "/app/clientes", "/app/trocar-conta"]}>
+          Mais
         </LinkNav>
       </nav>
     </div>

@@ -173,7 +173,7 @@
   }
   .app-inferior {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     position: fixed;
     bottom: 0;
     left: 0;
@@ -641,4 +641,22 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
   }
+}
+
+/* 5.2: página "Mais" do celular */
+.lista-mais {
+  padding: 0;
+}
+.lista-mais li + li {
+  border-top: 1px solid var(--linha);
+}
+.item-mais {
+  padding: 14px 16px;
+  min-height: 56px;
+  color: var(--tinta);
+  text-decoration: none;
+  align-items: center;
+}
+.item-mais:hover {
+  background: #f6f3ec;
 }
