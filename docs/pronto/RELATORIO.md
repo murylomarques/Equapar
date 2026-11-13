@@ -298,3 +298,37 @@ A rodada contra a imagem Docker (docker compose) está na verificação final.
 
 ### G6. E-mail pronto para ligar (feito)
 Botão "Enviar e-mail de teste" no painel interno: manda para `PAINEL_EMAILS` e, se falhar, mostra o erro exato do provedor, sem a senha da `SMTP_URL` (`src/lib/email-teste.test.ts`: sem destinatário, sem SMTP e servidor fora do ar, com a senha nunca aparecendo). Em produção, sem `SMTP_URL` ou `EMAIL_FROM`, o `/api/saude` e o painel avisam (`email_nao_configurado`, B6). `docs/operacao/email.md`: SPF, DKIM, DMARC começando com `p=none`, DNS reverso, TLS e as regras do Google (SPF ou DKIM para qualquer remetente; SPF, DKIM e DMARC acima de 5.000 mensagens por dia; spam abaixo de 0,3%). Nenhum provedor escolhido e nenhuma chave no repositório.
+
+## Fase D: jornada de 40 horas pronta e desligada
+
+(Os commits D3 e D4 entraram junto com o D0, porque mexem nos mesmos arquivos do passo 1; o código e os testes de cada item estão indicados abaixo.)
+
+### D0. Chave mestra (feito)
+`JORNADA_REGRA_CONFIRMADA` (padrão false) é a chave mestra. A checagem é no **servidor**:
+- `pedidoDaConta` (usado por todas as telas, ações e arquivos do pedido) trata o pedido da jornada como inexistente para quem não está em `PAINEL_EMAILS`;
+- `acaoJornada` recusa escolher a jornada no passo 1 e montar pedidos da jornada em lote.
+
+Desligada, cliente nenhum vê a jornada: nem o filtro e o lote da Carteira, nem a opção no passo 1, nem a faixa e o guia do site, nem o cartão de preço, nem o e-mail de aviso. Quem está em `PAINEL_EMAILS` vê tudo, com a marca "SIMULAÇÃO: regra em validação. Não protocolar." em toda tela do pedido (passos, memória, pedido pronto, Carteira), nos PDFs (ofício, memória, minuta do aditivo) e no Word (ofício). Ligada, a jornada vale para todos e a marca some; o cartão de preço (R$ 990 por contrato, `PRECO_JORNADA40_CONTRATO`) e a faixa (`SITE_FAIXA_JORNADA`) passam a depender também dela.
+Prova: `src/lib/jornada-acesso.test.ts`; `src/app/app/pedidos/jornada-acoes.test.ts` ("D7": cliente comum recusado com a chave desligada e aceito com ela ligada); `src/lib/avisos-jornada.test.ts` (desligada, nenhum aviso).
+
+### D1/D2. Representação: custo do posto sem inflar o salário (feito)
+Antes: `planilhaDoCenario` multiplicava **toda** linha em R$ (inclusive materiais do módulo 5) e a linha "Salário base" mostrava R$ 1.906,67, acima do piso. Depois:
+- o salário e os demais valores por empregado ficam no valor da convenção; o aumento entra como **empregados equivalentes por posto** (anterior ÷ nova, 44/42 = 1,047619, fator exato no cálculo e com 6 casas na tela);
+- cada linha tem o atributo "acompanha o número de empregados" (sim nos módulos 1 a 4 e benefícios; não em materiais e equipamentos do módulo 5; uniformes sim, editável no passo 3);
+- a memória mostra, por exemplo, "R$ 1.820,00 × 1,047619 empregados equivalentes = R$ 1.906,67 por posto (EC 141/2026, jornada 44 para 42 h)";
+- no cenário reduzir, os valores por empregado não mudam (art. 2º da EC 141) e o documento registra a redução das horas entregues (4,545% de 44 para 42).
+
+### D3. Etapa travada pela data (feito)
+O passo 1 tem a escolha da **etapa** (44 → 42 a partir de `JORNADA_42H_INICIO`; 42 → 40 a partir de `JORNADA_40H_INICIO`) e recusa efeitos financeiros fora da etapa. 44 → 40 num só aditivo não existe no formulário nem na ação. Prova: `src/lib/jornada-d.test.ts` (etapa pela data) e `jornada-acoes.test.ts` ("D3").
+
+### D4. Três datas (feito)
+Início da etapa (a data geral), data do aditivo (quando formalizado) e início dos efeitos financeiros (padrão: o início da etapa). O retroativo usa os efeitos financeiros (`calcularPedido`), e a assinatura do cálculo inclui essa data. Migração aditiva na C6 (`jornadaDataAditivo`, `jornadaInicioEfeitos`). Prova: `jornada-acoes.test.ts` ("D4").
+
+### D5. Os dois cenários no documento (feito)
+O ofício (Word e PDF) mostra "manter horas" e "reduzir horas" lado a lado, com a preferência da empresa marcada e a frase "A escolha do cenário e a formalização cabem ao órgão, pelo rito do contrato". Ofício e minuta continuam MINUTA. Prova: `src/lib/documentos-jornada.db.test.ts` (os dois cenários, a preferência, a frase e a marca de simulação no Word).
+
+### D6. Alerta de prorrogação na jornada (feito)
+Etapa começada, mão de obra dedicada e prorrogação sem pedido da jornada: "Revise antes de assinar: a jornada mudou e não há pedido de reequilíbrio.", grau Provável, no mesmo componente da C5 (tela de decisão e registro da prorrogação), só para quem pode ver a jornada. Prova: `src/lib/prorrogacao.test.ts` ("D6").
+
+### D7. Testes (feito, com 1 pendente)
+`src/lib/jornada-d.test.ts`: caso C1 por linha em 44 → 42, cenário manter (1.820,00 → 1.906,67; 324,20 → 339,64; 240,00 → 251,43; 480,00 → 502,86; 25,00 → 26,19); cenário reduzir sem mudança; trava da etapa. Permissão no servidor: `jornada-acesso.test.ts` e `jornada-acoes.test.ts`. Testes do motor iguais (trava 3). **Pendente (`it.todo`):** o preço completo do posto do caso C1, que aguarda a planilha completa assinada pelo contador.
