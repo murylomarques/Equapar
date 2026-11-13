@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { contatoSite, dadosEmpresa, telefoneFormatado } from "@/lib/site";
+import { Contato } from "@/components/contato";
 import { MenuSite } from "@/components/menu-site";
 import "./site.css";
 import { modoPiloto } from "@/lib/chaves";
@@ -55,6 +56,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <nav aria-label="Rodapé" className="pilha-8">
               <Link href="/privacidade">Política de privacidade</Link>
               <Link href="/termos">Termos de uso</Link>
+              <Contato agenda={false} />
               <a href={contato.emailLink}>{contato.email}</a>
               {contato.whatsapp && contato.whatsappLink && <a href={contato.whatsappLink}>WhatsApp {telefoneFormatado(contato.whatsapp)}</a>}
             </nav>

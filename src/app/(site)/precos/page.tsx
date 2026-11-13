@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { TabelaPlanos } from "@/components/planos";
 import { CalculadoraPreco } from "@/components/calculadora-preco";
+import { Contato } from "@/components/contato";
 import { canaisDeAviso } from "@/lib/site";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { modoPiloto } from "@/lib/chaves";
@@ -46,7 +47,9 @@ export default function Precos() {
             </li>
           )}
         </ul>
-        <p className="legenda mb-0">Cancele quando quiser, na tela de cobrança. Seus dados ficam disponíveis para exportar.</p>
+        <p className="legenda">Cancele quando quiser, na tela de cobrança. Seus dados ficam disponíveis para exportar.</p>
+        <p className="mb-8">Dúvidas sobre o piloto ou sobre o seu caso?</p>
+        <Contato />
       </div>
     </div>
   );
