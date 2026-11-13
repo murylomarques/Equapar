@@ -25,7 +25,7 @@
     "e2e:producao": "node e2e/producao.mjs",
     "db:seed:demo": "tsx --env-file=.env prisma/seed-demo.ts",
     "db:seed:demo:prod": "tsx --tsconfig tsconfig.worker.json prisma/seed-demo.ts",
-    "test:db": "node --env-file=.env -e \"process.env.TESTE_BANCO=1;require('child_process').execSync('npx vitest run --dir src',{stdio:'inherit',env:process.env})\"",
+    "test:db": "node --env-file=.env -e \"process.env.TESTE_BANCO=1;require('child_process').execSync('npx vitest run',{stdio:'inherit',env:process.env})\"",
     "worker": "tsx --tsconfig tsconfig.worker.json --env-file=.env scripts/worker.ts",
     "worker:prod": "tsx --tsconfig tsconfig.worker.json scripts/worker.ts",
     "verificar:producao": "tsx --tsconfig tsconfig.worker.json --env-file=.env scripts/verificar-producao.ts",
