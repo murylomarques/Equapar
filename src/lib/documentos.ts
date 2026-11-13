@@ -9,7 +9,8 @@ import { brl, calcularPlanilha, pct, dec } from "./calculo/motor";
 import { MODULOS, type PlanilhaCustos } from "./calculo/tipos";
 import { calcularPedido, situacaoChecklist, NOME_GATILHO } from "./pedido";
 import { formatarCnpj } from "./cnpj";
-import { data, dataLocal, dataPorExtenso, hojeUTC } from "./format";
+import { data, dataLocal, dataPorExtenso, diasAte, hojeUTC, reais } from "./format";
+import { tempoAteFim } from "./mascaras";
 import { COR, hexParaRgb, Pdf } from "./pdf";
 import type { ResultadoRaioX } from "./pncp";
 import { seloVigencia } from "./prazos";
@@ -418,10 +419,11 @@ export async function raioXPdf(r: ResultadoRaioX) {
     return s.tom !== "neutro";
   }).length;
   pdf.texto(`${r.contratos.length} contratos vigentes no PNCP. ${seis} terminam nos próximos 6 meses.`, { espaco: 10 });
+  // 5.4: só fatos públicos (valor global publicado no PNCP e tempo até o fim da vigência); nenhuma estimativa
   pdf.tabela(
-    ["Órgão", "Objeto", "Fim da vigência", "Prazo"],
-    r.contratos.map((c) => [c.orgao, c.objeto.slice(0, 160), data(c.fim), seloVigencia(c.fim).texto]),
-    [0.27, 0.43, 0.13, 0.17],
+    ["Órgão", "Objeto", "Valor global (PNCP)", "Fim da vigência", "Prazo"],
+    r.contratos.map((c) => [c.orgao, c.objeto.slice(0, 130), c.valorGlobal != null ? reais(c.valorGlobal) : "—", `${data(c.fim)} (${tempoAteFim(diasAte(c.fim))})`, seloVigencia(c.fim).texto]),
+    [0.22, 0.33, 0.15, 0.17, 0.13],
   );
   pdf.titulo("O que fazer agora", 12);
   for (const t of [

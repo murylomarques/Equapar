@@ -154,6 +154,13 @@ export function relativo(dias: number) {
   return dias > 0 ? `em ${txt}` : `há ${txt}`;
 }
 
+/** 5.4: tempo até o fim da vigência, só com a data pública: "faltam 20 dias", "faltam 4 meses", "terminou". */
+export function tempoAteFim(dias: number) {
+  if (dias < 0) return "terminou";
+  if (dias === 0) return "termina hoje";
+  return `faltam ${dias < 60 ? plural(dias, "dia", "dias") : plural(Math.round(dias / 30), "mês", "meses")}`;
+}
+
 // ---------------------------------------------------------------- Texto
 
 /** plural(1, "cliente", "clientes") → "1 cliente"; plural(0, ...) → "0 clientes". */
