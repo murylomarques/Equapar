@@ -40,3 +40,5 @@ export function camposFaltando(): string[] {
 
 /** Conta de demonstração (papel Leitura, dados fictícios), criada pelo seed. */
 export const EMAIL_DEMO = "demonstracao@equapar.local";
+/** 5.2: conta modelo da demonstração de assessoria (vários clientes fictícios), criada pelo seed. Ninguém entra nela. */
+export const EMAIL_DEMO_ASSESSORIA = "demonstracao-assessoria@equapar.local";

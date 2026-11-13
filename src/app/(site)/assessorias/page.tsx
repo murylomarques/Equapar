@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PreviaPronto } from "@/components/previas";
+import { SITE } from "@/lib/site";
+import { entrarNaDemonstracao } from "../demonstracao/acoes";
+
+// 5.2: conversa de 20 minutos (link de agenda opcional em SITE_AGENDA_URL; sem ele, e-mail)
+const agenda = process.env.SITE_AGENDA_URL || `mailto:${SITE.email}?subject=${encodeURIComponent("Conversa de 20 minutos sobre a Equapar para assessorias")}`;
 
 export const metadata: Metadata = {
   title: "Para assessorias | Equapar",
@@ -27,9 +32,21 @@ export default function Assessorias() {
           <p>
             <strong>A partir de R$ 1.497 por mês.</strong>
           </p>
-          <Link href="/criar-conta?tipo=assessoria" className="btn btn-primario">
-            Criar conta de assessoria
-          </Link>
+          <div className="fileira">
+            <form action={entrarNaDemonstracao}>
+              <input type="hidden" name="tipo" value="assessoria" />
+              <button type="submit" className="btn btn-primario">
+                Ver a demonstração com 3 clientes
+              </button>
+            </form>
+            <a href={agenda} className="btn">
+              Marcar uma conversa de 20 minutos
+            </a>
+          </div>
+          <p className="legenda mt-8">
+            Na demonstração, os clientes, contratos e valores são fictícios. Nada é enviado por e-mail ou WhatsApp. Prefere começar direto?{" "}
+            <Link href="/criar-conta?tipo=assessoria">Criar conta de assessoria</Link>.
+          </p>
         </div>
         <PreviaPronto />
       </div>

@@ -7,7 +7,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import { criarModeloDemo } from "./seed-demo";
+import { criarModeloAssessoriaDemo, criarModeloDemo } from "./seed-demo";
 
 const EMAIL_DONO = "dono@exemplo.local";
 
@@ -21,6 +21,7 @@ async function main() {
   try {
     await db.usuario.deleteMany({ where: { email: EMAIL_DONO } });
     const { contaId } = await criarModeloDemo(db);
+    await criarModeloAssessoriaDemo(db);
     const senhaDono = `${crypto.randomBytes(6).toString("base64url")}7x`;
     await db.usuario.create({
       data: {

@@ -15,6 +15,7 @@ import type { LinhaPlanilha, PlanilhaCustos } from "../src/lib/calculo/tipos";
 
 const dbPadrao = new PrismaClient();
 const EMAIL_DEMO = "demonstracao@equapar.local";
+const EMAIL_DEMO_ASSESSORIA = "demonstracao-assessoria@equapar.local";
 
 function cnpjFicticio() {
   const base = Array.from({ length: 12 }, (_, i) => (i < 8 ? Math.floor(Math.random() * 10) : [0, 0, 0, 1][i - 8]));
@@ -142,9 +143,63 @@ export async function criarModeloDemo(db: PrismaClient = dbPadrao) {
   return { contaId: conta.id };
 }
 
+/**
+ * 5.2: conta modelo de ASSESSORIA com três clientes fictícios, para a demonstração da página "Para assessorias".
+ * Apaga só a conta modelo de assessoria anterior. Ninguém entra nela: cada visitante recebe uma cópia.
+ */
+export async function criarModeloAssessoriaDemo(db: PrismaClient = dbPadrao) {
+  const antigos = await db.usuario.findMany({ where: { email: EMAIL_DEMO_ASSESSORIA }, include: { membros: true } });
+  for (const u of antigos) for (const m of u.membros) await db.conta.deleteMany({ where: { id: m.contaId, demo: false } });
+  await db.usuario.deleteMany({ where: { email: EMAIL_DEMO_ASSESSORIA } });
+
+  const conta = await db.conta.create({ data: { nome: "Assessoria Exemplo (fictícia)", tipo: "ASSESSORIA", plano: "ASSESSORIA", marcaNome: "Assessoria Exemplo", marcaCor: "#1f5f4a" } });
+  const u = await db.usuario.create({ data: { nome: "Carla (exemplo)", email: EMAIL_DEMO_ASSESSORIA, senhaHash: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 12) } });
+  await db.membro.create({ data: { usuarioId: u.id, contaId: conta.id, papel: "LEITURA" } });
+  const ano = new Date().getUTCFullYear();
+  const conv = await db.convencao.create({
+    data: { contaId: conta.id, nome: `CCT Asseio e Conservação Exemplo/ES ${ano} (fictícia)`, cidade: "Cidade Exemplo", uf: "ES", ano, mesDataBase: 1, situacao: "REGISTRADA", dataDeposito: new Date(Date.UTC(ano, 1, 10)), registroMte: "ES000000/EXEMPLO" },
+  });
+  const dataBase = new Date(Date.UTC(ano, 0, 1));
+  const comp = compararPlanilhas(antes, agora);
+  const clientes = [
+    { nome: "Limpeza Alfa Ltda. (fictícia)", contratos: [
+      { numero: "21/2025", orgao: "Prefeitura Municipal de Exemplo", fim: 25, pedido: null },
+      { numero: "08/2024", orgao: "Câmara Municipal de Exemplo", fim: 190, pedido: "PROTOCOLADO" },
+    ] },
+    { nome: "Conservação Beta Ltda. (fictícia)", contratos: [
+      { numero: "33/2025", orgao: "Universidade Federal Exemplo", fim: 48, pedido: null },
+      { numero: "02/2025", orgao: "Tribunal Regional Exemplo", fim: 300, pedido: "DEFERIDO" },
+    ] },
+    { nome: "Serviços Gama Ltda. (fictícia)", contratos: [{ numero: "14/2025", orgao: "Instituto Federal Exemplo", fim: 220, pedido: null }] },
+  ];
+  for (const cl of clientes) {
+    const e = await db.empresa.create({ data: { contaId: conta.id, cnpj: cnpjFicticio(), razaoSocial: cl.nome, exemplo: true } });
+    for (const k of cl.contratos) {
+      const c = await db.contrato.create({
+        data: {
+          empresaId: e.id, numero: k.numero, orgao: k.orgao, objeto: "Serviços contínuos de limpeza e conservação com dedicação exclusiva de mão de obra (exemplo)",
+          uf: "ES", municipio: "Cidade Exemplo", esfera: "M", maoDeObraDedicada: true, convencaoId: conv.id, postos: 11, valorMensal: comp.mensalAntes,
+          vigenciaInicio: dia(k.fim - 365), vigenciaFim: dia(k.fim), dataProposta: new Date(Date.UTC(ano - 1, 1, 20)),
+        },
+      });
+      if (k.pedido === "PROTOCOLADO")
+        await db.pedido.create({
+          data: { contratoId: c.id, estado: "PROTOCOLADO", passoAtual: 5, convencaoId: conv.id, dataBase, planilhaAntes: json(antes), planilhaAgora: json(agora), dataReferencia: dia(-15), diferencaMensal: comp.diferencaMensal, diferencaRetroativa: calcularRetroativo(comp.diferencaMensal, dataBase, dia(-15)).total, memoriaAprovadaEm: dia(-17), memoriaAprovadaPor: "Carla (exemplo)", geradoEm: dia(-16), protocoloNumero: "EXEMPLO-0101/2026", protocoloData: dia(-15) },
+        });
+      if (k.pedido === "DEFERIDO")
+        await db.pedido.create({
+          data: { contratoId: c.id, estado: "DEFERIDO", passoAtual: 5, convencaoId: conv.id, dataBase, planilhaAntes: json(antes), planilhaAgora: json(agora), dataReferencia: dia(-70), diferencaMensal: comp.diferencaMensal, diferencaRetroativa: "29870.40", memoriaAprovadaEm: dia(-90), memoriaAprovadaPor: "Carla (exemplo)", geradoEm: dia(-89), protocoloNumero: "EXEMPLO-0102/2026", protocoloData: dia(-88), respostaData: dia(-50), deferidoEm: dia(-50), valorDeferido: "29870.40" },
+        });
+    }
+  }
+  console.log("Dados fictícios da demonstração de assessoria criados (3 clientes).");
+  return { contaId: conta.id };
+}
+
 // Rodando direto (npm run db:seed:demo)
 if (process.argv[1]?.replaceAll("\\", "/").endsWith("prisma/seed-demo.ts")) {
   criarModeloDemo()
+    .then(() => criarModeloAssessoriaDemo())
     .catch((e) => {
       console.error(e);
       process.exitCode = 1;

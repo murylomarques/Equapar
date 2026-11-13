@@ -2,7 +2,7 @@ import "server-only";
 import crypto from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { db } from "./db";
-import { EMAIL_DEMO } from "./site";
+import { EMAIL_DEMO, EMAIL_DEMO_ASSESSORIA } from "./site";
 
 /** C6.2: cada visitante da demonstração ganha uma cópia própria dos dados fictícios, por 4 horas. */
 export const DURACAO_DEMO_MS = 4 * 3_600_000;
@@ -15,15 +15,15 @@ function sem<T extends Record<string, unknown>, K extends keyof T>(o: T, ...chav
   return c;
 }
 
-/** Conta modelo: a conta fictícia do seed (a da demonstração compartilhada). */
-async function contaModelo() {
-  const u = await db.usuario.findUnique({ where: { email: EMAIL_DEMO }, include: { membros: true } });
+/** Conta modelo: a conta fictícia do seed (empresa: a da demonstração compartilhada; 5.2: assessoria com vários clientes). */
+async function contaModelo(tipo: "EMPRESA" | "ASSESSORIA") {
+  const u = await db.usuario.findUnique({ where: { email: tipo === "ASSESSORIA" ? EMAIL_DEMO_ASSESSORIA : EMAIL_DEMO }, include: { membros: true } });
   return u?.membros[0]?.contaId ?? null;
 }
 
 /** Copia a conta modelo para um visitante e devolve o usuário e a conta novos. */
-export async function criarContaDemo() {
-  const modeloId = await contaModelo();
+export async function criarContaDemo(tipo: "EMPRESA" | "ASSESSORIA" = "EMPRESA") {
+  const modeloId = await contaModelo(tipo);
   if (!modeloId) return null;
   const m = await db.conta.findUniqueOrThrow({
     where: { id: modeloId },

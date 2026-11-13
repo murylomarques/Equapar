@@ -7,12 +7,13 @@ import { criarContaDemo } from "@/lib/demo";
  * Entra na demonstração (POST). Um GET em /demonstracao nunca abre sessão (C6), e quem já está
  * conectado numa conta real não é trocado de conta: a página mostra o aviso.
  */
-export async function entrarNaDemonstracao() {
+export async function entrarNaDemonstracao(fd?: FormData) {
   const s = await sessaoAtual();
   if (s && !s.pendente2fa && !ehDemo(s)) redirect("/demonstracao");
   if (s && ehDemo(s)) redirect("/app/hoje");
   // C6.2: cada visitante ganha a própria cópia dos dados fictícios (4 horas) e pode montar um pedido
-  const nova = await criarContaDemo();
+  // 5.2: a página "Para assessorias" abre a demonstração com vários clientes fictícios
+  const nova = await criarContaDemo(fd?.get("tipo") === "assessoria" ? "ASSESSORIA" : "EMPRESA");
   if (!nova) redirect("/?demo=indisponivel");
   await criarSessao(nova.usuario.id, { contaId: nova.conta.id, lembrar: false });
   redirect("/app/hoje");
