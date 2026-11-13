@@ -261,3 +261,11 @@ SIMULAÇÃO: nada foi apagado.
 O banco de teste não tem conta cancelada. `src/lib/limpeza-canceladas.db.test.ts` cria três contas fictícias (cancelada há 40 dias, cancelada há 10 dias, ativa) e confere: só a de 40 dias entra; a fatura dela fica fora; a conta ativa nunca entra; a simulação não apaga nada.
 
 **Ponto para o dono e o advogado:** "Excluir conta" (Configurações > Dados, pedido do próprio titular) apaga tudo na hora, inclusive as faturas, porque a fatura está ligada à conta com exclusão em cascata. Guardar a cobrança depois da exclusão exige mudar esse vínculo, e mudar `onDelete` é proibido nesta rodada (trava 1). Fica como decisão.
+
+## Fase F: medição
+
+### F1. Pesquisa de encaixe só para quem usou (feito)
+Antes: `mostrarPesquisa` mostrava a pesquisa a qualquer conta com mais de 30 dias, mesmo sem nenhum pedido. Depois: só quando a conta não é demonstração, tem pelo menos 1 pedido com o dossiê gerado, o primeiro dossiê tem 7 dias ou mais e a pesquisa não foi respondida nem dispensada. A data vem da tabela de pedidos (`geradoEm` mais antigo). Prova: `src/lib/metricas.test.ts` ("F1"; o caso da conta antiga sem dossiê, que antes recebia a pesquisa, agora não recebe).
+
+### F2. Ativação no painel interno (feito)
+Conta ativada = pelo menos 1 contrato com prazo calculado e 1 pedido com o cálculo pronto (diferença mensal gravada); a data da ativação é a mais tardia das duas (para o pedido, `geradoEm` ou, sem ele, a última atualização: é uma aproximação, porque o sistema não guarda o momento exato em que o cálculo ficou pronto). O painel mostra as contas criadas no mês (sem demonstrações e sem as contas modelo), quantas ativaram e a porcentagem, a mediana em dias e a lista das criadas há mais de 3 dias e ainda não ativadas, com o e-mail do dono para o telefonema. Continua restrito a `PAINEL_EMAILS`. Prova: `src/lib/metricas.test.ts` ("F2").
