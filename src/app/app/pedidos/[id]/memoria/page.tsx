@@ -113,6 +113,7 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
             comentarios={comentarios.map((c) => ({ id: c.id, linhaId: c.linhaId, autor: c.usuario.nome, quando: dataHora(c.criadoEm), texto: c.texto }))}
           />
           <p className="legenda leitura mt-24">
+            Arredondamento (C7): cada linha é arredondada a 2 casas, meio para cima, e o total soma as linhas arredondadas. Uma planilha que arredonda só no total pode dar 1 centavo de diferença.{" "}
             Os números vêm da planilha da proposta e da convenção informadas. A Equapar aplica a estrutura de cálculo; a revisão por profissional habilitado é recomendada antes do protocolo.
           </p>
         </>

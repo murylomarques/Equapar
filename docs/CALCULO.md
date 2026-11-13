@@ -6,6 +6,21 @@ Código: `src/lib/calculo/motor.ts` (motor) e `src/lib/pedido.ts` (uso no pedido
 
 - **Aritmética decimal exata** (decimal.js). Nunca ponto flutuante.
 - **Cada linha é arredondada a 2 casas** (meio para cima) antes de entrar em somas, como numa planilha preenchida à mão. O total é a soma das linhas arredondadas.
+
+### Arredondamento: por linha (regra do motor) × só no total (C7)
+
+O motor arredonda **cada linha** a 2 casas, meio para cima, e soma as linhas já arredondadas. Uma planilha que arredonda **só no total** pode dar 1 centavo de diferença. No caso fictício C1 do contador (5 rubricas × 44/42, para a etapa de 42 horas):
+
+| Rubrica | Valor | × 44/42 por linha |
+| --- | --- | --- |
+| Salário base | R$ 1.820,00 | R$ 1.906,67 |
+| Insalubridade | R$ 324,20 | R$ 339,64 |
+| Benefício | R$ 240,00 | R$ 251,43 |
+| Benefício | R$ 480,00 | R$ 502,86 |
+| Uniforme | R$ 25,00 | R$ 26,19 |
+| **Total** | R$ 2.889,20 | **R$ 3.026,79** por linha; **R$ 3.026,78** só no total |
+
+O motor **não muda**: a escolha entre as duas regras é do contador e do dono. O caso está preso no teste `src/lib/calculo/arredondamento.test.ts`, e a memória de cálculo mostra a regra numa nota.
 - **A IA nunca produz número final.** A leitura de PDF só sugere entradas, que a pessoa confirma.
 - **Pedido protocolado não é recalculado** (é documento entregue ao órgão).
 
