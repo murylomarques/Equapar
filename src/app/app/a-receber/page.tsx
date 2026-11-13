@@ -30,7 +30,15 @@ export default async function AReceber() {
 
   return (
     <>
-      <CabecalhoPagina titulo="A receber" subtitulo={pedidos.length ? `${reaisResumo(total)} deferidos e ainda não recebidos` : undefined} />
+      <CabecalhoPagina
+        titulo="A receber"
+        subtitulo={pedidos.length ? `${reaisResumo(total)} deferidos e ainda não recebidos` : undefined}
+        acao={
+          <Link href="/app/recuperado" className="btn">
+            Recuperado com a Equapar
+          </Link>
+        }
+      />
       {atrasados.length > 0 && (
         <Alerta tipo="atencao" className="mb-16" titulo={`${plural(atrasados.length, "pedido deferido", "pedidos deferidos")} há mais de 30 dias sem apostilamento`}>
           Sem <Termo>apostilamento</Termo>, o órgão não paga a diferença. Vale cobrar o fiscal do contrato: {atrasados.map((p) => `contrato ${p.contrato.numero}`).join(", ")}.
