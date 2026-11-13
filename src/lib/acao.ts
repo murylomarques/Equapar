@@ -1,5 +1,16 @@
 import { unstable_rethrow } from "next/navigation";
 import { ZodError } from "zod";
+import { reportarErro } from "./registro";
+
+/** Id da requisição posto pelo proxy (x-request-id), quando houver. */
+async function idRequisicao() {
+  try {
+    const { headers } = await import("next/headers");
+    return (await headers()).get("x-request-id");
+  } catch {
+    return null;
+  }
+}
 
 /** Resultado padrão das ações de servidor: o erro chega ao usuário em texto (também em produção). */
 export interface Resultado {
@@ -46,7 +57,7 @@ export async function tentar(fn: () => Promise<Resultado | void>): Promise<Resul
     if (e instanceof ErroCampos) return { erro: e.message, campos: e.campos };
     if (e instanceof ErroUsuario) return { erro: e.message };
     const codigo = codigoErro();
-    console.error(`[erro ${codigo}]`, e);
+    await reportarErro(e, { codigo, requisicao: await idRequisicao(), onde: "acao" });
     if (e instanceof ZodError) return { erro: `Algum dado veio num formato que não esperávamos. Confira o que foi preenchido e tente de novo (código do erro: ${codigo}).` };
     const msg = (e as Error)?.message ?? "";
     if (/prisma|database|ECONN|P\d{4}/i.test(msg)) return { erro: `Não foi possível salvar agora. Confira a conexão e tente de novo em instantes (código do erro: ${codigo}).` };
