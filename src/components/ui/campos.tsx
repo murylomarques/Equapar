@@ -5,6 +5,7 @@ import { useErroCampo } from "../form-acao";
 import {
   diasEntre,
   erroCnpj,
+  normalizarCnpj,
   exibirDinheiro,
   exibirPercentual,
   isoParaBr,
@@ -16,7 +17,6 @@ import {
   parseInteiro,
   parsePercentual,
   relativo,
-  soDigitos,
 } from "@/lib/mascaras";
 
 // ============================================================ Invólucro
@@ -238,7 +238,7 @@ export function CampoCnpj({
   const erroServidor = useErroCampo(nome);
   const [valor, setValor] = useState(mascaraCnpj(valorInicial ?? ""));
   const [erroLocal, setErroLocal] = useState<string | null>(null);
-  const valido = soDigitos(valor).length === 14 && !erroCnpj(valor);
+  const valido = normalizarCnpj(valor).length === 14 && !erroCnpj(valor);
   const erro = erroLocal ?? erroProp ?? erroServidor ?? null;
   return (
     <Campo {...ids} rotulo={rotulo} ajuda={ajuda} opcional={opcional} erro={erro} largura="cnpj" className={className}>
@@ -246,7 +246,7 @@ export function CampoCnpj({
         <input
           id={ids.id}
           data-campo={nome}
-          inputMode="numeric"
+          autoCapitalize="characters"
           autoComplete="off"
           value={valor}
           autoFocus={autoFocus}
@@ -258,12 +258,12 @@ export function CampoCnpj({
           }}
           onBlur={() => {
             if (!valor && opcional) return setErroLocal(null);
-            if (soDigitos(valor).length > 0) setErroLocal(erroCnpj(valor));
+            if (normalizarCnpj(valor).length > 0) setErroLocal(erroCnpj(valor));
           }}
         />
         {valido && <Check className="icone-ok" size={18} strokeWidth={2} aria-label="CNPJ válido" />}
       </div>
-      <input type="hidden" name={nome} value={soDigitos(valor)} />
+      <input type="hidden" name={nome} value={normalizarCnpj(valor)} />
     </Campo>
   );
 }

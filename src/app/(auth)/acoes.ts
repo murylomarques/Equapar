@@ -26,6 +26,7 @@ import { consumirCotas } from "@/lib/cota";
 import { ipConfiavel } from "@/lib/limite";
 import { appUrl, enviar } from "@/lib/mensagens";
 import { conviteValido, lerTokenConvite } from "@/lib/convite";
+import { normalizarCnpj } from "@/lib/mascaras";
 
 export type Estado = Resultado;
 
@@ -85,9 +86,9 @@ export async function criarConta(_: Estado, fd: FormData): Promise<Estado> {
   if (!p.success) for (const i of p.error.issues) erros[String(i.path[0])] ??= i.message;
   const fraca = senhaFraca(bruto.senha, { email: bruto.email });
   if (fraca) erros.senha = fraca;
-  const cnpj = soDigitos(bruto.cnpj);
+  const cnpj = normalizarCnpj(bruto.cnpj);
   if (bruto.tipo !== "ASSESSORIA" || cnpj) {
-    if (!cnpjValido(cnpj)) erros.cnpj = "Esse CNPJ não existe. Confira os 14 números.";
+    if (!cnpjValido(cnpj)) erros.cnpj = "Esse CNPJ não existe. Confira os 14 caracteres.";
   }
   if (Object.keys(erros).length || !p.success) return { campos: erros };
   const d = p.data;
@@ -138,9 +139,9 @@ export async function completarEmpresa(_: Estado, fd: FormData): Promise<Estado>
   // S6: quem já participa de uma conta só cria outra pelo fluxo explícito ("Criar outra conta")
   if (fd.get("novaConta") !== "1" && (await db.membro.count({ where: { usuarioId: s.usuarioId } })) > 0) redirect("/app/hoje");
   const tipo: "ASSESSORIA" | "EMPRESA" = fd.get("tipo") === "ASSESSORIA" ? "ASSESSORIA" : "EMPRESA";
-  const cnpj = soDigitos(String(fd.get("cnpj") ?? ""));
+  const cnpj = normalizarCnpj(String(fd.get("cnpj") ?? ""));
   const razao = String(fd.get("razaoSocial") ?? "").trim();
-  if (!(tipo === "ASSESSORIA" && !cnpj) && !cnpjValido(cnpj)) return { campos: { cnpj: "Esse CNPJ não existe. Confira os 14 números." } };
+  if (!(tipo === "ASSESSORIA" && !cnpj) && !cnpjValido(cnpj)) return { campos: { cnpj: "Esse CNPJ não existe. Confira os 14 caracteres." } };
   const m = await db.membro.create({
     data: {
       usuario: { connect: { id: s.usuarioId } },

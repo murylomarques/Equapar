@@ -8,10 +8,23 @@ export function soDigitos(v: string) {
 }
 
 // ---------------------------------------------------------------- CNPJ
+//
+// B3. CNPJ numérico e alfanumérico (Receita Federal, a partir de 07/2026): letras e números nas 12 primeiras
+// posições; os 2 dígitos verificadores continuam numéricos. Método oficial (Perguntas e respostas do CNPJ
+// alfanumérico, pergunta 14): cada caractere vale o código ASCII menos 48 ("0" = 0 ... "9" = 9, "A" = 17 ...
+// "Z" = 42); módulo 11 com pesos 5 4 3 2 9 8 7 6 5 4 3 2 (1º dígito) e 6 5 4 3 2 9 8 7 6 5 4 3 2 (2º dígito);
+// resto 0 ou 1 dá dígito 0, senão 11 − resto. Para CNPJ só com números, o resultado é o mesmo de antes.
 
-/** Máscara progressiva 00.000.000/0000-00 a partir de qualquer entrada. */
+/** Forma canônica: maiúsculas, só letras e números ("12.abc.345/01de-35" → "12ABC34501DE35"). */
+export function normalizarCnpj(v: string) {
+  return (v ?? "").toUpperCase().replace(/[^0-9A-Z]/g, "");
+}
+
+/** Máscara progressiva 00.000.000/0000-00 (aceita letras nas 12 primeiras posições). */
 export function mascaraCnpj(v: string) {
-  const d = soDigitos(v).slice(0, 14);
+  const n = normalizarCnpj(v);
+  // 12 primeiros: letras ou números; os 2 últimos: só números
+  const d = (n.slice(0, 12) + n.slice(12).replace(/\D/g, "")).slice(0, 14);
   let s = d.slice(0, 2);
   if (d.length > 2) s += "." + d.slice(2, 5);
   if (d.length > 5) s += "." + d.slice(5, 8);
@@ -20,22 +33,30 @@ export function mascaraCnpj(v: string) {
   return s;
 }
 
+/** Dígito verificador oficial (módulo 11 sobre ASCII − 48) para os primeiros 12 ou 13 caracteres. */
+export function digitoCnpj(base: string): number {
+  const pesos = base.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const r = pesos.reduce((soma, p, i) => soma + (base.charCodeAt(i) - 48) * p, 0) % 11;
+  return r < 2 ? 0 : 11 - r;
+}
+
 export function cnpjValido(v: string): boolean {
-  const c = soDigitos(v);
-  if (c.length !== 14 || /^(\d)\1{13}$/.test(c)) return false;
-  const dv = (len: number) => {
-    const pesos = len === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-    const r = pesos.reduce((s, p, i) => s + Number(c[i]) * p, 0) % 11;
-    return r < 2 ? 0 : 11 - r;
-  };
-  return dv(12) === Number(c[12]) && dv(13) === Number(c[13]);
+  const c = normalizarCnpj(v);
+  if (!/^[0-9A-Z]{12}[0-9]{2}$/.test(c) || /^(.)\1{13}$/.test(c)) return false;
+  return digitoCnpj(c.slice(0, 12)) === Number(c[12]) && digitoCnpj(c.slice(0, 13)) === Number(c[13]);
+}
+
+/** CNPJ com letras (o novo formato) */
+export function cnpjAlfanumerico(v: string) {
+  return /[A-Z]/.test(normalizarCnpj(v));
 }
 
 export function erroCnpj(v: string): string | null {
-  const d = soDigitos(v);
-  if (!d) return "Digite o CNPJ da empresa.";
-  if (d.length !== 14) return "Digite os 14 números do CNPJ.";
-  if (!cnpjValido(d)) return "Esse CNPJ não existe. Confira os 14 números.";
+  const c = normalizarCnpj(v);
+  if (!c) return "Digite o CNPJ da empresa.";
+  if (c.length !== 14) return "Digite os 14 caracteres do CNPJ.";
+  if (!/^[0-9A-Z]{12}[0-9]{2}$/.test(c)) return "Os 2 últimos caracteres do CNPJ são números.";
+  if (!cnpjValido(c)) return "Esse CNPJ não existe. Confira os 14 caracteres.";
   return null;
 }
 

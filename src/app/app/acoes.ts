@@ -5,7 +5,7 @@ import { contexto, contratoDaConta, ehDemo, exigir, exigirUsuario, registrarHist
 import { enviarConfirmacaoEmail } from "@/lib/confirmacao-envio";
 import { db } from "@/lib/db";
 import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/acao";
-import { cnpjValido, soDigitos } from "@/lib/cnpj";
+import { cnpjValido } from "@/lib/cnpj";
 import { registrarEvento } from "@/lib/eventos";
 import { data, lerData, lerDinheiro } from "@/lib/format";
 import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
@@ -15,6 +15,7 @@ import { riscoPreclusao } from "@/lib/prorrogacao";
 import { limiteDoPlano } from "@/lib/planos";
 import { proximaVersao } from "@/lib/versao-documento";
 import { modoPiloto } from "@/lib/chaves";
+import { normalizarCnpj } from "@/lib/mascaras";
 
 // ---------------------------------------------------------------------------
 // Sessão
@@ -402,8 +403,8 @@ export async function adicionarCliente(_: Resultado, fd: FormData): Promise<Resu
   return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("editar_contratos");
     if (ctx.conta.tipo !== "ASSESSORIA") return { erro: "Só contas de assessoria têm vários clientes." };
-    const cnpj = soDigitos(texto(fd, "cnpj"));
-    if (!cnpjValido(cnpj)) return { campos: { cnpj: "Esse CNPJ não existe. Confira os 14 números." } };
+    const cnpj = normalizarCnpj(texto(fd, "cnpj"));
+    if (!cnpjValido(cnpj)) return { campos: { cnpj: "Esse CNPJ não existe. Confira os 14 caracteres." } };
     if (ctx.empresas.some((e) => e.cnpj === cnpj)) return { campos: { cnpj: "Este cliente já está na conta." } };
     const limite = limiteDoPlano(ctx.conta.plano, { tipo: "adicionar_cliente", clientesAtuais: ctx.empresas.length }); // 4.2
     if (limite) return { erro: limite };

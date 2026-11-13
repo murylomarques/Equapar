@@ -120,7 +120,7 @@ try {
   const campoCnpj = page.getByLabel("CNPJ da empresa").first();
   await campoCnpj.fill("11111111111111");
   await campoCnpj.blur();
-  await page.getByText("Esse CNPJ não existe. Confira os 14 números.").filter({ visible: true }).first().waitFor();
+  await page.getByText("Esse CNPJ não existe. Confira os 14 caracteres.").filter({ visible: true }).first().waitFor();
   ok("Raio-X recusa CNPJ inválido com mensagem clara");
   await campoCnpj.fill(CNPJ_RAIOX);
   if ((await campoCnpj.inputValue()) !== "12.345.678/0001-95") throw new Error("máscara do CNPJ não aplicada");

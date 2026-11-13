@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { FormCnpj } from "@/components/form-cnpj";
-import { cnpjValido, formatarCnpj, soDigitos } from "@/lib/cnpj";
+import { cnpjValido, formatarCnpj } from "@/lib/cnpj";
 import { ResultadoRaioXCliente } from "./resultado";
+import { normalizarCnpj } from "@/lib/mascaras";
 
 export const metadata: Metadata = {
   title: "Raio-X grátis dos contratos públicos | Equapar",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default async function RaioX({ searchParams }: { searchParams: Promise<{ cnpj?: string }> }) {
   const { cnpj: bruto } = await searchParams;
-  const cnpj = soDigitos(bruto ?? "");
+  const cnpj = normalizarCnpj(bruto ?? "");
   return (
     <div className="site-largura" style={{ paddingTop: 40, paddingBottom: 24 }}>
       <h1 className="titulo-landing" style={{ fontSize: 38, lineHeight: "44px" }}>
@@ -58,7 +59,7 @@ export default async function RaioX({ searchParams }: { searchParams: Promise<{ 
       <div className="mt-32">
         {!bruto ? null : !cnpjValido(cnpj) ? (
           <p className="erro-texto" role="alert">
-            Esse CNPJ não existe. Confira os 14 números.
+            Esse CNPJ não existe. Confira os 14 caracteres.
           </p>
         ) : (
           <ResultadoRaioXCliente key={cnpj} cnpj={cnpj} />

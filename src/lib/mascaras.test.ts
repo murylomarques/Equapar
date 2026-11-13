@@ -30,9 +30,9 @@ describe("CNPJ", () => {
   });
   it("mensagens dizem o que fazer", () => {
     expect(erroCnpj("")).toBe("Digite o CNPJ da empresa.");
-    expect(erroCnpj("1122")).toBe("Digite os 14 números do CNPJ.");
-    expect(erroCnpj("11111111111111")).toBe("Esse CNPJ não existe. Confira os 14 números.");
-    expect(erroCnpj("11222333000180")).toBe("Esse CNPJ não existe. Confira os 14 números.");
+    expect(erroCnpj("1122")).toBe("Digite os 14 caracteres do CNPJ.");
+    expect(erroCnpj("11111111111111")).toBe("Esse CNPJ não existe. Confira os 14 caracteres.");
+    expect(erroCnpj("11222333000180")).toBe("Esse CNPJ não existe. Confira os 14 caracteres.");
     expect(erroCnpj("11.222.333/0001-81")).toBeNull();
   });
 });

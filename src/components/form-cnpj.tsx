@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { AlertCircle, Check } from "lucide-react";
-import { erroCnpj, mascaraCnpj, soDigitos } from "@/lib/mascaras";
+import { erroCnpj, mascaraCnpj, normalizarCnpj } from "@/lib/mascaras";
 
 /**
  * Campo do Raio-X: aceita colar em qualquer formato, mostra a máscara,
@@ -15,7 +15,7 @@ export function FormCnpj({ id, valorInicial = "", escuro }: { id?: string; valor
   const [valor, setValor] = useState(mascaraCnpj(valorInicial));
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const valido = soDigitos(valor).length === 14 && !erroCnpj(valor);
+  const valido = normalizarCnpj(valor).length === 14 && !erroCnpj(valor);
   return (
     <form
       action="/raio-x"
@@ -31,7 +31,7 @@ export function FormCnpj({ id, valorInicial = "", escuro }: { id?: string; valor
         }
         setErro("");
         setEnviando(true);
-        router.push(`/raio-x?cnpj=${soDigitos(valor)}`);
+        router.push(`/raio-x?cnpj=${normalizarCnpj(valor)}`);
         window.setTimeout(() => setEnviando(false), 1500);
       }}
     >
@@ -43,7 +43,7 @@ export function FormCnpj({ id, valorInicial = "", escuro }: { id?: string; valor
           <input
             id={campoId}
             name="cnpj"
-            inputMode="numeric"
+            autoCapitalize="characters"
             autoComplete="off"
             placeholder="00.000.000/0000-00"
             value={valor}
@@ -53,7 +53,7 @@ export function FormCnpj({ id, valorInicial = "", escuro }: { id?: string; valor
               if (erro) setErro("");
             }}
             onBlur={() => {
-              if (soDigitos(valor).length) setErro(erroCnpj(valor) ?? "");
+              if (normalizarCnpj(valor).length) setErro(erroCnpj(valor) ?? "");
             }}
             aria-invalid={!!erro}
             aria-describedby={erro ? `${campoId}-erro` : undefined}

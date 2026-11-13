@@ -1,7 +1,9 @@
-import { cnpjValido, mascaraCnpj, soDigitos } from "./mascaras";
+import { cnpjAlfanumerico, cnpjValido, mascaraCnpj, normalizarCnpj, soDigitos } from "./mascaras";
 
-export { cnpjValido, soDigitos };
+export { cnpjAlfanumerico, cnpjValido, normalizarCnpj, soDigitos };
 
+/** 00.000.000/0000-00 (numérico com zeros à esquerda completados, como antes; alfanumérico como está). */
 export function formatarCnpj(v: string) {
-  return mascaraCnpj(soDigitos(v).padStart(14, "0"));
+  const n = normalizarCnpj(v);
+  return mascaraCnpj(/^\d+$/.test(n) ? n.padStart(14, "0") : n);
 }

@@ -25,6 +25,7 @@ async function liberarEnvio(email: string, fd: FormData): Promise<string | null>
 }
 
 import type { Resultado } from "@/lib/acao";
+import { normalizarCnpj } from "@/lib/mascaras";
 
 export type EstadoForm = Resultado;
 
@@ -79,9 +80,9 @@ export async function pedirRelatorio(_: EstadoForm, fd: FormData): Promise<Estad
 
 /** PNCP fora do ar: guarda o e-mail, tenta de novo com prazo maior e manda o link se conseguir. */
 export async function avisarDepois(_: EstadoForm, fd: FormData): Promise<EstadoForm> {
-  const cnpj = soDigitos(String(fd.get("cnpj") ?? ""));
+  const cnpj = normalizarCnpj(String(fd.get("cnpj") ?? ""));
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
-  if (!cnpjValido(cnpj)) return { erro: "Esse CNPJ não existe. Confira os 14 números." };
+  if (!cnpjValido(cnpj)) return { erro: "Esse CNPJ não existe. Confira os 14 caracteres." };
   if (!z.string().email().safeParse(email).success) return { campos: { email: "Digite um e-mail válido, como nome@empresa.com.br." } };
   const barrado = await liberarEnvio(email, fd);
   if (barrado) return { erro: barrado };

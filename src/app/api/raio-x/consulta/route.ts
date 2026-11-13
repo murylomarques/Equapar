@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { cnpjValido, soDigitos } from "@/lib/cnpj";
+import { cnpjValido } from "@/lib/cnpj";
 import { registrarEvento } from "@/lib/eventos";
 import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
 import { consumirCotas } from "@/lib/cota";
 import { ipConfiavel } from "@/lib/limite";
+import { normalizarCnpj } from "@/lib/mascaras";
 
 /** Consulta do Raio-X para a tela (JSON). Só dados públicos do PNCP; registros de pessoa física já vêm descartados. */
 export async function GET(req: NextRequest) {
-  const cnpj = soDigitos(req.nextUrl.searchParams.get("cnpj") ?? "");
+  const cnpj = normalizarCnpj(req.nextUrl.searchParams.get("cnpj") ?? "");
   if (!cnpjValido(cnpj)) return NextResponse.json({ erro: "cnpj" }, { status: 400 });
   // S2: no máximo 60 consultas por dia por IP (do proxy de confiança)
   const ip = ipConfiavel(req.headers);

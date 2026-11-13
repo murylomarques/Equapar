@@ -148,3 +148,25 @@ Tudo certo.
 ### A7. Página do método das 1.447 empresas (feito)
 
 `/metodo/levantamento-limpeza`, com o texto do Apêndice D: fonte e data, termos, o que conta e o que fica fora, agrupamento pela raiz do CNPJ, limites e como refazer. O número da landing leva a ela ("Veja o método"). Trava 8: nenhuma empresa é listada. `curl http://localhost:3100/metodo/levantamento-limpeza` → 200. (O bloco de assessorias da landing escondido pelo A6 entrou no mesmo commit do A7, porque os dois mexeram no mesmo arquivo.)
+
+## Fase B: dados da empresa pelo ambiente
+
+(O B3 foi feito antes do B1 porque o B1 valida `SITE_CNPJ` com a regra nova.)
+
+### B3. CNPJ alfanumérico (feito)
+
+Antes: `cnpjValido("12.ABC.345/01DE-35")` → `false` (só dígitos), e a máscara apagava as letras. Raio-X, cadastro e contratos recusariam o CNPJ novo.
+
+Especificação usada: Receita Federal, "Perguntas e respostas: CNPJ alfanumérico", pergunta 14 (https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/perguntas-e-respostas/cnpj/cnpj-alfanumerico.pdf). Cada caractere vale o código ASCII menos 48; módulo 11 com pesos 5 4 3 2 9 8 7 6 5 4 3 2 e 6 5 4 3 2 9 8 7 6 5 4 3 2. Exemplo oficial: 12.ABC.345/01DE, soma 459, resto 8, 1º dígito 3; soma 424, resto 6, 2º dígito 5: 12.ABC.345/01DE-35.
+
+Correção: `normalizarCnpj` (maiúsculas, sem pontuação; é a forma guardada), `digitoCnpj`, `cnpjValido` e `mascaraCnpj` com letras nas 12 primeiras posições e dígitos numéricos no fim. Para CNPJ só com números, o cálculo é o mesmo de antes. Raio-X, cadastro, contratos, a busca no PNCP e os campos de CNPJ passaram a usar a forma canônica; o teclado do campo deixou de ser só numérico. Mensagens: "Confira os 14 caracteres".
+
+Prova: `src/lib/cnpj-alfanumerico.test.ts` (o exemplo oficial, minúsculas e pontuação, dígito errado, letra no dígito, os CNPJs numéricos de antes). `npm test`: 56 arquivos, 227 testes passando.
+
+APIs públicas com CNPJ alfanumérico (13/11/2026):
+```
+busca do PNCP (/api/search/?q=12ABC34501DE35&tipos_documento=contrato&status=vigente)  → HTTP 200, total 0 (aceita a consulta; ainda não há contrato publicado com CNPJ alfanumérico)
+busca do PNCP com CNPJ numérico fictício (11222333000181)                             → HTTP 200, total 0
+consulta pública /api/consulta/v1/contratos?cnpjOrgao=12ABC34501DE35                   → HTTP 204 (sem conteúdo, sem erro)
+```
+Nenhuma das duas recusa o formato novo. Quando houver contratos publicados com CNPJ alfanumérico, a comparação com `fornecedor_ni` já usa a forma canônica.

@@ -3,9 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { sessaoAtual } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { soDigitos } from "@/lib/cnpj";
 import { FormCriarConta, FormEmpresa } from "../formularios";
 import { ETAPAS_INICIO } from "@/lib/inicio";
+import { normalizarCnpj } from "@/lib/mascaras";
 
 export const metadata: Metadata = { title: "Criar conta | Equapar" };
 
@@ -47,7 +47,7 @@ export default async function CriarConta({ searchParams }: { searchParams: Promi
       <Etapas atual={0} />
       <h1>Criar conta</h1>
       <p className="secundario">Leva cerca de 1 minuto. Depois, a Equapar busca seus contratos no PNCP.</p>
-      <FormCriarConta cnpj={sp.cnpj ? soDigitos(sp.cnpj) : undefined} tipoInicial={sp.tipo === "assessoria" ? "ASSESSORIA" : "EMPRESA"} google={!!process.env.GOOGLE_CLIENT_ID} />
+      <FormCriarConta cnpj={sp.cnpj ? normalizarCnpj(sp.cnpj) : undefined} tipoInicial={sp.tipo === "assessoria" ? "ASSESSORIA" : "EMPRESA"} google={!!process.env.GOOGLE_CLIENT_ID} />
       <hr className="regua" />
       <p className="mb-0" style={{ fontSize: 14 }}>
         Já tem conta? <Link href="/entrar">Entrar</Link>

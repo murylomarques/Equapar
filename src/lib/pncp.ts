@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "./db";
-import { soDigitos } from "./cnpj";
 import { hojeUTC } from "./format";
+import { normalizarCnpj } from "./mascaras";
 
 /**
  * Consulta pública ao PNCP (somente leitura). Usa a busca do portal, filtrando pelo CNPJ do fornecedor.
@@ -63,7 +63,7 @@ function s(v: unknown) {
 }
 
 export async function consultarPncp(cnpjEntrada: string, opts: { semCache?: boolean; timeoutMs?: number } = {}): Promise<ResultadoRaioX> {
-  const cnpj = soDigitos(cnpjEntrada);
+  const cnpj = normalizarCnpj(cnpjEntrada);
   if (!opts.semCache) {
     const c = await db.raioXCache.findUnique({ where: { cnpj } });
     if (c && Date.now() - c.consultadoEm.getTime() < CACHE_HORAS * 3_600_000) {
@@ -92,7 +92,7 @@ export async function consultarPncp(cnpjEntrada: string, opts: { semCache?: bool
   const vistos = new Set<string>();
   const contratos: ContratoPncp[] = [];
   for (const it of itens) {
-    if (soDigitos(s(it.fornecedor_ni) ?? "") !== cnpj) continue;
+    if (normalizarCnpj(s(it.fornecedor_ni) ?? "") !== cnpj) continue;
     if (s(it.fornecedor_tipo_pessoa) !== "PJ") continue; // descarta pessoa física
     if (it.cancelado === true) continue;
     const fim = s(it.data_fim_vigencia)?.slice(0, 10);

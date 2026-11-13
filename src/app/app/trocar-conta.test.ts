@@ -28,7 +28,15 @@ const chamar = async (contaId: string) => {
 };
 
 describe("L14: trocar de conta", () => {
-  beforeEach(() => Object.assign(sessoes[0], { contaId: "a", empresaId: "e1" }));
+  beforeEach(() => {
+    Object.assign(sessoes[0], { contaId: "a", empresaId: "e1" });
+    vi.stubEnv("MODO_PILOTO", "false"); // A6: a troca de conta só existe fora do piloto
+  });
+  it("A6: no modo piloto, a troca de conta é recusada e nada muda", async () => {
+    vi.stubEnv("MODO_PILOTO", "true");
+    expect(await chamar("b")).toHaveProperty("erro");
+    expect(sessoes[0].contaId).toBe("a");
+  });
   it("troca para outra conta da pessoa e limpa o cliente selecionado", async () => {
     expect(await chamar("b")).toEqual({ redirect: true });
     expect(sessoes[0]).toMatchObject({ contaId: "b", empresaId: null });
