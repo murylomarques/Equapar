@@ -1,0 +1,70 @@
+{
+  "ficticia": {
+    "observacoes": "Respostas GRAVADAS para a simulação: 7 certas, 1 erro com confiança baixa (insalubridade lida como 40%), 1 omissão (benefício social) e 1 valor sugerido onde a convenção não traz valor (vale-transporte, confiança baixa).",
+    "sugestoes": [
+      {
+        "postoId": "srv",
+        "linhaId": "sal",
+        "valorNovo": "1.850,00",
+        "clausula": "Cláusula 3ª",
+        "pagina": 1,
+        "trecho": "piso salarial de servente de R$ 1.850,00",
+        "confianca": "alta"
+      },
+      {
+        "postoId": "enc",
+        "linhaId": "sal",
+        "valorNovo": "2.450,00",
+        "clausula": "Cláusula 3ª",
+        "pagina": 1,
+        "trecho": "encarregado R$ 2.450,00",
+        "confianca": "alta"
+      },
+      {
+        "postoId": "srv",
+        "linhaId": "ins",
+        "valorNovo": "40",
+        "clausula": "Cláusula 8ª",
+        "pagina": 2,
+        "trecho": "adicional de 20% ou 40% conforme o grau",
+        "confianca": "baixa"
+      },
+      {
+        "postoId": "srv",
+        "linhaId": "alim",
+        "valorNovo": "25,00",
+        "clausula": "Cláusula 10ª",
+        "pagina": 2,
+        "trecho": "auxílio-alimentação de R$ 25,00 por dia trabalhado",
+        "confianca": "alta"
+      },
+      {
+        "postoId": "srv",
+        "linhaId": "vt",
+        "valorNovo": "6",
+        "clausula": "Cláusula 11ª",
+        "pagina": 2,
+        "trecho": "desconto de até 6% do salário-base",
+        "confianca": "baixa"
+      },
+      {
+        "postoId": "srv",
+        "linhaId": "cesta",
+        "valorNovo": "180,00",
+        "clausula": "Cláusula 12ª",
+        "pagina": 3,
+        "trecho": "cesta básica de R$ 180,00 mensais",
+        "confianca": "alta"
+      },
+      {
+        "postoId": "srv",
+        "linhaId": "saude",
+        "valorNovo": "60,00",
+        "clausula": "Cláusula 13ª",
+        "pagina": 3,
+        "trecho": "R$ 60,00 por empregado por mês",
+        "confianca": "alta"
+      }
+    ]
+  }
+}

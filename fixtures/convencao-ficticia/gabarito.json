@@ -1,0 +1,93 @@
+{
+  "_leia": "Convenção FICTÍCIA criada para testar a avaliação (E3). Gerada por scripts/gerar-convencao-ficticia.ts; os valores são inventados e conferidos por construção.",
+  "convencoes": [
+    {
+      "id": "ficticia",
+      "registro": "FIC000001/2026",
+      "arquivo": "FIC000001-2026.pdf",
+      "conferido": true,
+      "campos": {
+        "piso": {
+          "linha": "srv:sal",
+          "valor": 1850.0,
+          "unidade": "R$/mês",
+          "condicao": "44 h",
+          "clausula": "3ª",
+          "pagina": "1"
+        },
+        "encarregado": {
+          "linha": "enc:sal",
+          "valor": 2450.0,
+          "unidade": "R$/mês",
+          "condicao": "44 h",
+          "clausula": "3ª",
+          "pagina": "1"
+        },
+        "insalubridade": {
+          "linha": "srv:ins",
+          "valor": 20,
+          "unidade": "% do salário mínimo",
+          "condicao": "grau médio",
+          "clausula": "8ª",
+          "pagina": "2"
+        },
+        "alimentacao": {
+          "linha": "srv:alim",
+          "valor": 25.0,
+          "unidade": "R$ por dia trabalhado",
+          "condicao": "jornada acima de 6 h",
+          "clausula": "10ª",
+          "pagina": "2"
+        },
+        "vale_transporte": {
+          "linha": "srv:vt",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "desconto até 6% do salário-base",
+          "clausula": "11ª",
+          "pagina": "2"
+        },
+        "cesta": {
+          "linha": "srv:cesta",
+          "valor": 180.0,
+          "unidade": "R$/mês",
+          "condicao": "jornada integral",
+          "clausula": "12ª",
+          "pagina": "3"
+        },
+        "saude": {
+          "linha": "srv:saude",
+          "valor": 60.0,
+          "unidade": "R$/mês por empregado",
+          "condicao": "custeio da empresa",
+          "clausula": "13ª",
+          "pagina": "3"
+        },
+        "seguro": {
+          "linha": "srv:seguro",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "facultativo",
+          "clausula": "14ª",
+          "pagina": "3"
+        },
+        "uniformes": {
+          "linha": "srv:uni",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "dois conjuntos por ano",
+          "clausula": "20ª",
+          "pagina": "4"
+        },
+        "beneficio_social": {
+          "linha": "srv:social",
+          "valor": 20.0,
+          "unidade": "R$/mês por empregado",
+          "condicao": "benefício social",
+          "clausula": "15ª",
+          "pagina": "3"
+        }
+      }
+    }
+  ]
+}

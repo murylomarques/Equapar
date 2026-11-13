@@ -1,0 +1,278 @@
+{
+  "_leia": "Gabarito do Apêndice C do prompt v4. Valores tirados por pesquisa, A CONFERIR por uma pessoa nos PDFs. Enquanto 'conferido' for false, a avaliação não autoriza ligar a IA. Os PDFs ficam fora do git (pasta convencoes-reais/). 'valor': null = a convenção não traz valor em reais para aquela linha (a IA deve omitir).",
+  "convencoes": [
+    {
+      "id": "campinas-sp",
+      "registro": "SP002852/2026",
+      "solicitacao": "MR006681/2026",
+      "arquivo": "SP002852-2026.pdf",
+      "conferido": false,
+      "sindicatos": "SEAC-SP e SIEMACO Campinas; base Campinas/SP",
+      "vigencia": "01/01/2026 a 31/12/2027; data-base 1º de janeiro",
+      "campos": {
+        "piso": {
+          "linha": "srv:sal",
+          "valor": 1837.4,
+          "unidade": "R$/mês",
+          "condicao": "44 h; piso que inclui servente (2026)",
+          "clausula": "3ª e nota 1",
+          "pagina": "2-3"
+        },
+        "encarregado": {
+          "linha": "enc:sal",
+          "valor": 2404.68,
+          "unidade": "R$/mês",
+          "condicao": "11 ou mais empregados; líder de até 10: R$ 2.003,90",
+          "clausula": "3ª",
+          "pagina": "3"
+        },
+        "insalubridade": {
+          "linha": "srv:ins",
+          "valor": 20,
+          "unidade": "% do salário mínimo",
+          "condicao": "20% nas atividades listadas; 40% nas condições listadas",
+          "clausula": "10ª, itens 1 a 5",
+          "pagina": "6-7"
+        },
+        "alimentacao": {
+          "linha": "srv:alim",
+          "valor": 21.8,
+          "unidade": "R$ por dia trabalhado",
+          "condicao": "2026; desconto até R$ 1,46",
+          "clausula": "15ª",
+          "pagina": "11-12"
+        },
+        "vale_transporte": {
+          "linha": "srv:vt",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "antecipado; desconto até o gasto e até 6% do salário-base; opção por escrito",
+          "clausula": "17ª",
+          "pagina": "13"
+        },
+        "cesta": {
+          "linha": "srv:cesta",
+          "valor": 151.91,
+          "unidade": "R$/mês",
+          "condicao": "Cesta I (referência 2026); Cesta II R$ 315,00/mês com condições",
+          "clausula": "14ª e 16ª",
+          "pagina": "9-10 e 12-13"
+        },
+        "saude": {
+          "linha": "srv:saude",
+          "valor": 37.09,
+          "unidade": "R$/mês por empregado",
+          "condicao": "nas condições da cláusula",
+          "clausula": "18ª, § 3º",
+          "pagina": "14-15"
+        },
+        "seguro": {
+          "linha": "srv:seguro",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "facultativo; contribuição do empregado até 10% do prêmio",
+          "clausula": "20ª",
+          "pagina": "16"
+        },
+        "uniformes": {
+          "linha": "srv:uni",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "um na admissão e outro 30 dias depois",
+          "clausula": "52ª",
+          "pagina": "31-32"
+        },
+        "beneficio_social": {
+          "linha": "srv:social",
+          "valor": 16.75,
+          "unidade": "R$ por trabalhador",
+          "condicao": "Benefício Social Sindical",
+          "clausula": "23ª, § 1º",
+          "pagina": "17"
+        }
+      }
+    },
+    {
+      "id": "parana",
+      "registro": "PR000063/2026",
+      "solicitacao": "MR001796/2026",
+      "arquivo": "PR000063-2026.pdf",
+      "conferido": false,
+      "sindicatos": "SEAC-PR, FEACONSPAR e sindicatos laborais signatários; abrangência PR",
+      "vigencia": "01/02/2026 a 31/01/2028; data-base 1º de fevereiro",
+      "campos": {
+        "piso": {
+          "linha": "srv:sal",
+          "valor": 1900.0,
+          "unidade": "R$/mês",
+          "condicao": "ingresso; no hospital, gratificação de R$ 62,00 nas condições do item 02",
+          "clausula": "3ª, itens 01 e 02",
+          "pagina": "2"
+        },
+        "encarregado": {
+          "linha": "enc:sal",
+          "valor": 2191.0,
+          "unidade": "R$/mês",
+          "condicao": "3 a 10; R$ 2.279,00 de 11 a 20; R$ 2.404,00 acima de 20",
+          "clausula": "3ª, item 03",
+          "pagina": "2"
+        },
+        "insalubridade": {
+          "linha": "srv:ins",
+          "valor": 40,
+          "unidade": "% do salário mínimo",
+          "condicao": "coleta, varrição e atividades especificadas; 20% nas do § 6º, com laudo",
+          "clausula": "3ª, §§ 5º a 7º",
+          "pagina": "5"
+        },
+        "alimentacao": {
+          "linha": "srv:alim",
+          "valor": 900.0,
+          "unidade": "R$/mês",
+          "condicao": "regra geral; R$ 494,00 com alimentação no local; R$ 30,00/dia no § 3º",
+          "clausula": "13ª, caput e §§ 1º, 3º e 5º",
+          "pagina": "8-9"
+        },
+        "vale_transporte": {
+          "linha": "srv:vt",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "desde a admissão; antecipação em dinheiro e ajuda combustível",
+          "clausula": "15ª, caput e § 1º",
+          "pagina": "10"
+        },
+        "cesta": {
+          "linha": "srv:cesta",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "sem cesta autônoma nesta cópia",
+          "clausula": "13ª",
+          "pagina": "8-9"
+        },
+        "saude": {
+          "linha": "srv:saude",
+          "valor": 94.5,
+          "unidade": "R$/mês por empregado",
+          "condicao": "na região, com exceções de jornada",
+          "clausula": "16ª, §§ 1º a 4º",
+          "pagina": "10-11"
+        },
+        "seguro": {
+          "linha": "srv:seguro",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "desconto autorizado; sem prêmio obrigatório",
+          "clausula": "7ª, § 2º e 17ª",
+          "pagina": "7 e 12"
+        },
+        "uniformes": {
+          "linha": "srv:uni",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "gratuitos; sem quantidade ou preço",
+          "clausula": "33ª",
+          "pagina": "18"
+        },
+        "beneficio_social": {
+          "linha": "srv:social",
+          "valor": 31.0,
+          "unidade": "R$/mês por empregado",
+          "condicao": "Benefício Social Familiar",
+          "clausula": "17ª, § 1º",
+          "pagina": "12"
+        }
+      }
+    },
+    {
+      "id": "belo-horizonte-mg",
+      "registro": "MG004404/2025",
+      "solicitacao": "MR079112/2025",
+      "arquivo": "MG004404-2025.pdf",
+      "conferido": false,
+      "sindicatos": "SEAC-MG e SINDEAC; abrangência Belo Horizonte/MG",
+      "vigencia": "01/01/2026 a 31/12/2026; data-base 1º de janeiro",
+      "campos": {
+        "piso": {
+          "linha": "srv:sal",
+          "valor": 1772.8,
+          "unidade": "R$/mês",
+          "condicao": "item 58 da tabela",
+          "clausula": "3ª, item 58",
+          "pagina": "3"
+        },
+        "encarregado": {
+          "linha": "enc:sal",
+          "valor": 2648.04,
+          "unidade": "R$/mês",
+          "condicao": "item 26 da tabela",
+          "clausula": "3ª, item 26",
+          "pagina": "2"
+        },
+        "insalubridade": {
+          "linha": "srv:ins",
+          "valor": 40,
+          "unidade": "% do salário mínimo",
+          "condicao": "banheiros públicos ou coletivos de grande circulação (99 pessoas por dia ou mais)",
+          "clausula": "12ª, caput e §§ 1º a 4º",
+          "pagina": "6"
+        },
+        "alimentacao": {
+          "linha": "srv:alim",
+          "valor": 31.34,
+          "unidade": "R$ por dia trabalhado",
+          "condicao": "jornada diária acima de 6 h; desconto até 20%",
+          "clausula": "13ª, caput e §§ 1º, 3º e 5º",
+          "pagina": "6-7"
+        },
+        "vale_transporte": {
+          "linha": "srv:vt",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "antecipação discriminada como Benefício de Transporte",
+          "clausula": "15ª",
+          "pagina": "7-8"
+        },
+        "cesta": {
+          "linha": "srv:cesta",
+          "valor": 200.0,
+          "unidade": "R$/mês",
+          "condicao": "jornada integral de 44 h; proporcionalidade e regra de 12x36",
+          "clausula": "14ª, caput e § 5º",
+          "pagina": "7"
+        },
+        "saude": {
+          "linha": "srv:saude",
+          "valor": 103.09,
+          "unidade": "R$/mês por empregado",
+          "condicao": "Programa de Assistência Familiar, nas condições do § 4º",
+          "clausula": "16ª, §§ 3º, 4º e 14",
+          "pagina": "8-10"
+        },
+        "seguro": {
+          "linha": "srv:seguro",
+          "valor": 20327.11,
+          "unidade": "R$ de cobertura",
+          "condicao": "sem ônus ao empregado; morte ou invalidez por acidente de trabalho",
+          "clausula": "19ª, incisos I e II",
+          "pagina": "11"
+        },
+        "uniformes": {
+          "linha": "srv:uni",
+          "valor": null,
+          "unidade": "-",
+          "condicao": "completo e gratuito se exigido; sem preço",
+          "clausula": "47ª",
+          "pagina": "18"
+        },
+        "beneficio_social": {
+          "linha": "srv:social",
+          "valor": 3547.5,
+          "unidade": "R$ (auxílio único)",
+          "condicao": "aposentadoria por invalidez decorrente de acidente de trabalho",
+          "clausula": "16ª, § 3º, inciso V",
+          "pagina": "9"
+        }
+      }
+    }
+  ]
+}

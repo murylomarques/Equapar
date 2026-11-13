@@ -54,3 +54,7 @@ docs/produto-pronto/depois/*.png
 docs/pronto/capturas/*.png
 
 e2e/.modo-piloto-dados.json
+
+# Trava 9: PDFs de convenções coletivas reais ficam fora do git (trazem nomes de dirigentes sindicais)
+convencoes-reais/
+convencoes-ficticias/*.pdf

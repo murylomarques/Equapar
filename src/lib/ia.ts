@@ -104,6 +104,11 @@ Regras:
 - Se a leitura for incerta (tabela confusa, mais de um valor possível, função diferente da do posto), use confianca "baixa" e explique em observacoes.`;
 
 export async function lerConvencaoPdf(pdf: Buffer, linhas: LinhaParaConvencao[]): Promise<LeituraConvencao> {
+  return (await lerConvencaoPdfDetalhado(pdf, linhas)).leitura;
+}
+
+/** E3: a mesma leitura, devolvendo também os tokens usados (para a avaliação medir custo e tempo). As instruções não mudam. */
+export async function lerConvencaoPdfDetalhado(pdf: Buffer, linhas: LinhaParaConvencao[]): Promise<{ leitura: LeituraConvencao; uso: { entrada: number; saida: number } }> {
   const client = new Anthropic();
   const resposta = await client.messages.parse({
     model: "claude-opus-5-5",
@@ -122,5 +127,5 @@ export async function lerConvencaoPdf(pdf: Buffer, linhas: LinhaParaConvencao[])
   if (resposta.stop_reason === "refusal") throw new ErroUsuario("A leitura automática recusou este documento. Atualize as linhas à mão.");
   if (resposta.stop_reason === "max_tokens") throw new ErroUsuario("A convenção é longa demais para a leitura automática. Atualize as linhas à mão.");
   if (!resposta.parsed_output) throw new ErroUsuario("Não foi possível ler a convenção. Atualize as linhas à mão.");
-  return resposta.parsed_output;
+  return { leitura: resposta.parsed_output, uso: { entrada: resposta.usage.input_tokens, saida: resposta.usage.output_tokens } };
 }
