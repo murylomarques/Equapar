@@ -54,6 +54,7 @@ enum Gatilho {
   NOVA_CONVENCAO
   ACORDO_DISSIDIO
   OUTRO_CUSTO
+  JORNADA_EC141
 }
 
 enum CanalAviso {
@@ -120,6 +121,9 @@ model Conta {
   situacaoCobranca        String    @default("EM_DIA") // 4.2: EM_DIA, ATRASADA, CARENCIA, SOMENTE_LEITURA
   carenciaAte             DateTime? // 4.2: fim da carência antes de virar somente leitura
   gatewayClienteId        String? // 4.2: id do cliente no gateway de pagamento
+  dicasDispensadas        Json? // 5.4: dicas do primeiro pedido já dispensadas
+  avisoJornadaEm          DateTime? // 5.1: aviso da EC 141 já enviado a esta conta
+  pesquisaDispensadaEm    DateTime? // 5.5: pesquisa de Sean Ellis respondida ou dispensada
   criadoEm                DateTime  @default(now())
   demo                    Boolean   @default(false) // C6: conta de demonstração de um visitante
   demoExpiraEm            DateTime? // C6: quando a conta de demonstração vence
@@ -132,6 +136,8 @@ model Conta {
   tarefas     Tarefa[]
   faturas     Fatura[]
   trabalhos   TrabalhoFundo[]
+  registrosTempo          RegistroTempo[]
+  respostasPesquisa       RespostaPesquisa[]
 }
 
 model Membro {
@@ -251,6 +257,14 @@ model Pedido {
   protocoloData       DateTime?
   respostaData        DateTime?
   respostaResumo      String?
+  jornadaAntes        Int? // 5.1: jornada semanal antes (padrão 44)
+  jornadaDepois       Int? // 5.1: 42 ou 40
+  horasCobertura      Decimal?     @db.Decimal(6, 2) // 5.1: horas semanais de cobertura exigidas por posto
+  inicioJornada       DateTime? // 5.1: início da nova jornada
+  cenarioJornada      String? // 5.1: MANTER_HORAS ou REDUZIR_HORAS (escolha explícita, sem padrão)
+  recursoData         DateTime? // 5.5: recurso depois do indeferimento
+  recursoPrazo        DateTime?
+  pedidoOrigemId      String? // 5.5: novo pedido a partir deste
   deferidoEm          DateTime?
   valorDeferido       Decimal?     @db.Decimal(14, 2)
   apostiladoEm        DateTime?
@@ -466,4 +480,37 @@ model EventoCobranca {
   id         String   @id // id do evento no gateway
   tipo       String
   recebidoEm DateTime @default(now())
+}
+
+/// 5.5: minutos de trabalho humano por conta e tipo (coleta, cálculo, revisão, retrabalho, suporte)
+model RegistroTempo {
+  id            String   @id @default(cuid())
+  contaId       String
+  conta         Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  tipo          String
+  minutos       Int
+  data          DateTime
+  descricao     String?
+  registradoPor String?
+  criadoEm      DateTime @default(now())
+
+  @@index([contaId, data])
+}
+
+/// 5.5: pesquisa de Sean Ellis ("Como você se sentiria se não pudesse mais usar a Equapar?")
+model RespostaPesquisa {
+  id         String   @id @default(cuid())
+  contaId    String
+  conta      Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  resposta   String // MUITO_DECEPCIONADO, POUCO_DECEPCIONADO, NAO_DECEPCIONADO, NAO_USO_MAIS
+  comentario String?
+  criadoEm   DateTime @default(now())
+}
+
+/// 5.4: números mensais que o dono informa para o painel interno
+model MetricaMensal {
+  mes            String   @id // "2026-11"
+  custoAquisicao Decimal? @db.Decimal(12, 2)
+  margemPct      Decimal? @db.Decimal(5, 2)
+  atualizadoEm   DateTime @updatedAt
 }
