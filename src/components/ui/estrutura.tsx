@@ -268,8 +268,13 @@ export function Passos({
     <nav aria-label="Passos" className="passos-nav">
       <p className="legenda mb-0" style={{ marginBottom: 8 }}>
         Passo {atual} de {passos.length}
+        <span className="so-celular-inline"> · {passos[atual - 1]}</span>
         {estimativa ? ` · ${estimativa}` : ""}
       </p>
+      {/* 5.2: no celular, barra de progresso no lugar da lista de passos (que ficava cortada) */}
+      <div className="barra-passos" role="progressbar" aria-label="Progresso do pedido" aria-valuemin={1} aria-valuemax={passos.length} aria-valuenow={atual} aria-valuetext={`Passo ${atual} de ${passos.length}: ${passos[atual - 1]}`}>
+        <span style={{ width: `${(atual / passos.length) * 100}%` }} />
+      </div>
       <ol className="progresso">
         {passos.map((p, i) => {
           const n = i + 1;

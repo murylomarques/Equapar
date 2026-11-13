@@ -660,3 +660,26 @@
 .item-mais:hover {
   background: #f6f3ec;
 }
+
+/* 5.2: etapas do dinheiro em lista vertical no celular */
+@media (max-width: 720px) {
+  .estados {
+    flex-direction: column;
+    overflow: visible;
+  }
+  .estados li {
+    min-width: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0 6px 12px;
+    border-top: 0;
+    border-left: 3px solid var(--linha);
+  }
+  .estados li.feito {
+    border-left-color: var(--verde);
+  }
+  .estados li strong {
+    font-size: 13px;
+  }
+}

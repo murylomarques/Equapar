@@ -1884,3 +1884,36 @@ mark {
       radial-gradient(farthest-side at 100% 50%, rgba(29, 27, 22, 0.22), transparent) right / 12px 100% no-repeat scroll;
   }
 }
+
+/* 5.2: passos do pedido no celular: "Passo 3 de 5 · Novos custos" com barra de progresso */
+.barra-passos {
+  display: none;
+}
+@media (min-width: 721px) {
+  .so-celular-inline {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .passos-nav .progresso {
+    display: none;
+  }
+  .passos-nav .legenda {
+    font-weight: 500;
+    color: var(--tinta);
+  }
+  .barra-passos {
+    display: block;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--linha);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .barra-passos > span {
+    display: block;
+    height: 100%;
+    background: var(--verde);
+    border-radius: 3px;
+  }
+}
