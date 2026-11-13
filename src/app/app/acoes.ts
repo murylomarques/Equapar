@@ -12,6 +12,7 @@ import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
 import { salvarArquivo } from "@/lib/storage";
 import { vigenciaAoImportar } from "@/lib/pncp-vigencia";
 import { riscoPreclusao } from "@/lib/prorrogacao";
+import { limiteDoPlano } from "@/lib/planos";
 
 // ---------------------------------------------------------------------------
 // Sessão
@@ -401,6 +402,8 @@ export async function adicionarCliente(_: Resultado, fd: FormData): Promise<Resu
     const cnpj = soDigitos(texto(fd, "cnpj"));
     if (!cnpjValido(cnpj)) return { campos: { cnpj: "Esse CNPJ não existe. Confira os 14 números." } };
     if (ctx.empresas.some((e) => e.cnpj === cnpj)) return { campos: { cnpj: "Este cliente já está na conta." } };
+    const limite = limiteDoPlano(ctx.conta.plano, { tipo: "adicionar_cliente", clientesAtuais: ctx.empresas.length }); // 4.2
+    if (limite) return { erro: limite };
     let razao = texto(fd, "razaoSocial");
     if (!razao) {
       try {

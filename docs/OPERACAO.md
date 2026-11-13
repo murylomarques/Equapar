@@ -61,6 +61,7 @@ Toda integração nasce em **simulação**. Ligar é decisão do dono (chave rea
 | Captcha | `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Domínio cadastrado no Turnstile |
 | Alerta de erro | `ERROS_WEBHOOK_URL` | Endpoint que recebe JSON |
 | Arquivos em S3 | `ARMAZENAMENTO=s3`, `S3_*`, `AWS_*` | Bucket privado, cifrado, versionado |
+| Cobrança (Asaas) | `ASAAS_API_KEY`, `ASAAS_AMBIENTE=producao`, `ASAAS_WEBHOOK_TOKEN`; depois `COBRANCA_EXIGIR_PLANO=true` | Testar no sandbox (chave `$aact_hmlg_…`); cadastrar o webhook em `APP_URL/api/cobranca/asaas` com o mesmo token; escolher o emissor da nota fiscal |
 
 ## Rotinas de limpeza (sempre simulam antes)
 

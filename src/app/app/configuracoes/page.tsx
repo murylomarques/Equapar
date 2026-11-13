@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Monitor } from "lucide-react";
 import { contexto, ehDemo, NOME_PAPEL, pode } from "@/lib/auth";
+import { PRECOS, situacaoEfetiva, valorDoPlano } from "@/lib/planos";
+import { cobranca } from "@/lib/cobranca";
 import { db } from "@/lib/db";
 import { prefsDe } from "@/lib/avisos";
-import { dataHora, reais } from "@/lib/format";
+import { data, dataHora, reais } from "@/lib/format";
 import { navegadorLegivel, plural } from "@/lib/mascaras";
 import { emailAtivo, whatsappAtivo } from "@/lib/mensagens";
 import { FormAcao } from "@/components/form-acao";
@@ -23,6 +25,7 @@ import {
   exportarEmFundo,
   mudarPapel,
   mudarPlano,
+  simularEventoFatura,
   removerLogo,
   removerPessoa,
   salvarAvisos,
@@ -263,31 +266,81 @@ async function AvisosPrefs({ demo }: { demo: boolean }) {
   );
 }
 
+const SITUACAO: Record<string, { tom: "info" | "atencao" | "erro"; texto: string }> = {
+  ATRASADA: { tom: "atencao", texto: "O último pagamento não foi identificado. Vamos tentar de novo; para pagar agora, use o link da fatura." },
+  CARENCIA: {
+    tom: "erro",
+    texto: "Depois de 3 tentativas, o pagamento não foi identificado. A conta continua funcionando até o fim da carência; depois, fica só para consulta. Nenhum dado é apagado.",
+  },
+  SOMENTE_LEITURA: { tom: "erro", texto: "A conta está só para consulta porque o pagamento não foi identificado. Pague a fatura em aberto para voltar a editar. Nenhum dado foi apagado." },
+};
+
+const STATUS_FATURA: Record<string, string> = { ABERTA: "em aberto", PAGA: "paga", FALHOU: "não paga", CANCELADA: "cancelada" };
+
 async function Cobranca({ dono }: { dono: boolean }) {
   const ctx = await contexto();
   const agg = await db.contrato.aggregate({ where: { arquivado: false, maoDeObraDedicada: true, empresa: { contaId: ctx.conta.id } }, _sum: { postos: true } });
   const postos = agg._sum.postos ?? 0;
-  const valor = ctx.conta.plano === "CARTEIRA" ? Math.max(297, 4 * postos) : ctx.conta.plano === "ASSESSORIA" ? 1497 : 0;
+  const ciclo = ctx.conta.ciclo === "ANUAL" ? "ANUAL" : "MENSAL";
+  const valor = valorDoPlano(ctx.conta.plano, { postos, ciclo });
   const faturas = await db.fatura.findMany({ where: { contaId: ctx.conta.id }, orderBy: { criadoEm: "desc" } });
+  const situacao = situacaoEfetiva(ctx.conta.situacaoCobranca, ctx.conta.carenciaAte);
+  const simulacao = cobranca().modo === "simulacao";
   return (
     <div className="pilha">
+      {SITUACAO[situacao] && (
+        <Alerta tipo={SITUACAO[situacao].tom} titulo={situacao === "CARENCIA" && ctx.conta.carenciaAte ? `Carência até ${data(ctx.conta.carenciaAte)}` : undefined}>
+          {SITUACAO[situacao].texto}
+        </Alerta>
+      )}
       <div className="cartao">
         <h2>Plano</h2>
         <dl className="dl-resumo">
           <dt>Plano atual</dt>
           <dd>{PLANOS.find((p) => p.valor === ctx.conta.plano)?.titulo}</dd>
+          {ctx.conta.planoPendente && (
+            <>
+              <dt>Aguardando pagamento</dt>
+              <dd>{PLANOS.find((p) => p.valor === ctx.conta.planoPendente)?.titulo}: passa a valer quando o pagamento for confirmado.</dd>
+            </>
+          )}
           <dt>Postos contados</dt>
           <dd>{plural(postos, "posto", "postos")} nos contratos ativos com mão de obra dedicada</dd>
-          <dt>Valor mensal</dt>
-          <dd className="tnum">{ctx.conta.plano === "PILOTO" ? "por pedido (a partir de R$ 1.500)" : reais(valor)}</dd>
+          <dt>Valor {ciclo === "ANUAL" ? "anual" : "mensal"}</dt>
+          <dd className="tnum">{ctx.conta.plano === "PILOTO" ? "por pedido (a partir de R$ 1.500)" : reais(valor.toFixed(2))}</dd>
         </dl>
-        <Alerta tipo="info" className="mt-16">
-          O pagamento online ainda não está ligado. A mudança de plano fica registrada e a cobrança é feita à parte.
-        </Alerta>
+        {simulacao && (
+          <Alerta tipo="info" className="mt-16">
+            Pagamento em modo simulação: nenhuma cobrança real é feita. Cada fatura em aberto tem os botões para simular o pagamento ou o vencimento.
+          </Alerta>
+        )}
         {dono && (
           <FormAcao action={mudarPlano} className="mt-24">
-            <RadiosCartao nome="plano" legenda="Mudar de plano" valorInicial={ctx.conta.plano} opcoes={PLANOS} />
-            <BotaoEnvio className="btn">Salvar plano</BotaoEnvio>
+            <RadiosCartao nome="plano" legenda="Escolher o plano" valorInicial={ctx.conta.planoPendente ?? ctx.conta.plano} opcoes={PLANOS} />
+            <div className="linha-form">
+              <CampoSelect
+                nome="ciclo"
+                rotulo="Ciclo"
+                valorInicial={ciclo}
+                opcoes={[
+                  { valor: "MENSAL", rotulo: "Mensal" },
+                  { valor: "ANUAL", rotulo: PRECOS.descontoAnualPct() ? `Anual (${PRECOS.descontoAnualPct()}% de desconto)` : "Anual" },
+                ]}
+              />
+              <CampoSelect
+                nome="metodo"
+                rotulo="Forma de pagamento"
+                valorInicial="ESCOLHER"
+                opcoes={[
+                  { valor: "ESCOLHER", rotulo: "Escolher na hora de pagar" },
+                  { valor: "PIX", rotulo: "Pix" },
+                  { valor: "BOLETO", rotulo: "Boleto" },
+                  { valor: "CARTAO", rotulo: "Cartão de crédito" },
+                ]}
+              />
+            </div>
+            <p className="legenda">Escolher um plano abre a cobrança; ele passa a valer quando o pagamento for confirmado. Escolher o Grátis cancela a assinatura na hora.</p>
+            <BotaoEnvio className="btn">Continuar</BotaoEnvio>
           </FormAcao>
         )}
       </div>
@@ -298,13 +351,49 @@ async function Cobranca({ dono }: { dono: boolean }) {
         ) : (
           <ul className="lista-limpa pilha-8">
             {faturas.map((f) => (
-              <li key={f.id} className="entre">
-                <span>
-                  {f.referencia} · {f.descricao}
-                </span>
-                <span className="num">
-                  {reais(f.valor)} {f.pagaEm ? "· paga" : "· em aberto"}
-                </span>
+              <li key={f.id} className="item-doc">
+                <div className="entre" style={{ alignItems: "flex-start" }}>
+                  <span>
+                    <strong style={{ fontWeight: 500 }}>{f.descricao}</strong>
+                    <span className="legenda" style={{ display: "block" }}>
+                      {f.referencia}
+                      {f.vencimento ? ` · vence em ${data(f.vencimento)}` : ""}
+                      {f.tentativas ? ` · ${plural(f.tentativas, "tentativa", "tentativas")}` : ""}
+                    </span>
+                  </span>
+                  <span className="num">
+                    {reais(f.valor)} · {STATUS_FATURA[f.status] ?? f.status}
+                  </span>
+                </div>
+                <div className="fileira mt-8">
+                  {f.status === "ABERTA" && f.linkPagamento && !f.linkPagamento.startsWith("/") && (
+                    <a className="btn btn-pequeno btn-primario" href={f.linkPagamento} target="_blank" rel="noopener noreferrer">
+                      Pagar
+                    </a>
+                  )}
+                  {f.status === "PAGA" &&
+                    (f.notaFiscalUrl ? (
+                      <a className="btn btn-pequeno" href={f.notaFiscalUrl}>
+                        Baixar a nota fiscal
+                      </a>
+                    ) : (
+                      <span className="legenda">Nota fiscal: emitida depois do pagamento.</span>
+                    ))}
+                  {simulacao && dono && f.status === "ABERTA" && (
+                    <>
+                      <FormAcao action={simularEventoFatura}>
+                        <input type="hidden" name="faturaId" value={f.id} />
+                        <input type="hidden" name="evento" value="PAGO" />
+                        <BotaoEnvio className="btn btn-pequeno">Simular pagamento</BotaoEnvio>
+                      </FormAcao>
+                      <FormAcao action={simularEventoFatura}>
+                        <input type="hidden" name="faturaId" value={f.id} />
+                        <input type="hidden" name="evento" value="VENCIDO" />
+                        <BotaoEnvio className="btn btn-pequeno btn-discreto">Simular vencimento</BotaoEnvio>
+                      </FormAcao>
+                    </>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

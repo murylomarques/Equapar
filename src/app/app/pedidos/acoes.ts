@@ -20,6 +20,7 @@ import { oportunidade } from "@/lib/prazos";
 import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendenciasParaGerar, totaisGravados, type DadosAprovacaoDesfeita, type Pendencia } from "@/lib/pedido-regras";
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
+import { limiteDoPlano } from "@/lib/planos";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -342,6 +343,8 @@ export async function concluirPasso4(_: Resultado, fd: FormData): Promise<Result
 export async function gerarPedido(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
+    const limite = limiteDoPlano(ctx.conta.plano, { tipo: "gerar_pedido" }); // 4.2
+    if (limite) return { erro: limite };
     const docs = await db.documento.findMany({ where: { pedidoId: p.id } });
     const pend = pendenciasParaGerar(p, docs, 5);
     if (pend.length) return recusarPorPendencias(p.id, pend, "O pedido ainda não pode ser gerado:");

@@ -14,6 +14,8 @@ import { normalizarTelefoneBR } from "@/lib/telefone";
 import { gerarCodigosRecuperacao } from "@/lib/recuperacao";
 import { tokenConvite } from "@/lib/convite";
 import { enfileirar } from "@/lib/fila";
+import { abrirCobrancaDoPlano, processarEventoPagamento } from "@/lib/cobranca-servidor";
+import { cobranca } from "@/lib/cobranca";
 
 export async function salvarConta(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
@@ -128,14 +130,41 @@ export async function removerPessoa(_: Resultado, fd: FormData): Promise<Resulta
   });
 }
 
+/**
+ * 4.2: escolher o plano só ABRE a cobrança; o plano muda quando o pagamento for confirmado.
+ * Cancelar (voltar ao Grátis) vale na hora, sem obstáculo.
+ */
 export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("gerenciar_conta");
     const plano = z.enum(["GRATIS", "PILOTO", "CARTEIRA", "ASSESSORIA"]).parse(texto(fd, "plano")) as Plano;
-    await db.conta.update({ where: { id: ctx.conta.id }, data: { plano, pilotoInicio: plano === "PILOTO" ? new Date() : ctx.conta.pilotoInicio } });
-    await registrarHistorico(ctx, `Mudou o plano para ${plano.toLowerCase()}`);
+    const ciclo = texto(fd, "ciclo") === "ANUAL" ? "ANUAL" : "MENSAL";
+    const metodo = z.enum(["PIX", "BOLETO", "CARTAO", "ESCOLHER"]).catch("ESCOLHER").parse(texto(fd, "metodo") || "ESCOLHER");
+    if (plano === "GRATIS") {
+      await db.conta.update({ where: { id: ctx.conta.id }, data: { plano: "GRATIS", planoPendente: null } });
+      await registrarHistorico(ctx, "Cancelou a assinatura (plano grátis)");
+      revalidatePath("/app", "layout");
+      return { ok: "Assinatura cancelada. Seus dados continuam aqui e disponíveis para exportar." };
+    }
+    if (plano === "PILOTO") return { erro: "O Piloto é cobrado por pedido. Fale com a gente pelo e-mail de contato para começar." };
+    const r = await abrirCobrancaDoPlano(ctx.conta.id, plano, ciclo, metodo, ctx.usuario.email);
+    await registrarHistorico(ctx, `Escolheu o plano ${plano.toLowerCase()} (${ciclo.toLowerCase()}); cobrança aberta`);
+    revalidatePath("/app/configuracoes");
+    return { ok: r.modo === "simulacao" ? "Cobrança aberta (simulação). Use Simular pagamento na fatura para testar." : "Cobrança aberta. Pague pelo link da fatura; o plano muda quando o pagamento for confirmado.", dados: { link: r.link } };
+  });
+}
+
+/** 4.2, só em simulação (sem ASAAS_API_KEY): simula o pagamento ou o vencimento de uma fatura da própria conta. */
+export async function simularEventoFatura(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigir("gerenciar_conta");
+    if (cobranca().modo !== "simulacao") return { erro: "A simulação só existe sem o gateway ligado." };
+    const f = await db.fatura.findFirst({ where: { id: texto(fd, "faturaId"), contaId: ctx.conta.id } });
+    if (!f) return { erro: "Fatura não encontrada nesta conta." };
+    const evento = texto(fd, "evento") === "VENCIDO" ? "VENCIDO" : "PAGO";
+    await processarEventoPagamento({ faturaId: f.id, evento });
     revalidatePath("/app", "layout");
-    return { ok: plano === "GRATIS" ? "Assinatura cancelada. Seus dados continuam disponíveis para exportar." : "Plano alterado." };
+    return { ok: evento === "PAGO" ? "Pagamento simulado." : "Vencimento simulado." };
   });
 }
 
