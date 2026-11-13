@@ -7,7 +7,12 @@ export function proxy(req: NextRequest) {
   // A6: chave esconde, nunca apaga. Rotas escondidas: 404 no site, Hoje dentro do app.
   const escondida = rotaEscondida(req.nextUrl.pathname);
   if (escondida === "hoje") return NextResponse.redirect(new URL("/app/hoje", req.url));
-  if (escondida === "404") return NextResponse.rewrite(new URL("/_escondida", req.url), { status: 404 });
+  if (escondida === "404") {
+    // a página "não encontrada" é estática: CSP sem nonce, como as demais páginas geradas no build
+    const r = NextResponse.rewrite(new URL("/_escondida", req.url), { status: 404 });
+    r.headers.set("Content-Security-Policy", montarCsp(null));
+    return r;
+  }
   const estatica = rotaEstatica(req.nextUrl.pathname);
   const nonce = estatica ? null : Buffer.from(crypto.randomUUID()).toString("base64");
   const csp = montarCsp(nonce);

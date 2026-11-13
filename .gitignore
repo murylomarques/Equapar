@@ -52,3 +52,5 @@ docs/produto-pronto/depois/*.png
 
 # Capturas de evidência da v4 (PNG fora do repositório)
 docs/pronto/capturas/*.png
+
+e2e/.modo-piloto-dados.json

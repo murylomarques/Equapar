@@ -112,3 +112,39 @@ Medição: `node scripts/lighthouse.mjs http://localhost:3100/ 3` (Lighthouse 12
 O que foi feito: o formulário do CNPJ da landing e dos guias é renderizado no servidor e funciona sem JavaScript (a página do Raio-X valida e mantém a máscara); a animação de entrada ao rolar saiu; "Entrar" virou link comum (quem já tem sessão é levado ao app pela própria `/entrar`); o provedor de toasts saiu da landing; o CSS deixou de ser embutido; o menu do celular não usa JavaScript.
 
 **Resultado honesto:** as rodadas boas ficam entre 2,54 e 2,60 s, mas a mediana de 3 rodadas não fica de forma estável abaixo de 2,5 s neste computador. O LCP observado (sem simulação) é 0,5 a 0,8 s. O que sobra no caminho é o próprio React e o roteador do Next (cerca de 390 KB sem compressão, executados antes da primeira pintura porque o servidor local entrega tudo em menos de 100 ms). A máquina de medição é lenta para o fator 4x do Lighthouse (`benchmarkIndex` 687), o que infla a parte de CPU da simulação. Recomendação: repetir `node scripts/lighthouse.mjs https://equapar.com/ 3` contra a produção, com rede real. Não mudei o fator de CPU para melhorar o número.
+
+### A6. Chave única MODO_PILOTO (feito)
+
+`src/lib/chaves.ts`: `MODO_PILOTO` (padrão `true`). Ligada, esconde do menu, do "Mais", do site, do mapa do site (`/sitemap.xml`, novo) e das telas:
+- `/assessorias`, o plano Assessoria em Preços e o bloco de assessorias da landing, e `/app/trocar-conta` (também no menu da conta; a ação `trocarConta` recusa);
+- `/app/recuperado` (e o botão em A receber);
+- o histórico do órgão (contrato e pedido);
+- os guias de reforma tributária e da jornada (o da jornada volta com a chave da fase D). No ar sempre: `GUIAS_NO_AR` (repactuação passo a passo, prorrogação, convenção e data-base).
+
+As rotas escondidas são tratadas no servidor, no `proxy` (valem na hora): 404 no site, redirecionamento para `/app/hoje` no app. Trava 10: nada é apagado.
+
+**Decisão técnica:** as chaves e os dados `SITE_*` vêm do `.env` de quem sobe a imagem, mas as páginas do site eram geradas no build (com o ambiente do build). Agora elas se refazem a cada 60 s (`revalidate = 60`) com o ambiente de execução: depois de subir ou mudar uma chave, o conteúdo das páginas reflete o `.env` em até 1 minuto (o primeiro acesso depois disso ainda pode receber a versão anterior). Renderizar a cada requisição deixaria isso imediato, mas piorou o LCP do celular (mediana 2,90 s), então ficou a regeneração.
+
+Prova:
+- `src/lib/chaves.test.ts`: ligada, as 4 rotas escondem; desligada, as 4 voltam; os 3 guias do piloto sempre no ar; o da jornada só com a chave D.
+- `e2e/modo-piloto.mjs`, rodado com o servidor subido com `MODO_PILOTO=false` e depois `true` (sem rebuild):
+
+```
+ESPERADO=desligado: /assessorias 200, guia de reforma 200, /app/recuperado e /app/trocar-conta abrem, link Recuperado visível
+OK    mesmos dados nos dois estados: {"contas":39,"pedidos":72,"contratos":175,"documentos":0}
+ESPERADO=ligado:
+OK    /assessorias: 404 (esperado 404)
+OK    /guias/reforma-tributaria-contratos-publicos-reequilibrio: 404 (esperado 404)
+OK    /guias/... (os 3 do piloto) sempre no ar
+OK    /app/recuperado → /app/hoje
+OK    /app/trocar-conta → /app/hoje
+OK    link Recuperado em A receber escondido
+Tudo certo.
+```
+
+- A página 404 das rotas escondidas leva a CSP (achado pelo `s3-cabecalhos.mjs`, corrigido; "Tudo certo").
+- Capturas: `capturas/A6-desligado-*.png` e `capturas/A6-ligado-*.png` (Preços e A receber nos dois estados).
+
+### A7. Página do método das 1.447 empresas (feito)
+
+`/metodo/levantamento-limpeza`, com o texto do Apêndice D: fonte e data, termos, o que conta e o que fica fora, agrupamento pela raiz do CNPJ, limites e como refazer. O número da landing leva a ela ("Veja o método"). Trava 8: nenhuma empresa é listada. `curl http://localhost:3100/metodo/levantamento-limpeza` → 200. (O bloco de assessorias da landing escondido pelo A6 entrou no mesmo commit do A7, porque os dois mexeram no mesmo arquivo.)
