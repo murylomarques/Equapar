@@ -82,11 +82,13 @@ describe("5.5: tempo humano e Sean Ellis", () => {
       pct: 50,
     });
   });
-  it("pesquisa só para conta ativa há mais de 30 dias, uma vez", () => {
+  it("F1: pesquisa só para quem gerou dossiê há 7 dias ou mais, uma vez, fora da demonstração", () => {
     const agora = new Date("2026-11-13T12:00:00Z");
-    expect(mostrarPesquisa({ criadoEm: new Date("2026-10-01T00:00:00Z"), demo: false, pesquisaDispensadaEm: null }, agora)).toBe(true);
-    expect(mostrarPesquisa({ criadoEm: new Date("2026-11-01T00:00:00Z"), demo: false, pesquisaDispensadaEm: null }, agora)).toBe(false);
-    expect(mostrarPesquisa({ criadoEm: new Date("2026-10-01T00:00:00Z"), demo: false, pesquisaDispensadaEm: agora }, agora)).toBe(false);
-    expect(mostrarPesquisa({ criadoEm: new Date("2026-10-01T00:00:00Z"), demo: true, pesquisaDispensadaEm: null }, agora)).toBe(false);
+    const conta = { demo: false, pesquisaDispensadaEm: null };
+    expect(mostrarPesquisa(conta, null, agora)).toBe(false); // conta antiga que nunca gerou dossiê: antes aparecia
+    expect(mostrarPesquisa(conta, new Date("2026-11-10T12:00:00Z"), agora)).toBe(false); // 3 dias
+    expect(mostrarPesquisa(conta, new Date("2026-11-06T12:00:00Z"), agora)).toBe(true); // 7 dias
+    expect(mostrarPesquisa({ ...conta, pesquisaDispensadaEm: agora }, new Date("2026-10-01T00:00:00Z"), agora)).toBe(false);
+    expect(mostrarPesquisa({ ...conta, demo: true }, new Date("2026-10-01T00:00:00Z"), agora)).toBe(false);
   });
 });

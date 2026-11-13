@@ -133,7 +133,10 @@ export function resultadoSeanEllis(respostas: { resposta: string }[]) {
   return { respostas: respostas.length, consideradas: usam.length, muito, pct: usam.length ? Math.round((muito / usam.length) * 1000) / 10 : null };
 }
 
-/** A pesquisa aparece uma vez para cada conta ativa há mais de 30 dias (nem demonstração, nem já respondida/dispensada). */
-export function mostrarPesquisa(conta: { criadoEm: Date; demo: boolean; pesquisaDispensadaEm: Date | null }, agora = new Date()) {
-  return !conta.demo && !conta.pesquisaDispensadaEm && agora.getTime() - conta.criadoEm.getTime() > 30 * 86_400_000;
+/**
+ * F1: a pesquisa aparece uma vez, só para quem já usou o produto: não é demonstração, tem pelo menos um
+ * pedido com o dossiê gerado, o primeiro dossiê tem 7 dias ou mais, e a conta ainda não respondeu nem dispensou.
+ */
+export function mostrarPesquisa(conta: { demo: boolean; pesquisaDispensadaEm: Date | null }, primeiroDossie: Date | null, agora = new Date()) {
+  return !conta.demo && !conta.pesquisaDispensadaEm && !!primeiroDossie && agora.getTime() - primeiroDossie.getTime() >= 7 * 86_400_000;
 }

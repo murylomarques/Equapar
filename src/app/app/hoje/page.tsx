@@ -45,6 +45,8 @@ export default async function Hoje() {
   }
 
   const leitura = !pode(ctx.papel, "editar_pedidos");
+  // F1: o primeiro dossiê gerado da conta (a pesquisa só aparece 7 dias depois dele)
+  const primeiroDossie = (await db.pedido.findFirst({ where: { contrato: { empresa: { contaId: ctx.conta.id } }, geradoEm: { not: null } }, orderBy: { geradoEm: "asc" }, select: { geradoEm: true } }))?.geradoEm ?? null;
   const tarefas = await db.tarefa.findMany({
     where: { contaId: ctx.conta.id, feitaEm: null, ...(ctx.empresaId ? { contrato: { empresaId: ctx.empresaId } } : {}) },
     include: { contrato: true },
@@ -90,7 +92,7 @@ export default async function Hoje() {
         </p>
       </div>
 
-      {!ehDemo(ctx) && mostrarPesquisa(ctx.conta) && <PesquisaEncaixe />}
+      {!ehDemo(ctx) && mostrarPesquisa(ctx.conta, primeiroDossie) && <PesquisaEncaixe />}
 
       <div className="cartoes-numero faixa-numeros">
         <CartaoNumero
