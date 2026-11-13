@@ -1,0 +1,41 @@
+# Exemplo local da produção (G3/G5): app + worker + banco, a partir da imagem do Dockerfile.
+#   1. crie .env.producao (fora do git) a partir do .env.example, com DATABASE_URL apontando para o serviço "db"
+#   2. docker compose -f docker-compose.producao.yml up -d --build
+#   3. docker compose -f docker-compose.producao.yml exec app npm run db:seed:demo:prod
+#   4. APP_URL=http://localhost npm run e2e:producao
+# Banco separado do de desenvolvimento (volume e porta próprios).
+name: equapar-producao
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: equapar
+      POSTGRES_PASSWORD: equapar_producao_local
+      POSTGRES_DB: equapar
+    volumes:
+      - equapar-pg-producao:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U equapar -d equapar"]
+      interval: 5s
+      retries: 20
+  app:
+    build: .
+    image: equapar:local
+    restart: unless-stopped
+    env_file: .env.producao
+    ports:
+      - "80:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+  worker:
+    image: equapar:local
+    restart: unless-stopped
+    env_file: .env.producao
+    command: ["npm", "run", "worker:prod"]
+    depends_on:
+      app:
+        condition: service_started
+volumes:
+  equapar-pg-producao:
