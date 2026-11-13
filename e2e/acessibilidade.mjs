@@ -42,7 +42,6 @@ async function auditar(page, rota, tam) {
   await page.goto(BASE + rota, { waitUntil: "networkidle" });
   await page.addScriptTag({ content: AXE });
   const r = await page.evaluate(async () =>
-    // eslint-disable-next-line no-undef
     axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }, resultTypes: ["violations"] }),
   );
   const v = r.violations.map((x) => ({ id: x.id, impacto: x.impact, ajuda: x.help, nos: x.nodes.length, exemplo: x.nodes[0]?.target?.join(" ") }));
