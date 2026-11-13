@@ -53,13 +53,14 @@ export default function Landing() {
             </small>
           </div>
           <div>
-            <strong>Assinar a prorrogação sem pedir pode encerrar o direito à repactuação</strong>
+            {/* C1 (MINUTA até o advogado aprovar) */}
+            <strong>Vai prorrogar o contrato? Confira se há repactuação a solicitar e se cabe ressalva no termo aditivo.</strong>
             <small>
               Fonte:{" "}
               <a href={FONTES.preclusao.url} target="_blank" rel="noreferrer">
                 TCU
               </a>
-              .
+              . <Link href="/guias/prorrogacao-sem-perder-a-repactuacao">A regra depende do regime do contrato e da fase do pedido</Link>.
             </small>
           </div>
           <div>
