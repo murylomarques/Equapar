@@ -9,7 +9,6 @@ import type { PlanilhaCustos } from "@/lib/calculo/tipos";
 import { calcularPedido, NOME_GATILHO, situacaoChecklist } from "@/lib/pedido";
 import { data, dataLocal, paraInputData, hojeUTC, plural } from "@/lib/format";
 import { FONTES } from "@/lib/prazos";
-import { iaAtiva } from "@/lib/ia";
 import { convencoesParaForm } from "@/lib/dto";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
@@ -32,6 +31,7 @@ import { ConvencaoIa } from "./convencao-ia";
 import { dispensarDica } from "../../../../acoes";
 import { Lightbulb } from "lucide-react";
 import { jornadaEmSimulacao, jornadaVisivelPara, MARCA_SIMULACAO_JORNADA } from "@/lib/jornada-acesso";
+import { iaEmTeste, iaPara } from "@/lib/ia-acesso";
 
 export const metadata: Metadata = { title: "Pedido de repactuação | Equapar" };
 
@@ -58,8 +58,8 @@ export default async function Passo({ params }: { params: Promise<{ id: string; 
       <DicaPasso contaId={ctx.conta.id} dispensadas={ctx.conta.dicasDispensadas} passo={n} />
       <div className="passo-conteudo">
         {n === 1 && <Passo1 p={p} contaId={ctx.conta.id} leitura={leitura} verJornada={jornadaVisivelPara(ctx.usuario.email)} />}
-        {n === 2 && <Passo2 p={p} leitura={leitura} />}
-        {n === 3 && <Passo3 p={p} leitura={leitura} />}
+        {n === 2 && <Passo2 p={p} leitura={leitura} iaPlanilha={iaPara("PLANILHA", ctx.usuario.email)} />}
+        {n === 3 && <Passo3 p={p} leitura={leitura} iaConvencao={iaPara("CONVENCAO", ctx.usuario.email)} />}
         {n === 4 && <Passo4 p={p} leitura={leitura} />}
         {n === 5 && <Passo5 p={p} leitura={leitura} podeAprovar={pode(ctx.papel, "aprovar_memoria")} />}
       </div>
@@ -224,7 +224,7 @@ async function Passo1({ p, contaId, leitura, verJornada }: { p: P; contaId: stri
 
 const AVISO_REFAZER = "A planilha nova do passo 3 será refeita a partir desta. As alterações do passo 3 serão perdidas.";
 
-function Passo2({ p, leitura }: { p: P; leitura: boolean }) {
+function Passo2({ p, leitura, iaPlanilha }: { p: P; leitura: boolean; iaPlanilha: boolean }) {
   const naoLidas = (p.linhasNaoLidas as LinhaNaoLida[] | null) ?? [];
   // C1: trocar a planilha atual refaz a planilha nova do passo 3
   const temNova = !!p.planilhaAgora;
@@ -245,7 +245,8 @@ function Passo2({ p, leitura }: { p: P; leitura: boolean }) {
             <FormAcao action={enviarPlanilha} confirmar={refazer}>
               <input type="hidden" name="pedidoId" value={p.id} />
               {temNova && <input type="hidden" name="refazerPlanilhaNova" value="1" />}
-              <AreaArquivo tipos={iaAtiva() ? ["excel", "pdf"] : ["excel"]} enviarAoEscolher textoEnviando="Lendo a planilha…" />
+              <AreaArquivo tipos={iaPlanilha ? ["excel", "pdf"] : ["excel"]} enviarAoEscolher textoEnviando="Lendo a planilha…" />
+              {iaPlanilha && iaEmTeste("PLANILHA") && <span className="selo selo-ambar mt-8">Leitura de PDF com IA: em teste</span>}
             </FormAcao>
           </div>
           <div className="cartao">
@@ -379,7 +380,7 @@ function CenariosJornada({ p, leitura }: { p: P; leitura: boolean }) {
   );
 }
 
-function Passo3({ p, leitura }: { p: P; leitura: boolean }) {
+function Passo3({ p, leitura, iaConvencao }: { p: P; leitura: boolean; iaConvencao: boolean }) {
   if (!p.planilhaAntes || !p.planilhaAgora) redirect(`/app/pedidos/${p.id}/passo/2`);
   if (p.gatilho === "JORNADA_EC141")
     return (
@@ -400,7 +401,7 @@ function Passo3({ p, leitura }: { p: P; leitura: boolean }) {
       <p className="secundario mb-0 leitura">
         Atualize pisos, benefícios e encargos com os números da convenção nova. Em cada linha alterada, informe a fonte (a cláusula). A memória ao lado mostra cada conta.
       </p>
-      {!leitura && (iaAtiva() || p.sugestoesConvencao) && <ConvencaoIa pedidoId={p.id} sugestoes={(p.sugestoesConvencao as unknown as SugestoesConvencao | null) ?? null} />}
+      {!leitura && (iaConvencao || p.sugestoesConvencao) && <ConvencaoIa pedidoId={p.id} emTeste={iaEmTeste("CONVENCAO")} sugestoes={(p.sugestoesConvencao as unknown as SugestoesConvencao | null) ?? null} />}
       <EditorPlanilha
         key={p.atualizadoEm.getTime()}
         pedidoId={p.id}

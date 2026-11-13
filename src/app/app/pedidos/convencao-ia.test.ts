@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { antes as exemplo } from "../../../../prisma/seed-demo";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
 
@@ -13,8 +13,11 @@ const vale = srv.linhas.find((l) => l.modulo === "M2_3")!;
 vi.mock("next/navigation", () => ({ redirect: () => { throw new Redirect(); }, unstable_rethrow: (e: unknown) => { if (e instanceof Redirect) throw e; } }));
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 vi.mock("@/lib/eventos", () => ({ registrarEvento: vi.fn() }));
+let email = "cliente@exemplo.local";
+let textoPdf = "Cláusula 3ª: piso de R$ 1.900,00";
+vi.mock("@/lib/pdf-texto", () => ({ textoDoPdf: async () => textoPdf }));
 vi.mock("@/lib/auth", () => ({
-  exigir: async () => ({ conta: { id: "c1" }, usuario: { nome: "Dono" } }),
+  exigir: async () => ({ conta: { id: "c1" }, usuario: { nome: "Dono", email } }),
   pedidoDaConta: async () => ({ ...pedido }),
   contratoDaConta: vi.fn(),
   registrarHistorico: vi.fn(),
@@ -50,8 +53,15 @@ const form = (o: Record<string, string>) => {
   return f;
 };
 
+afterEach(() => vi.unstubAllEnvs());
 beforeEach(() => {
   updates.length = 0;
+  email = "cliente@exemplo.local";
+  textoPdf = "Cláusula 3ª: piso de R$ 1.900,00";
+  // E1: com a chave da API e IA_LEITURA_CONVENCAO=true, vale para todos
+  vi.stubEnv("ANTHROPIC_API_KEY", "chave-ficticia");
+  vi.stubEnv("IA_LEITURA_CONVENCAO", "true");
+  vi.stubEnv("PAINEL_EMAILS", "dono@exemplo.local");
   pedido = {
     id: "p1", contratoId: "k1", estado: "EM_ANALISE", passoAtual: 3, gatilho: "NOVA_CONVENCAO", convencaoId: "cv", memoriaAprovadaEm: null,
     dataBase: new Date(Date.UTC(2026, 0, 1)), dataReferencia: null, checklist: null, planilhaAntes: structuredClone(exemplo), planilhaAgora: structuredClone(exemplo), sugestoesConvencao: null,
@@ -91,6 +101,33 @@ describe("5.5: leitura da convenção com IA", () => {
     pedido.sugestoesConvencao = { documentoId: "doc1", lidoEm: "", observacoes: "", itens: [{ postoId: "srv", posto: "x", linhaId: piso.id, descricao: "", tipo: "VALOR", valorAtual: "1", valorNovo: "2.00", clausula: "1ª", pagina: 1, trecho: "", confianca: "alta" }] };
     const r = (await aplicarSugestoesConvencao({}, form({}))) as { erro?: string };
     expect(r.erro).toMatch(/Marque/);
+    expect(updates).toHaveLength(0);
+  });
+  it("E1: chave desligada, cliente não usa; PAINEL_EMAILS usa (em teste); sem chave da API, ninguém", async () => {
+    vi.stubEnv("IA_LEITURA_CONVENCAO", "false");
+    const f = () => {
+      const x = form({});
+      x.set("arquivo", new File(["%PDF"], "cct.pdf", { type: "application/pdf" }));
+      return x;
+    };
+    expect(((await lerConvencaoComIa({}, f())) as { erro?: string }).erro).toMatch(/não está ligada/);
+    email = "dono@exemplo.local";
+    expect(((await lerConvencaoComIa({}, f())) as { ok?: string }).ok).toMatch(/sugestões/);
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    expect(((await lerConvencaoComIa({}, f())) as { erro?: string }).erro).toMatch(/não está ligada/);
+  });
+  it("E2: arquivo com CPF de pessoas não vai para a IA e nada é gravado", async () => {
+    // CPF FICTÍCIO gerado pelo algoritmo (123.456.789-09)
+    const base = "123456789".split("").map(Number);
+    for (const n of [9, 10]) {
+      const r = (base.slice(0, n).reduce((s, x, i) => s + x * (n + 1 - i), 0) * 10) % 11;
+      base.push(r === 10 ? 0 : r);
+    }
+    textoPdf = `Lista de empregados: Fulano Exemplo, CPF ${base.join("")}`;
+    const x = form({});
+    x.set("arquivo", new File(["%PDF"], "cct.pdf", { type: "application/pdf" }));
+    const r = (await lerConvencaoComIa({}, x)) as { erro?: string };
+    expect(r.erro).toBe("Este arquivo parece ter CPF de pessoas. Tire nomes e CPFs ou digite os valores à mão.");
     expect(updates).toHaveLength(0);
   });
 });

@@ -10,13 +10,14 @@ import { aplicarSugestoesConvencao, descartarSugestoesConvencao, lerConvencaoCom
  * 5.5: leitura da convenção com IA no passo 3. A IA sugere; a pessoa marca, corrige se for o caso e
  * confirma linha a linha. Sem ANTHROPIC_API_KEY, este bloco não aparece e o passo segue à mão.
  */
-export function ConvencaoIa({ pedidoId, sugestoes }: { pedidoId: string; sugestoes: SugestoesConvencao | null }) {
+export function ConvencaoIa({ pedidoId, sugestoes, emTeste }: { pedidoId: string; sugestoes: SugestoesConvencao | null; emTeste?: boolean }) {
   const valor = (tipo: string, v: string) => (tipo === "PERCENTUAL" ? `${v.replace(".", ",")}%` : brl(v));
   if (!sugestoes)
     return (
       <section className="cartao" aria-labelledby="ia-conv">
         <h2 id="ia-conv" className="fileira">
           <Sparkles size={18} strokeWidth={1.5} aria-hidden /> Ler a convenção com IA
+          {emTeste && <span className="selo selo-ambar">em teste</span>}
         </h2>
         <p className="secundario">
           Envie o PDF da convenção nova. A IA sugere o valor novo de cada linha que a convenção define, com a cláusula e a página. Nada entra no cálculo sem você conferir e confirmar.

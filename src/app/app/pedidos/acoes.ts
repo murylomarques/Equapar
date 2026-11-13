@@ -13,7 +13,7 @@ import { calcularPedido } from "@/lib/pedido";
 import { validarPlanilha } from "@/lib/calculo/motor";
 import { clonarPlanilha, planilhaModelo } from "@/lib/calculo/modelo";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
-import { iaAtiva, lerConvencaoPdf, lerPlanilhaPdf } from "@/lib/ia";
+import { lerConvencaoPdf, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
 import { apagarArquivo, gravarArquivo, lerArquivo, salvarArquivo } from "@/lib/storage";
 import crypto from "node:crypto";
@@ -27,6 +27,9 @@ import { etapaNaData, etapasJornada, JORNADA, planilhaDoCenario, type Cenario } 
 import { proximaVersao } from "@/lib/versao-documento";
 import { aplicarConfirmadas, filtrarSugestoes, fonteDaSugestao, linhasParaConvencao, normalizarNumero, type SugestoesConvencao } from "@/lib/sugestoes-convencao";
 import { acaoJornada } from "@/lib/jornada-acesso";
+import { iaPara } from "@/lib/ia-acesso";
+import { contarCpfs, MENSAGEM_CPF } from "@/lib/cpf";
+import { textoDoPdf } from "@/lib/pdf-texto";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -272,13 +275,16 @@ export async function enviarPlanilha(_: Resultado, fd: FormData): Promise<Result
     if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o arquivo da planilha." };
     const troca = trocaDaPlanilhaAtual(p, fd);
     if ("erro" in troca) return troca;
+    // E1/E2: PDF só vai para a IA com a chave (ou para PAINEL_EMAILS) e sem CPF de pessoas; o arquivo com CPF nem é guardado
+    const pdf = arquivo.name.toLowerCase().endsWith(".pdf");
+    if (pdf && iaPara("PLANILHA", ctx.usuario.email) && contarCpfs(await textoDoPdf(Buffer.from(await arquivo.arrayBuffer())).catch(() => "")) > 0) return { erro: MENSAGEM_CPF };
     const s = await salvarArquivo(ctx.conta.id, arquivo);
     const versaoPlanilha = await proximaVersao({ pedidoId: p.id }, "PLANILHA");
     await db.documento.create({ data: { pedidoId: p.id, contratoId: p.contratoId, tipo: "PLANILHA", nome: s.nome, versao: versaoPlanilha, mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
     let imp;
     if (s.mime.includes("spreadsheet") || s.nome.toLowerCase().endsWith(".xlsx")) imp = await importarExcel(s.buffer);
     else if (s.mime === "application/pdf") {
-      if (!iaAtiva())
+      if (!iaPara("PLANILHA", ctx.usuario.email))
         return {
           erro: "O PDF foi anexado, mas a leitura automática de PDF está desligada neste ambiente. Envie a planilha em Excel ou preencha as linhas abaixo a partir do modelo.",
         };
@@ -697,10 +703,12 @@ export async function novoPedidoAPartirDe(_: Resultado, fd: FormData): Promise<R
 export async function lerConvencaoComIa(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
-    if (!iaAtiva()) return { erro: "A leitura com IA não está ligada. Atualize as linhas à mão." };
+    if (!iaPara("CONVENCAO", ctx.usuario.email)) return { erro: "A leitura com IA não está ligada. Atualize as linhas à mão." };
     if (!p.planilhaAgora) return { erro: "Conclua o passo 2 antes." };
     const arquivo = fd.get("arquivo");
     if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o PDF da convenção." };
+    // E2: convenção com CPF de pessoas (ex.: lista de dirigentes ou de empregados) não vai para a IA
+    if (contarCpfs(await textoDoPdf(Buffer.from(await arquivo.arrayBuffer())).catch(() => "")) > 0) return { erro: MENSAGEM_CPF };
     const s = await salvarArquivo(ctx.conta.id, arquivo);
     if (s.mime !== "application/pdf") return { erro: "Envie a convenção em PDF." };
     const doc = await db.documento.create({
