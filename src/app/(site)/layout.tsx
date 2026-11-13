@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { SITE } from "@/lib/site";
+import { SITE, dadoSite } from "@/lib/site";
 import { LinkEntrar } from "@/components/link-entrar";
 import { MenuSite } from "@/components/menu-site";
 import "./site.css";
@@ -12,8 +12,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       {process.env.SITE_FAIXA_JORNADA === "true" && (
         <div className="site-faixa">
           <div className="site-largura">
-            Jornada de 40 horas: seus contratos com mão de obra precisam de reequilíbrio.{" "}
-            <Link href="/guias/jornada-40-horas-contratos-publicos">Entenda e veja quais são afetados</Link>
+            {/* texto sugerido no prompt; passa pelo dono (trava 6) */}
+            A jornada caiu para 40 horas. Seus contratos com o governo precisam ser recalculados.{" "}
+            <Link href="/guias/jornada-40-horas-contratos-publicos">Entenda o prazo</Link>
           </div>
         </div>
       )}
@@ -47,11 +48,11 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               <Link href="/privacidade">Política de privacidade</Link>
               <Link href="/termos">Termos de uso</Link>
               <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
-              <span>WhatsApp {SITE.whatsapp}</span>
+              {dadoSite(SITE.whatsapp) && <span>WhatsApp {dadoSite(SITE.whatsapp)}</span>}
             </nav>
           </div>
           <p className="legenda mt-24" style={{ color: "#b9b6ae" }}>
-            {SITE.razaoSocial} · CNPJ {SITE.cnpj} · {SITE.endereco}
+            {[dadoSite(SITE.razaoSocial), dadoSite(SITE.cnpj) && `CNPJ ${dadoSite(SITE.cnpj)}`, dadoSite(SITE.endereco)].filter(Boolean).join(" · ")}
           </p>
         </div>
       </footer>

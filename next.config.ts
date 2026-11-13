@@ -1,4 +1,11 @@
 import type { NextConfig } from "next";
+import { camposFaltando } from "./src/lib/site";
+
+// 5.2: aviso no build quando o site ainda tem dados [PREENCHER] (em produção esses campos ficam escondidos)
+if (process.argv.includes("build")) {
+  const faltam = camposFaltando();
+  if (faltam.length) console.warn(`⚠ Site: faltam dados em src/lib/site.ts (${faltam.join(", ")}). Em produção esses campos ficam escondidos.`);
+}
 
 // S3: cabeçalhos de segurança em todas as respostas (a CSP vem do src/proxy.ts, com nonce por requisição).
 const cabecalhos = [

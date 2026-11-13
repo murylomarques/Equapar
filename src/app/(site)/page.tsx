@@ -3,7 +3,7 @@ import Link from "next/link";
 import { FormCnpj } from "@/components/form-cnpj";
 import { PreviaCarteira, PreviaHoje, PreviaMemoria, PreviaPronto, PreviaReceber } from "@/components/previas";
 import { Revelar } from "@/components/revelar";
-import { SITE } from "@/lib/site";
+import { SITE, dadoSite } from "@/lib/site";
 import { TabelaPlanos } from "@/components/planos";
 import { FONTES } from "@/lib/prazos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
@@ -236,7 +236,8 @@ export default function Landing() {
         </div>
       </Revelar>
 
-      {/* 10. Quem faz */}
+      {/* 10. Quem faz (5.2: sem o nome do fundador preenchido, a seção não aparece em produção) */}
+      {dadoSite(SITE.fundador.nome) && (
       <Revelar className="secao">
         <div className="site-largura">
           <div className="fundador">
@@ -253,6 +254,7 @@ export default function Landing() {
           </div>
         </div>
       </Revelar>
+      )}
 
       {/* 11. Perguntas */}
       <Revelar className="secao">

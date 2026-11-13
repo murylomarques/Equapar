@@ -15,7 +15,7 @@ function Moldura({ titulo, children }: { titulo: string; children: React.ReactNo
       </div>
       <div style={{ padding: 16 }}>{children}</div>
       <figcaption className="legenda" style={{ padding: "0 16px 12px" }}>
-        Tela real da Equapar com dados de uma empresa fictícia, usada como exemplo.
+        Exemplo ilustrativo, com dados de uma empresa fictícia. Os números da demonstração podem ser outros.
       </figcaption>
     </figure>
   );
