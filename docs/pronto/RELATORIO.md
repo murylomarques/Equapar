@@ -332,3 +332,36 @@ Etapa começada, mão de obra dedicada e prorrogação sem pedido da jornada: "R
 
 ### D7. Testes (feito, com 1 pendente)
 `src/lib/jornada-d.test.ts`: caso C1 por linha em 44 → 42, cenário manter (1.820,00 → 1.906,67; 324,20 → 339,64; 240,00 → 251,43; 480,00 → 502,86; 25,00 → 26,19); cenário reduzir sem mudança; trava da etapa. Permissão no servidor: `jornada-acesso.test.ts` e `jornada-acoes.test.ts`. Testes do motor iguais (trava 3). **Pendente (`it.todo`):** o preço completo do posto do caso C1, que aguarda a planilha completa assinada pelo contador.
+
+## Fase E: leitura por IA pronta e desligada
+
+### E1. Chaves (feito)
+`IA_LEITURA_PLANILHA` e `IA_LEITURA_CONVENCAO` (padrão false), em `src/lib/ia-acesso.ts`. Sem `ANTHROPIC_API_KEY`, nada aparece (como antes). Com a chave da API e a chave do recurso desligada, só os e-mails de `PAINEL_EMAILS` veem a leitura (PDF da planilha no passo 2, convenção no passo 3), com o selo "em teste". Com true, vale para todos. As ações conferem no servidor. Prova: `src/app/app/pedidos/convencao-ia.test.ts` ("E1": cliente recusado com a chave desligada, `PAINEL_EMAILS` aceito, ninguém sem a chave da API).
+
+### E2. Proteção antes de enviar à IA (feito)
+Antes de mandar um PDF à IA, `textoDoPdf` (dependência nova `unpdf` 1.9.1, só leitura, sem binário nativo; aprovada pelo dono) extrai o texto, e `contarCpfs` procura CPFs (11 dígitos com dígito verificador válido, com ou sem máscara). Achou: o arquivo não é enviado nem guardado, e a tela mostra "Este arquivo parece ter CPF de pessoas. Tire nomes e CPFs ou digite os valores à mão.". Prova: `src/lib/cpf.test.ts` e `src/lib/pdf-texto.test.ts` (PDF de verdade gerado no teste, com CPF fictício gerado pelo algoritmo, trava 7) e `convencao-ia.test.ts` ("E2": nada gravado). O `package-lock.json` só ganhou a `unpdf` (conferido: nenhuma versão de outro pacote mudou).
+
+### E3. Avaliação da leitura de convenção (feito; a rodada com as convenções reais fica para o dono)
+- `fixtures/gabarito-convencoes.json`: o Apêndice C, com `"conferido": false` nas 3 convenções. Os PDFs reais ficam em `convencoes-reais/`, fora do git (trava 9).
+- `scripts/avaliar-ia-convencao.ts`: roda `lerConvencaoPdf` (as mesmas instruções do sistema; `INSTRUCOES_CONVENCAO` não mudou) com o posto de exemplo e compara valor, cláusula e página. Mostra acertos, erros, omissões, os campos deixados para conferência humana (confiança baixa), o acerto por nível de confiança, a lista de erros com o trecho, e o tempo e os tokens de cada leitura (custo com `--preco-entrada` e `--preco-saida`, porque o preço é do contrato do dono com a Anthropic).
+- **Unidade e condição** não são avaliadas: a leitura atual não devolve esses campos, e devolvê-los exige mudar `INSTRUCOES_CONVENCAO` (precisa do "ok" do dono). O relatório diz isso em cada convenção.
+- Regra para ligar: gabarito conferido por uma pessoa **e** nenhum erro com confiança alta (`podeLigar`).
+
+Rodada com a convenção **fictícia** criada por mim (`scripts/gerar-convencao-ficticia.ts` gera o PDF; `fixtures/convencao-ficticia/`). Sem chave da API nesta máquina, a rodada usa respostas gravadas (`--simular`), para conferir o caminho da avaliação:
+```
+Modo: SIMULAÇÃO (respostas gravadas ...; nenhuma chamada à API)
+== FIC000001/2026 (ficticia) · gabarito conferido
+   acertos 7 · erros 2 · omissões 1 · deixados para conferência humana (confiança baixa) 2
+   por confiança: alta 5 acertos / 0 erros · baixa 0 acertos / 2 erros
+   ERRO insalubridade [baixa]: valor 40 ≠ 20 · trecho: "adicional de 20% ou 40% conforme o grau"
+   ERRO vale_transporte [baixa]: sugeriu 6, mas a convenção não traz valor em reais (desconto até 6% do salário-base)
+   OMISSAO beneficio_social [-]: não sugeriu; esperado 20 (R$/mês por empregado)
+RESULTADO: o gabarito está conferido e nenhum erro tem confiança alta. A IA pode ser ligada.
+```
+Com o gabarito real:
+```
+Sem ANTHROPIC_API_KEY: nada foi enviado. ...
+AVISO: Gabarito não conferido por pessoa: o resultado não autoriza ligar a IA. (SP002852/2026, PR000063/2026, MG004404/2025)
+RESULTADO: NÃO ligar a IA (gabarito não conferido por pessoa).
+```
+Prova: `src/lib/avaliacao-ia.test.ts`.
