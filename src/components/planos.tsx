@@ -24,7 +24,8 @@ export function TabelaPlanos() {
           <h3 className="mb-0">Piloto</h3>
           <div className="preco">a partir de R$ 1.500</div>
           <small>por pedido</small>
-          <p className="secundario mb-0">Uma repactuação real, da coleta de documentos ao acompanhamento da cobrança.</p>
+          {/* C3 */}
+          <p className="secundario mb-0">Organização de documentos e prazos, consolidação de dados e geração de memória de cálculo e arquivos editáveis para conferência e protocolo pelo cliente.</p>
           <div className="mt-16">
             <Contato agenda={false} />
           </div>

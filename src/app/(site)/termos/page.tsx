@@ -15,7 +15,7 @@ export default function Termos() {
       </p>
       <h2>O que a Equapar faz</h2>
       <p>
-        A Equapar é um software que organiza prazos, cálculos e documentos de repactuação de contratos públicos. Ela não é escritório de advocacia nem de contabilidade e não protocola pedidos em nome do cliente.
+        A Equapar é software e apoio operacional: organização de documentos e prazos, consolidação de dados e geração de memória de cálculo e arquivos editáveis para conferência e protocolo pelo cliente. Ela não é escritório de advocacia nem de contabilidade e não protocola pedidos em nome do cliente. Análise jurídica individual, estratégia de recurso e consultoria jurídica são atividades de advogado habilitado e não fazem parte do serviço.
       </p>
       <h2>Responsabilidade pelos números</h2>
       <p>

@@ -31,7 +31,7 @@ export default function Precos() {
             <strong>Raio-X:</strong> contratos vigentes do PNCP pelo CNPJ, prazos e relatório em PDF.
           </li>
           <li>
-            <strong>Piloto:</strong> uma repactuação real, com memória de cálculo revisada e acompanhamento até a cobrança. A assinatura da carteira pode começar no próprio piloto.
+            <strong>Piloto:</strong> software e apoio operacional para um pedido real. Organização de documentos e prazos, consolidação de dados e geração de memória de cálculo e arquivos editáveis para conferência e protocolo pelo cliente. Análise jurídica individual, estratégia de recurso e consultoria jurídica são atividades de advogado habilitado e não fazem parte do serviço.
           </li>
           <li>
             <strong>Carteira:</strong> R$ 4 por posto de trabalho por mês, mínimo de R$ 297 (74 postos = R$ 297; 75 postos = R$ 300). {canaisDeAviso()}, pedidos montados pelo sistema e painel A receber.
