@@ -13,6 +13,7 @@ import { salvarArquivo } from "@/lib/storage";
 import { vigenciaAoImportar } from "@/lib/pncp-vigencia";
 import { riscoPreclusao } from "@/lib/prorrogacao";
 import { limiteDoPlano } from "@/lib/planos";
+import { proximaVersao } from "@/lib/versao-documento";
 
 // ---------------------------------------------------------------------------
 // Sessão
@@ -313,7 +314,7 @@ export async function enviarDocumentoContrato(_: Resultado, fd: FormData): Promi
     if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha um arquivo." };
     const tipo = texto(fd, "tipo") || "OUTRO";
     const s = await salvarArquivo(ctx.conta.id, arquivo);
-    const versao = (await db.documento.count({ where: { contratoId: c.id, tipo, nome: s.nome } })) + 1;
+    const versao = await proximaVersao({ contratoId: c.id }, tipo); // 5.5: mesmo tipo no contrato = versão seguinte
     await db.documento.create({ data: { contratoId: c.id, tipo, nome: s.nome, versao, mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
     await registrarHistorico(ctx, `Anexou o documento ${s.nome}`, { contratoId: c.id });
     revalidatePath(`/app/contratos/${c.id}`);
@@ -371,7 +372,7 @@ export async function salvarConvencao(_: Resultado, fd: FormData): Promise<Resul
     const arquivo = fd.get("arquivo");
     if (arquivo instanceof File && arquivo.size > 0) {
       const s = await salvarArquivo(ctx.conta.id, arquivo);
-      await db.documento.create({ data: { convencaoId: convId, tipo: "CONVENCAO", nome: s.nome, mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
+      await db.documento.create({ data: { convencaoId: convId, tipo: "CONVENCAO", nome: s.nome, versao: await proximaVersao({ convencaoId: convId }, "CONVENCAO"), mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
     }
     await registrarHistorico(ctx, id ? `Editou a convenção ${d.nome}` : `Cadastrou a convenção ${d.nome}`);
     revalidatePath("/app/convencoes");

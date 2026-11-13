@@ -25,6 +25,7 @@ import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { limiteDoPlano } from "@/lib/planos";
 import { planilhaDoCenario, type Cenario } from "@/lib/jornada";
 import { JORNADA } from "@/lib/jornada";
+import { proximaVersao } from "@/lib/versao-documento";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -258,7 +259,8 @@ export async function enviarPlanilha(_: Resultado, fd: FormData): Promise<Result
     const troca = trocaDaPlanilhaAtual(p, fd);
     if ("erro" in troca) return troca;
     const s = await salvarArquivo(ctx.conta.id, arquivo);
-    await db.documento.create({ data: { pedidoId: p.id, contratoId: p.contratoId, tipo: "PLANILHA", nome: s.nome, mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
+    const versaoPlanilha = await proximaVersao({ pedidoId: p.id }, "PLANILHA");
+    await db.documento.create({ data: { pedidoId: p.id, contratoId: p.contratoId, tipo: "PLANILHA", nome: s.nome, versao: versaoPlanilha, mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
     let imp;
     if (s.mime.includes("spreadsheet") || s.nome.toLowerCase().endsWith(".xlsx")) imp = await importarExcel(s.buffer);
     else if (s.mime === "application/pdf") {
@@ -367,7 +369,8 @@ export async function anexarDocumentoPedido(_: Resultado, fd: FormData): Promise
     if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha um arquivo." };
     const tipo = texto(fd, "tipo") || "OUTRO";
     const s = await salvarArquivo(ctx.conta.id, arquivo);
-    await db.documento.create({ data: { pedidoId: p.id, contratoId: p.contratoId, tipo, nome: s.nome, mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
+    const versao = await proximaVersao({ pedidoId: p.id }, tipo); // 5.5: as versões anteriores ficam guardadas
+    await db.documento.create({ data: { pedidoId: p.id, contratoId: p.contratoId, tipo, nome: s.nome, versao, mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
     const item = texto(fd, "item");
     if (item) {
       const marcado = { ...((p.checklist as Record<string, string> | null) ?? {}), [item]: "ANEXADO" };
@@ -638,7 +641,7 @@ export async function novoPedidoAPartirDe(_: Resultado, fd: FormData): Promise<R
         const buf = await lerArquivo(d.caminho);
         const caminho = `${ctx.conta.id}/${Date.now()}-${crypto.randomBytes(6).toString("hex")}${path.extname(d.caminho)}`;
         await gravarArquivo(caminho, buf, d.mime);
-        await db.documento.create({ data: { pedidoId: novo.id, contratoId: d.contratoId, tipo: d.tipo, nome: d.nome, mime: d.mime, tamanho: d.tamanho, caminho, enviadoPor: d.enviadoPor } });
+        await db.documento.create({ data: { pedidoId: novo.id, contratoId: d.contratoId, tipo: d.tipo, nome: d.nome, versao: d.versao, mime: d.mime, tamanho: d.tamanho, caminho, enviadoPor: d.enviadoPor } });
       } catch (e) {
         console.error("[novo pedido] arquivo não copiado", d.caminho, e);
       }
