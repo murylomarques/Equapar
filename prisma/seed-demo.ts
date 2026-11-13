@@ -12,6 +12,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { compararPlanilhas, calcularRetroativo } from "../src/lib/calculo/motor";
 import type { LinhaPlanilha, PlanilhaCustos } from "../src/lib/calculo/tipos";
+import { EXEMPLO } from "../src/lib/exemplo-demo";
 
 const dbPadrao = new PrismaClient();
 const EMAIL_DEMO = "demonstracao@equapar.local";
@@ -107,26 +108,27 @@ export async function criarModeloDemo(db: PrismaClient = dbPadrao) {
 
   // Valores mensais variados (fictícios). 12/2024 e 07/2025 seguem a planilha dos pedidos de exemplo.
   // 1. Prorrogação em 18 dias, convenção nova depositada, nenhum pedido: "Pedir repactuação"
-  await mk({ numero: "45/2025", orgao: "Prefeitura Municipal de Exemplo", objeto: "Serviços contínuos de limpeza e conservação predial com dedicação exclusiva de mão de obra (exemplo)", vigenciaInicio: dia(-347), vigenciaFim: dia(18), dataProposta: new Date(Date.UTC(ano - 1, 1, 20)) });
+  await mk({ numero: EXEMPLO.pedir.numero, orgao: EXEMPLO.pedir.orgao, objeto: "Serviços contínuos de limpeza e conservação predial com dedicação exclusiva de mão de obra (exemplo)", vigenciaInicio: dia(-347), vigenciaFim: dia(EXEMPLO.pedir.diasAteProrrogacao), dataProposta: new Date(Date.UTC(ano - 1, 1, 20)) });
 
   // 2. Pedido protocolado há 21 dias
-  const c2 = await mk({ numero: "12/2024", orgao: "Tribunal Regional Exemplo", esfera: "F", objeto: "Limpeza, asseio e conservação das unidades do tribunal (exemplo)", vigenciaInicio: dia(-500), vigenciaFim: dia(140), dataProposta: new Date(Date.UTC(ano - 2, 9, 1)) });
-  const retro2 = calcularRetroativo(comp.diferencaMensal, dataBase, dia(-21));
+  const c2 = await mk({ numero: EXEMPLO.protocolado.numero, orgao: EXEMPLO.protocolado.orgao, esfera: "F", objeto: "Limpeza, asseio e conservação das unidades do tribunal (exemplo)", vigenciaInicio: dia(-500), vigenciaFim: dia(140), dataProposta: new Date(Date.UTC(ano - 2, 9, 1)) });
+  const D = EXEMPLO.protocolado.diasDesdeProtocolo;
+  const retro2 = calcularRetroativo(comp.diferencaMensal, dataBase, dia(-D));
   await db.pedido.create({
     data: {
       contratoId: c2.id, estado: "PROTOCOLADO", passoAtual: 5, convencaoId: conv.id, dataBase, dataDeposito: conv.dataDeposito, planilhaAntes: json(antes), planilhaAgora: json(agora),
-      dataReferencia: dia(-21), diferencaMensal: comp.diferencaMensal, diferencaRetroativa: retro2.total, memoriaAprovadaEm: dia(-23), memoriaAprovadaPor: "Marcos (exemplo)",
-      geradoEm: dia(-22), protocoloNumero: "EXEMPLO-0001/2026", protocoloData: dia(-21), checklist: json({ convencao_nova: "ANEXADO", planilha_atual: "ANEXADO" }),
+      dataReferencia: dia(-D), diferencaMensal: comp.diferencaMensal, diferencaRetroativa: retro2.total, memoriaAprovadaEm: dia(-23), memoriaAprovadaPor: "Marcos (exemplo)",
+      geradoEm: dia(-22), protocoloNumero: "EXEMPLO-0001/2026", protocoloData: dia(-D), checklist: json({ convencao_nova: "ANEXADO", planilha_atual: "ANEXADO" }),
     },
   });
 
   // 3. Pedido deferido e apostilado, falta faturar: A receber
-  const c3 = await mk({ numero: "07/2025", orgao: "Universidade Federal Exemplo", esfera: "F", objeto: "Serviços de limpeza e conservação nos campi (exemplo)", vigenciaInicio: dia(-300), vigenciaFim: dia(260), dataProposta: new Date(Date.UTC(ano - 1, 0, 5)), valorMensal: comp.mensalAgora, ultimoApostilamento: dia(-12) });
+  const c3 = await mk({ numero: EXEMPLO.deferido.numero, orgao: EXEMPLO.deferido.orgao, esfera: "F", objeto: "Serviços de limpeza e conservação nos campi (exemplo)", vigenciaInicio: dia(-300), vigenciaFim: dia(260), dataProposta: new Date(Date.UTC(ano - 1, 0, 5)), valorMensal: comp.mensalAgora, ultimoApostilamento: dia(-12) });
   await db.pedido.create({
     data: {
       contratoId: c3.id, estado: "DEFERIDO", passoAtual: 5, convencaoId: conv.id, dataBase, planilhaAntes: json(antes), planilhaAgora: json(agora), dataReferencia: dia(-60),
-      diferencaMensal: comp.diferencaMensal, diferencaRetroativa: "31540.20", memoriaAprovadaEm: dia(-80), memoriaAprovadaPor: "Marcos (exemplo)", geradoEm: dia(-79),
-      protocoloNumero: "EXEMPLO-0002/2026", protocoloData: dia(-78), respostaData: dia(-40), deferidoEm: dia(-40), valorDeferido: "31540.20", apostiladoEm: dia(-12),
+      diferencaMensal: comp.diferencaMensal, diferencaRetroativa: EXEMPLO.deferido.valor, memoriaAprovadaEm: dia(-80), memoriaAprovadaPor: "Marcos (exemplo)", geradoEm: dia(-79),
+      protocoloNumero: "EXEMPLO-0002/2026", protocoloData: dia(-78), respostaData: dia(-40), deferidoEm: dia(-40), valorDeferido: EXEMPLO.deferido.valor, apostiladoEm: dia(-12),
     },
   });
 

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { TabelaPlanos } from "@/components/planos";
 import { CalculadoraPreco } from "@/components/calculadora-preco";
+import { canaisDeAviso } from "@/lib/site";
+import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 
 export const metadata: Metadata = {
   title: "Preços | Equapar",
@@ -30,14 +32,16 @@ export default function Precos() {
             <strong>Piloto:</strong> uma repactuação real, com memória de cálculo revisada e acompanhamento até a cobrança. A assinatura da carteira pode começar no próprio piloto.
           </li>
           <li>
-            <strong>Carteira:</strong> R$ 4 por posto de trabalho por mês, mínimo de R$ 297. Avisos por e-mail e WhatsApp, pedidos montados pelo sistema e painel A receber.
+            <strong>Carteira:</strong> R$ 4 por posto de trabalho por mês, mínimo de R$ 297 (74 postos = R$ 297; 75 postos = R$ 300). {canaisDeAviso()}, pedidos montados pelo sistema e painel A receber.
           </li>
           <li>
             <strong>Assessoria:</strong> vários clientes numa conta, visão de todos os prazos e PDFs com a sua marca.
           </li>
-          <li>
-            <strong>Revisão de especialista:</strong> cobrada à parte, para casos complexos.
-          </li>
+          {revisaoEspecialistaAtiva() && (
+            <li>
+              <strong>Revisão de especialista:</strong> cobrada à parte, para casos complexos.
+            </li>
+          )}
         </ul>
         <p className="legenda mb-0">Cancele quando quiser, na tela de cobrança. Seus dados ficam disponíveis para exportar.</p>
       </div>

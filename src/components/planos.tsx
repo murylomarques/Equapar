@@ -1,6 +1,13 @@
 import Link from "next/link";
+import { canaisDeAviso } from "@/lib/site";
+import { revisaoEspecialistaAtiva } from "@/lib/revisao";
+import { PRECOS } from "@/lib/planos";
+import { Contato } from "./contato";
 
 export function TabelaPlanos() {
+  const min = PRECOS.carteiraMinimo;
+  const porPosto = PRECOS.carteiraPorPosto;
+  const limite = Math.ceil(min / porPosto); // a partir de quantos postos passa do mínimo
   return (
     <>
       <div className="planos">
@@ -17,16 +24,18 @@ export function TabelaPlanos() {
           <div className="preco">a partir de R$ 1.500</div>
           <small>por pedido</small>
           <p className="secundario mb-0">Uma repactuação real, da coleta de documentos ao acompanhamento da cobrança.</p>
-          <Link href="/criar-conta" className="btn mt-16">
-            Começar um piloto
-          </Link>
+          <div className="mt-16">
+            <Contato agenda={false} />
+          </div>
         </div>
         <div className="plano plano-destaque">
           <h3 className="mb-0">Carteira</h3>
           <div className="preco">R$ 4 por posto</div>
           <small>por mês, mínimo R$ 297</small>
-          <p className="secundario mb-0">Avisos, pedidos montados pelo sistema, acompanhamento e WhatsApp.</p>
-          <p className="legenda mb-0">Exemplo: 375 postos dão R$ 1.500 por mês. Revisão de especialista é cobrada à parte.</p>
+          <p className="secundario mb-0">{canaisDeAviso()}, pedidos montados pelo sistema e acompanhamento.</p>
+          <p className="legenda mb-0">
+            Exemplo: {limite - 1} postos = R$ {min} (mínimo); {limite} postos = R$ {limite * porPosto}.{revisaoEspecialistaAtiva() ? " Revisão de especialista é cobrada à parte." : ""}
+          </p>
           <Link href="/criar-conta" className="btn btn-primario mt-16">
             Criar conta
           </Link>

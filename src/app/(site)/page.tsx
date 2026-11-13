@@ -30,14 +30,14 @@ export default function Landing() {
               </h1>
             )}
             <p className="leitura" style={{ fontSize: 18, color: "var(--grafite)" }}>
-              A Equapar acompanha os contratos públicos da sua empresa, avisa antes da prorrogação e monta o pedido de repactuação com memória de cálculo e documentos. Depois, segue a diferença até ela entrar no caixa.
+              Software e apoio operacional para a repactuação de contratos elegíveis: a Equapar organiza documentos e prazos, consolida os dados e gera a memória de cálculo e os arquivos editáveis que demonstram a variação de custos. Você confere e protocola.
             </p>
             <div className="mt-24">
               <FormCnpj id="cnpj-abertura" />
               <p className="legenda" style={{ marginTop: 10 }}>
                 Grátis. Usa só dados públicos do PNCP. Sem senha e sem cadastro.
               </p>
-              <a href="/demonstracao">Ver a tela por dentro (2 min)</a>
+              <a href="/demonstracao">Ver a demonstração</a>
             </div>
           </div>
           <PreviaHoje />

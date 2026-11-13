@@ -1,4 +1,6 @@
 import { SeloSimples, Carimbo } from "./selo";
+import { EXEMPLO, valorResumoExemplo } from "@/lib/exemplo-demo";
+import { reais } from "@/lib/format";
 
 /** Recortes de tela do produto com dados fictícios (identificados como exemplo), para a landing. */
 
@@ -25,7 +27,7 @@ export function PreviaHoje() {
   return (
     <Moldura titulo="Equapar · Hoje">
       <p style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>
-        Bom dia, Juliana. Esta semana: 2 prazos, 1 pedido aguardando o órgão e R$ 48,3 mil a receber.
+        Bom dia, {EXEMPLO.usuario}. Próximos 30 dias: {EXEMPLO.prazos30} contratos com prazo, 1 pedido aguardando o órgão e {valorResumoExemplo()} a receber.
       </p>
       <div className="legenda" style={{ fontWeight: 500, color: "var(--tinta)", marginBottom: 6 }}>
         Precisa de você
@@ -35,7 +37,7 @@ export function PreviaHoje() {
           <div>
             <strong>Pedir repactuação</strong> · Contrato 45/2025 · Prefeitura Municipal de Exemplo
             <div className="fileira" style={{ marginTop: 6 }}>
-              <SeloSimples texto="prorrogação em 18 dias" tom="carimbo" icone="relogio" />
+              <SeloSimples texto={`prorrogação em ${EXEMPLO.pedir.diasAteProrrogacao} dias`} tom="carimbo" icone="relogio" />
             </div>
           </div>
           <span className="btn btn-primario btn-pequeno" aria-hidden>
@@ -46,7 +48,7 @@ export function PreviaHoje() {
       <div className="cartao" style={{ padding: 12, marginTop: 8 }}>
         <strong>Aguardando o órgão</strong> · Contrato 12/2024 · Tribunal Regional Exemplo
         <div style={{ marginTop: 6 }}>
-          <SeloSimples texto="Protocolado há 21 dias · prazo preferencial: 1 mês" tom="azul" icone="ampulheta" />
+          <SeloSimples texto={`Protocolado há ${EXEMPLO.protocolado.diasDesdeProtocolo} dias · prazo preferencial: 1 mês`} tom="azul" icone="ampulheta" />
         </div>
       </div>
     </Moldura>
@@ -146,7 +148,7 @@ export function PreviaPronto() {
 export function PreviaReceber() {
   return (
     <Moldura titulo="Equapar · A receber">
-      <p style={{ fontWeight: 600, fontSize: 15 }}>R$ 48,3 mil deferidos e ainda não recebidos</p>
+      <p style={{ fontWeight: 600, fontSize: 15 }}>{valorResumoExemplo()} deferidos e ainda não recebidos</p>
       <table className="tabela" style={{ background: "var(--branco)" }}>
         <thead>
           <tr>
@@ -158,14 +160,14 @@ export function PreviaReceber() {
         </thead>
         <tbody>
           <tr>
-            <td>12/2024</td>
+            <td>{EXEMPLO.deferido.numero}</td>
             <td>
               <SeloSimples texto="Sim" tom="verde" />
             </td>
             <td>
               <SeloSimples texto="Falta" tom="ambar" icone="alerta" />
             </td>
-            <td className="num">R$ 31.540,20</td>
+            <td className="num">{reais(EXEMPLO.deferido.valor)}</td>
           </tr>
         </tbody>
       </table>

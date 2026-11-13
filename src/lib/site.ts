@@ -56,3 +56,8 @@ export function contatoSite() {
     agendaUrl: process.env.SITE_AGENDA_URL?.trim() || null,
   };
 }
+
+/** A4: o site só promete WhatsApp quando a integração existe (WHATSAPP_TOKEN). */
+export function canaisDeAviso() {
+  return process.env.WHATSAPP_TOKEN ? "Avisos por e-mail e WhatsApp" : "Avisos por e-mail";
+}
