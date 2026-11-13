@@ -11,7 +11,7 @@ let contaId = "";
 
 beforeAll(async () => {
   const base = await db.pedido.findFirst({
-    where: { planilhaAntes: { not: undefined }, contrato: { empresa: { exemplo: true, conta: { demo: false } } } },
+    where: { planilhaAntes: { not: undefined }, contrato: { empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } },
     include: { contrato: { include: { empresa: true } } },
   });
   if (!base?.planilhaAntes) throw new Error("Rode o seed: falta um pedido de exemplo com planilha.");
