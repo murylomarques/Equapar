@@ -269,3 +269,32 @@ Antes: `mostrarPesquisa` mostrava a pesquisa a qualquer conta com mais de 30 dia
 
 ### F2. Ativação no painel interno (feito)
 Conta ativada = pelo menos 1 contrato com prazo calculado e 1 pedido com o cálculo pronto (diferença mensal gravada); a data da ativação é a mais tardia das duas (para o pedido, `geradoEm` ou, sem ele, a última atualização: é uma aproximação, porque o sistema não guarda o momento exato em que o cálculo ficou pronto). O painel mostra as contas criadas no mês (sem demonstrações e sem as contas modelo), quantas ativaram e a porcentagem, a mediana em dias e a lista das criadas há mais de 3 dias e ainda não ativadas, com o e-mail do dono para o telefonema. Continua restrito a `PAINEL_EMAILS`. Prova: `src/lib/metricas.test.ts` ("F2").
+
+## Fase G: pronto para subir
+
+### G1. .env.example completo (feito)
+Reescrito em três blocos (**para subir**, **para vender**, **depois**). Cada variável diz o que é, se é obrigatória, onde se obtém, o formato com exemplo fictício e o que acontece vazia. Inclui as novas: `SITE_*`, `MODO_PILOTO`, `DEMO_MAX_ATIVAS`, `LIMPEZA_DEMOS_AUTOMATICA`, `LIMPEZA_CONTAS_CANCELADAS`, `IA_LEITURA_PLANILHA`, `IA_LEITURA_CONVENCAO` e `HOSPEDAGEM_PROVEDOR` (subprocessador da C8). Conferido por comando: toda variável lida no código está no arquivo, e as únicas do arquivo sem leitura direta são `AWS_ACCESS_KEY_ID` e `AWS_SECRET_ACCESS_KEY`, que o SDK da AWS lê sozinho:
+```
+No código e fora do .env.example:        (nenhuma)
+No .env.example e não usadas no código:  AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+```
+
+### G3. docs/SUBIR.md (feito)
+Passo a passo para quem nunca subiu um sistema, sem escolher provedor: banco PostgreSQL 17 com backup diário de 30 dias; bucket S3 privado com versionamento (e por que o R2 não serve sem uma cópia diária); domínio equapar.com, HTTPS e e-mail com SPF, DKIM e DMARC (regras do Google com a fonte); variáveis só no painel de segredos; os dois processos (app com migrações no CMD e worker com reinício automático); verificação, seed da demonstração, primeiro acesso, monitoramento, teste de restauração, teste final e o que fazer quando sair o CNPJ. Exemplo local: `docker-compose.producao.yml` (app, worker e banco separado do de desenvolvimento).
+
+### G5. npm run e2e:producao (feito)
+`e2e/producao.mjs`, só leitura, contra `APP_URL`: home 200 com CSP, HSTS e `X-Content-Type-Options`; `/api/saude` OK (e os avisos, se houver); Raio-X, preços, termos, privacidade, método e login abrem; a demonstração abre uma vez. Rodado contra o build de produção local:
+```
+OK    home responde 200 (veio 200)
+OK    home com CSP
+OK    home com HSTS
+OK    home com X-Content-Type-Options: nosniff
+OK    /api/saude OK (banco ok, fila ok)
+OK    /raio-x abre (200) · /precos · /termos · /privacidade · /metodo/levantamento-limpeza · /entrar
+OK    a demonstração abre (uma vez)
+Tudo certo.
+```
+A rodada contra a imagem Docker (docker compose) está na verificação final.
+
+### G6. E-mail pronto para ligar (feito)
+Botão "Enviar e-mail de teste" no painel interno: manda para `PAINEL_EMAILS` e, se falhar, mostra o erro exato do provedor, sem a senha da `SMTP_URL` (`src/lib/email-teste.test.ts`: sem destinatário, sem SMTP e servidor fora do ar, com a senha nunca aparecendo). Em produção, sem `SMTP_URL` ou `EMAIL_FROM`, o `/api/saude` e o painel avisam (`email_nao_configurado`, B6). `docs/operacao/email.md`: SPF, DKIM, DMARC começando com `p=none`, DNS reverso, TLS e as regras do Google (SPF ou DKIM para qualquer remetente; SPF, DKIM e DMARC acima de 5.000 mensagens por dia; spam abaixo de 0,3%). Nenhum provedor escolhido e nenhuma chave no repositório.
