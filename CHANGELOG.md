@@ -2,6 +2,25 @@
 
 Registra principalmente mudanças de **regra de cálculo** (versão em `VERSAO_REGRA`, `src/lib/calculo/motor.ts`) e de comportamento que o cliente percebe.
 
+## Fase 2 (13/11/2026)
+
+### Regra de cálculo
+
+- **Versão da regra continua `IN05-2017-AnexoVII-D/v1`** para todos os motivos existentes: nenhum número muda.
+- **Novo motivo "Mudança de lei: jornada (EC 141/2026)"**, com regra própria e escolha obrigatória de cenário em cada pedido:
+  - manter as horas de serviço: linhas em R$ da planilha atual × jornada antes ÷ jornada depois (44 ÷ 40 = 1,10); percentuais e tributos acompanham pelo motor;
+  - reduzir as horas: valor mensal igual, horas por posto reduzidas na proporção.
+  Datas da emenda em configuração, a confirmar com o jurídico. Os dados da jornada e o cenário entram na assinatura do cálculo.
+- **Leitura da convenção com IA**: a IA só sugere; o número que entra é o que a pessoa confirmou, com a cláusula e a página como fonte.
+
+### Comportamento
+
+- Celular: barra com Pedidos e "Mais"; Hoje compacto; passos com barra de progresso; memória por cartão e por módulo.
+- Carteira em 5 colunas, filtro "Afetados pela jornada de 40 horas" e pedidos da jornada em lote.
+- Recurso depois do indeferimento e novo pedido a partir dele; documentos com versão; Recuperado com a Equapar; histórico do órgão na conta.
+- Raio-X com valor global do PNCP e tempo até o fim da vigência (sem estimativa).
+- Painel interno: custo de aquisição, margem, minutos de trabalho humano e pesquisa de Sean Ellis.
+
 ## Branch `produto-pronto` (12/11/2026)
 
 ### Regra de cálculo

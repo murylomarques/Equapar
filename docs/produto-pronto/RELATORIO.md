@@ -4,7 +4,7 @@ Atualizado a cada item. Situação: **feito**, **parcial**, **bloqueado** (esper
 
 ## Onde parei
 
-Fase 0 em andamento: C1–C8 feitos; S1–S3 feitos; S4 sem o teste no navegador; S5 feito; S1–S12 L1–L10 e L12 feitos (L7 sem o teste de navegador); L11 bloqueado (decisão do dono); L13 parcial; L14 feito; **Fase 0 concluída** (o dono aprovou seguir, com a opção 1: migrações L11 e L17). Verificação no navegador feita no build de produção: C1–C4, C6, C7, S1–S4, S11, S12, L7, fluxo completo (computador e celular, 23 etapas cada), assessoria + duas etapas, teclado e axe (0 graves em 93). Limpezas continuam só em simulação. **Fase 1 concluída** (migração aprovada; Asaas; carência 15 dias), verificada no build de produção: cobrança simulada no navegador (`e2e/cobranca-simulada.mjs`), fluxo completo, CSP de todas as páginas, `/api/saude` com banco e fila, axe 0 graves em 93, lint sem avisos. Pendências: chaves reais (Asaas, S3, alerta de erro, Turnstile), emissor de nota fiscal, `npm ci` e imagem Docker num container limpo. **Fase 2 em andamento** (o dono mandou seguir e completar: datas da EC 141 em configuração, a confirmar com o jurídico; dois cenários lado a lado com escolha obrigatória; textos jurídicos como MINUTA). 5.1 feito e testado no navegador. Testes de navegador pendentes: S4, S11, S12, L7. Servidor de teste: `npm run build` e `next start -p 3100` (o `next dev` da porta 3000 é do dono e tem o cliente Prisma antigo em memória). Senha do dono fictício: impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
+**Fases 0, 1 e 2 concluídas e verificadas no build de produção** (13/11/2026). Branch `produto-pronto`, só local (nada foi enviado ao GitHub). O que ainda depende do dono está na seção "O que depende do dono" no fim deste relatório. Servidor de teste: `npm run build` e `next start -p 3100`; senha do dono fictício impressa pelo seed (`npx tsx --env-file=.env prisma/seed.ts`).
 
 ## Versão do prompt
 
@@ -131,14 +131,83 @@ Nenhuma de produção. (Desenvolvimento, do redesenho: `axe-core`, `lighthouse`.
 
 ## Fase 2: crescer
 
-Migração aditiva aplicada (`20261113141057_fase2_jornada_recurso_metricas`): valor novo `JORNADA_EC141` no enum `Gatilho`; colunas anuláveis em `Pedido` (jornada, cenário, recurso, pedido de origem) e `Conta` (dicas, aviso da jornada, pesquisa); tabelas novas `RegistroTempo`, `RespostaPesquisa`, `MetricaMensal`. Nada apagado, renomeado ou com tipo trocado.
+Migrações aditivas aplicadas (o dono autorizou as aditivas da fase 2 com "complete tudo"):
+
+- `20261113141057_fase2_jornada_recurso_metricas`: valor novo `JORNADA_EC141` no enum `Gatilho`; colunas anuláveis em `Pedido` (jornada, cenário, recurso, pedido de origem) e `Conta` (dicas, aviso da jornada, pesquisa); tabelas novas `RegistroTempo`, `RespostaPesquisa`, `MetricaMensal`.
+- `20261113180000_fase2_sugestoes_convencao`: `ALTER TABLE "Pedido" ADD COLUMN "sugestoesConvencao" JSONB;` (sugestões da IA esperando confirmação).
+
+Nada apagado, renomeado ou com tipo trocado. A biblioteca de convenções (5.4.7) ficou como **proposta, não aplicada** (`docs/produto-pronto/biblioteca-convencoes.md`).
 
 | Item | Situação | Prova | Pendente |
 | --- | --- | --- | --- |
 | 5.1 Pedido da jornada (EC 141/2026) | feito | `src/lib/jornada.ts` (datas em configuração, `JORNADA_*`, marcadas "a confirmar com o jurídico" na tela; fonte Conjur). Regra nova **só para este motivo**: "manter as horas" multiplica as linhas em R$ da planilha atual por jornada antes ÷ depois (44 ÷ 40 = 1,10), percentuais e tributos acompanham pelo motor; "reduzir as horas" mantém o valor e registra as horas por posto. Os testes do motor seguem com os mesmos valores. `src/lib/jornada.test.ts`, `src/app/app/pedidos/jornada-acoes.test.ts` (passo 1 sem convenção nem depósito; passo 3 recusa sem cenário; manter dá diferença positiva; reduzir aceita diferença zero), `src/lib/documentos-jornada.db.test.ts` (ofício pede reequilíbrio com "[fundamento indicado pelo advogado]"; minuta do aditivo em PDF e no ZIP), `src/lib/avisos-jornada.test.ts` (aviso uma vez por conta, com a fonte), `src/lib/prazos.test.ts` (o pedido da jornada não esconde a repactuação da convenção). Navegador: `e2e/jornada.mjs`, 12 verificações (filtro da Carteira, lote, passo 1, os dois cenários sem nenhum marcado, não avança sem escolher, minuta e ofício). Commits "5.1 …" | **Dono/jurídico:** confirmar as datas e o prazo do aditivo (`JORNADA_42H_INICIO`, `JORNADA_40H_INICIO`, `JORNADA_ADITIVO_PRAZO`; depois `JORNADA_REGRA_CONFIRMADA=true`) e a regra dos cenários. Aprovar o texto do guia `/guias/jornada-40-horas-contratos-publicos` e da faixa do site (ligar com `SITE_FAIXA_JORNADA=true`) |
+| 5.2 Navegação no celular | feito | Barra com Hoje, Carteira, Pedidos, A receber e Mais (`/app/mais`: Convenções, Avisos, Configurações, Clientes, Trocar de conta); contador de pedidos sobre o ícone. `e2e/fase2.mjs` confere os 5 itens e o caminho até Convenções | — |
+| 5.2 Hoje no celular | feito | Faixa compacta de números (3 colunas, rótulos curtos) e "Precisa de você" na primeira tela (captura `14-hoje-celular`). A saudação já usava o mesmo conjunto do cartão (L1) | — |
+| 5.2 Carteira no desktop | feito | 5 colunas: contrato e órgão (duas linhas, local, fim e postos na legenda), situação, próximo prazo, valor mensal, convenção abreviada com o nome inteiro na dica; cabeçalho fixo abaixo da barra superior; linha inteira clicável | — |
+| 5.2 Abas do contrato no celular | feito | Rolagem visível e sombra na borda quando há mais abas (CSS, sem JavaScript) | — |
+| 5.2 Passos e etapas no celular | feito | "Passo 3 de 5 · Novos custos" com barra de progresso (`role="progressbar"`); etapas do dinheiro em lista vertical | — |
+| 5.2 Memória no celular | feito | Cartão por linha (item, antes → agora, variação, fonte), um módulo por vez com seletor, "Linhas com valor diferente" ligado por padrão no celular; a impressão continua com a tabela inteira (captura `35-memoria-de-calculo-celular`) | — |
+| 5.2 "⋯" do cabeçalho | feito | No celular fica na linha do título; as outras ações descem | — |
+| 5.2 Site: prévia, rodapé, faixa | feito | Prévia marcada "Exemplo ilustrativo"; `[PREENCHER]` some em produção (`dadoSite`, `src/lib/site.test.ts`) e o build avisa o que falta (conferido: "⚠ Site: faltam dados em src/lib/site.ts (razaoSocial, cnpj, endereco, whatsapp, fundador.nome)"); sem o nome do fundador, a seção "Quem faz" não aparece; faixa da jornada pronta e desligada (`SITE_FAIXA_JORNADA`) | Preencher `src/lib/site.ts`; aprovar o texto da faixa (o texto sugerido diz "caiu para 40 horas", mas a primeira etapa é 42 h: sugiro "vai cair") |
+| 5.2 Desempenho no celular | **parcial** | Lighthouse (celular, simulado, Edge): LCP 3,1 s, FCP 0,8 s, CLS 0, TBT 1,0 s; LCP observado 0,8 s. O elemento do LCP é o parágrafo da abertura; 85% é atraso de renderização por trabalho na thread principal (layout e o JavaScript do React). Já estavam: fontes com `display: swap`, sem imagem principal, CSS embutido, `content-visibility` abaixo da dobra | **Meta de 2,5 s não atingida.** Próximo passo proposto: tirar componentes de cliente do topo (o formulário do CNPJ sem JavaScript até a interação) e reduzir o RSC embutido (112 KB na landing) |
+| 5.2 Para assessorias | feito | "Ver a demonstração com 3 clientes" (conta modelo de assessoria fictícia, copiada por visitante como a C6.2) e "Marcar uma conversa de 20 minutos" (`SITE_AGENDA_URL` ou e-mail). `e2e/fase2.mjs` entra na demonstração e confere 3 clientes fictícios | Link da agenda (opcional) |
+| 5.2 Recuperado com a Equapar | feito | `/app/recuperado` (link em A receber): deferido e recebido por ano e por contrato, imprimível. `src/lib/recuperado.test.ts`. Só valores registrados, nenhuma estimativa | — |
+| 5.3 Padrão de espera | feito | Conferido: indicador por 500 ms no mínimo (`useIndicador`), `aria-busy`/`role="status"`, textos específicos ("Gerando o ofício…", "Lendo a convenção… pode levar até 1 minuto", "Copiando planilhas e documentos…"), esqueletos nas páginas com carregamento (novo em Recuperado), fila com aviso no sino para exportação | — |
+| 5.4.1 Promessa no topo | feito (desligado) | "Cada repactuação no prazo, com prova." como título com `SITE_TITULO_PROMESSA=true`; o título atual vira a frase de apoio | Texto final do dono (trava 6) |
+| 5.4.2 Entrada do Raio-X | feito | Três linhas sobre o que o resultado mostra e um exemplo marcado "Exemplo · dados fictícios" | — |
+| 5.4.3 Relatório do Raio-X | feito | Valor global publicado no PNCP e tempo até o fim da vigência ("faltam 4 meses"), na tela e no PDF. Nenhuma estimativa de valor | Data-base provável da convenção da cidade: o Raio-X é anônimo e não tem conta, então não se aplica; fica para o Raio-X de quem já tem conta |
+| 5.4.4 Primeiro pedido guiado | feito | Dica curta por passo enquanto a conta não gerou nenhum pedido; "Entendi, não mostrar mais" grava em `Conta.dicasDispensadas`. "Ver um pedido pronto de exemplo" abre `/app/pedido-exemplo` em outra aba (o pedido protocolado da conta modelo, só leitura): a demonstração isolada não serve aqui porque não troca a sessão de quem está conectado (C6). `src/lib/dicas.test.ts` | — |
+| 5.4.5 Plano anual | feito (fase 1) | Mensal ou anual na cobrança; desconto em `DESCONTO_ANUAL_PCT` | **Dono: valor do desconto anual** (hoje 0%) |
+| 5.4.6 Histórico do órgão | feito | No resumo do contrato e no pedido: pedidos protocolados, deferidos, indeferidos, tempo médio até a resposta e até o apostilamento, só da própria conta, pelo CNPJ do órgão (sem CNPJ, pelo nome exato). `src/lib/historico-orgao.test.ts` | Juntar dados entre contas: decisão do dono e do advogado |
+| 5.4.7 Biblioteca de convenções | proposta | `docs/produto-pronto/biblioteca-convencoes.md`: tabela `ConvencaoPublica` + coluna anulável `Convencao.publicaId`, SQL aditivo pronto, nada compartilhado | **Dono:** aplicar agora ou junto com o compartilhamento; quem cria a convenção pública |
+| 5.4.8 Custo de aquisição e margem | feito | Painel interno: custo de aquisição e margem do mês informados pelo dono (`MetricaMensal`); custo por conta nova pagante e margem bruta em reais aparecem só quando preenchidos. `src/lib/metricas.test.ts` | Dono preencher os números do mês |
+| 5.5.1 Leitura da convenção com IA | feito (sem chave aqui) | Passo 3: envia o PDF; a IA sugere valor novo, cláusula, página e trecho para as linhas que a convenção define (nunca calcula). A pessoa marca, pode corrigir e confirma linha a linha; só as marcadas entram, com fonte "Cláusula 4ª, p. 3", que na memória vira link para a página do PDF (`?ver=1#page=3`, PDF aberto no navegador). Sem `ANTHROPIC_API_KEY` o bloco não aparece. `src/lib/sugestoes-convencao.test.ts`, `src/app/app/pedidos/convencao-ia.test.ts` (IA simulada: guarda só sugestões válidas, não mexe na planilha antes da confirmação, aplica só a marcada, desfaz a aprovação) | Testar com a chave real e uma convenção real (trava 5) |
+| 5.5.2 Tempo humano e Sean Ellis | feito | Painel: registro de minutos por cliente e tipo (coleta, cálculo, revisão, retrabalho, suporte), relatório do mês por plano com a meta de 49 min; pesquisa de Sean Ellis em Hoje, uma vez para conta ativa há mais de 30 dias, com as 4 respostas padrão e comentário, dispensável; resultado (% muito decepcionados entre quem ainda usa) no painel. `src/lib/metricas.test.ts` | — |
+| 5.5.3 Depois do indeferimento | feito | "Registrar recurso" (data, se já apresentado, e prazo): entra nos prazos do contrato, em "Precisa de você" ("Apresentar o recurso") e no histórico. "Começar um novo pedido a partir deste": copia motivo, planilhas e cópias dos arquivos (descartar o novo não apaga os do indeferido), com `pedidoOrigemId`. `src/lib/prazos.test.ts`, `e2e/fase2.mjs` | — |
+| 5.5.4 Documentos com versão | feito | Reenvio do mesmo tipo no mesmo pedido, contrato ou convenção ganha a versão seguinte; as anteriores ficam. `src/lib/versao-documento.db.test.ts` | — |
+| 5.5.5 Reforma tributária | fora, por decisão do dossiê | Não implementado. Hoje o sistema só marca se o contrato é anterior à LC 214/2025 | **Dono:** o módulo (carga efetiva 2027 a 2033, defesa contra redução de ofício do art. 375, prazo de 90 dias do art. 376) depende de decisão; a CBS cheia começa em janeiro de 2027 |
 
 ### Textos jurídicos novos da fase 2 (todos marcados MINUTA, revise com seu jurídico)
 
 - Ofício do pedido da jornada (`src/lib/documentos.ts`, `linhasJornada`): pedido de reequilíbrio, fundamento deixado como "[fundamento indicado pelo advogado]".
 - Minuta do termo aditivo da jornada (`minutaAditivoPdf`): quatro cláusulas (objeto, valor ou carga horária, efeitos, ratificação), selo "MINUTA, revise com seu jurídico".
 - Guia público da jornada e faixa do site: texto para aprovação do dono (a faixa nasce desligada).
+- Nenhum outro texto jurídico novo na fase 2.
+
+## Verificação final (seção 7), build de produção em 13/11/2026
+
+| Verificação | Resultado |
+| --- | --- |
+| Testes de unidade (`npm test`) | 53 arquivos, 216 testes, todos passando. Os testes do motor e o caso do exemplo (R$ 33.951,94) seguem com os mesmos valores |
+| Testes no banco (`npm run test:db`) | fila, cobrança, documentos da jornada, versão dos documentos: passando |
+| Tipos e lint | `tsc` sem erro; `eslint` sem aviso |
+| Fluxo completo no navegador (`e2e/fluxo.mjs`) | computador 23/23, celular 23/23 |
+| Falhas bloqueadoras (`e2e/bloqueadoras/*`) | C1–C4, C6, C7, L7, S1–S4, S11, S12: todas "Tudo certo" |
+| Jornada (`e2e/jornada.mjs`) | 12/12 |
+| Fase 2 (`e2e/fase2.mjs`) | 12/12, incluindo isolamento entre contas: pedido e documento de outra conta não abrem e nenhum dado dela aparece |
+| Cobrança simulada, assessoria com duas etapas, teclado | passando (teclado: 14 páginas, anel de foco em todas as paradas) |
+| Acessibilidade (axe) | 105 verificações (as páginas novas incluídas), 0 violações graves |
+| Cabeçalhos de segurança e CSP | `s3-cabecalhos.mjs` 24/24 |
+| Lighthouse celular | LCP 3,1 s (meta 2,5 s **não** atingida), CLS 0; ver 5.2 Desempenho |
+| Capturas | 113 em `docs/produto-pronto/depois/` (computador e celular, lista em `lista.json`); os PNGs ficam fora do repositório (`.gitignore`), gere de novo com `node e2e/capturas.mjs docs/produto-pronto/depois` |
+
+### Achados da verificação final (corrigidos)
+
+- Lint: o filtro do celular na memória usava `setState` dentro de efeito; trocado por `useSyncExternalStore`.
+- Testes antigos pegavam o "primeiro pedido de exemplo" do banco e passaram a cair na nova conta modelo de assessoria; agora filtram a conta modelo de empresa.
+- C1: o teste escolhia o arquivo antes de a página carregar o JavaScript; agora espera a página carregar.
+- Pedido de outra conta responde 200 com a página "não encontrado" (o esqueleto de carregamento já iniciou a resposta). Nenhum dado vaza; o teste confere o conteúdo.
+
+## O que depende do dono (tudo o que ficou em aberto)
+
+1. **Jurídico da jornada (EC 141):** datas das etapas e prazo do aditivo (`JORNADA_*`, depois `JORNADA_REGRA_CONFIRMADA=true`), regra dos dois cenários, texto do ofício e da minuta do aditivo.
+2. **Textos públicos (trava 6):** faixa da jornada (`SITE_FAIXA_JORNADA`), promessa como título (`SITE_TITULO_PROMESSA`), guia da jornada.
+3. **Dados do site:** `src/lib/site.ts` (razão social, CNPJ, endereço, WhatsApp, nome e foto do fundador).
+4. **Valores:** desconto anual (`DESCONTO_ANUAL_PCT`), preço do pacote Jornada 40 horas (proposta R$ 990), custo de aquisição e margem do mês no painel.
+5. **Regra do retroativo (L11):** padrão com o advogado.
+6. **Chaves reais (trava 5):** Asaas e webhook, S3, alerta de erro, Turnstile, `ANTHROPIC_API_KEY` (leitura de PDF e da convenção), modelo `equapar_deferido_valor` na Meta, emissor de nota fiscal.
+7. **Migração proposta:** biblioteca de convenções (5.4.7).
+8. **Limpezas em modo aplicar (trava 2):** `scripts/limpar-*`.
+9. **Revisão de especialista (L12)** e **reforma tributária (5.5.5)**: decisões de produto.
+10. **Desempenho do site no celular:** aprovar o próximo passo proposto em 5.2.
+11. **Enviar a branch `produto-pronto` ao GitHub** quando quiser (nada foi enviado).
