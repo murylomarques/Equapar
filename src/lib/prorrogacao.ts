@@ -59,3 +59,22 @@ export function avaliarProrrogacao(pr: { dataTermo: Date | null; comRessalva: bo
     return { grau: "Confirmado", mensagem: "Revise antes de assinar: há repactuação a pedir.", porQue: "A convenção nova já foi depositada e não há pedido de repactuação protocolado. Para o TCU, prorrogar assim pode encerrar o direito." };
   return null;
 }
+
+/**
+ * D6. Jornada: a etapa já começou, o contrato tem mão de obra dedicada e a prorrogação vai ser (ou foi)
+ * assinada sem pedido de reequilíbrio da jornada. Mesmo componente da C5, grau "Provável".
+ * Só aparece para quem pode ver a jornada (chave mestra ou PAINEL_EMAILS).
+ */
+export function alertaJornadaNaProrrogacao(
+  c: { maoDeObraDedicada: boolean; pedidos: { gatilho?: string; estado: string }[] },
+  inicioEtapa: Date,
+  hoje: Date,
+): AlertaProrrogacao | null {
+  if (!c.maoDeObraDedicada || hoje < inicioEtapa) return null;
+  if (c.pedidos.some((p) => p.gatilho === "JORNADA_EC141" && p.estado !== "INDEFERIDO")) return null;
+  return {
+    grau: "Provável",
+    mensagem: "Revise antes de assinar: a jornada mudou e não há pedido de reequilíbrio.",
+    porQue: "A redução da jornada da EC 141/2026 já começou e este contrato tem mão de obra dedicada, mas não há pedido de reequilíbrio da jornada. Prorrogar sem pedir pode dificultar a recomposição do preço.",
+  };
+}

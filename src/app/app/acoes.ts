@@ -11,12 +11,13 @@ import { data, hojeUTC, lerData, lerDinheiro } from "@/lib/format";
 import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
 import { salvarArquivo } from "@/lib/storage";
 import { vigenciaAoImportar } from "@/lib/pncp-vigencia";
-import { riscoPreclusao } from "@/lib/prorrogacao";
+import { alertaJornadaNaProrrogacao, avaliarProrrogacao, riscoPreclusao } from "@/lib/prorrogacao";
 import { limiteDoPlano } from "@/lib/planos";
 import { proximaVersao } from "@/lib/versao-documento";
 import { modoPiloto } from "@/lib/chaves";
 import { normalizarCnpj } from "@/lib/mascaras";
-import { avaliarProrrogacao } from "@/lib/prorrogacao";
+import { jornadaVisivelPara } from "@/lib/jornada-acesso";
+import { JORNADA } from "@/lib/jornada";
 
 // ---------------------------------------------------------------------------
 // Sessão
@@ -294,7 +295,10 @@ export async function registrarProrrogacao(_: Resultado, fd: FormData): Promise<
     const completo = await db.contrato.findUnique({ where: { id: c.id }, include: { convencao: true, pedidos: true } });
     revalidatePath(`/app/contratos/${c.id}`);
     // C5: alerta com grau (o caso "Confirmado" é o mesmo riscoPreclusao de antes)
-    const alerta = completo ? avaliarProrrogacao({ dataTermo: dataTermo!, comRessalva, hoje: hojeUTC() }, completo) : null;
+    // D6: na jornada (só para quem pode ver), prorrogação sem pedido de reequilíbrio da jornada também alerta
+    const alerta =
+      (completo ? avaliarProrrogacao({ dataTermo: dataTermo!, comRessalva, hoje: hojeUTC() }, completo) : null) ??
+      (completo && jornadaVisivelPara(ctx.usuario.email) ? alertaJornadaNaProrrogacao(completo, JORNADA.inicio42(), hojeUTC()) : null);
     if (alerta) return { ok: "Prorrogação registrada.", dados: { alerta: JSON.stringify(alerta), preclusao: completo ? riscoPreclusao({ dataTermo: dataTermo!, comRessalva }, completo) : false } };
     return { ok: "Prorrogação registrada." };
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avaliarProrrogacao, riscoPreclusao } from "./prorrogacao";
+import { alertaJornadaNaProrrogacao, avaliarProrrogacao, riscoPreclusao } from "./prorrogacao";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 const contrato = (pedidos: { estado: string; protocoloData: Date | null }[], dataDeposito: Date | null = d("2026-02-10")) => ({ convencao: dataDeposito ? { dataDeposito } : null, pedidos });
@@ -49,5 +49,17 @@ describe("C5: alerta de prorrogação com grau", () => {
   it("com ressalva ou com pedido protocolado: sem alerta", () => {
     expect(avaliarProrrogacao({ dataTermo: d("2026-11-30"), comRessalva: true, hoje }, c())).toBeNull();
     expect(avaliarProrrogacao({ dataTermo: d("2026-11-30"), comRessalva: false, hoje }, c({ pedidos: [{ estado: "PROTOCOLADO", protocoloData: d("2026-10-01") }] }))).toBeNull();
+  });
+});
+
+describe("D6: alerta de prorrogação na jornada", () => {
+  const inicio = d("2026-12-16");
+  it("etapa começou, mão de obra dedicada, sem pedido da jornada: Provável", () => {
+    expect(alertaJornadaNaProrrogacao({ maoDeObraDedicada: true, pedidos: [] }, inicio, d("2027-01-10"))).toMatchObject({ grau: "Provável", mensagem: "Revise antes de assinar: a jornada mudou e não há pedido de reequilíbrio." });
+  });
+  it("antes da etapa, sem mão de obra dedicada ou com pedido da jornada: sem alerta", () => {
+    expect(alertaJornadaNaProrrogacao({ maoDeObraDedicada: true, pedidos: [] }, inicio, d("2026-12-01"))).toBeNull();
+    expect(alertaJornadaNaProrrogacao({ maoDeObraDedicada: false, pedidos: [] }, inicio, d("2027-01-10"))).toBeNull();
+    expect(alertaJornadaNaProrrogacao({ maoDeObraDedicada: true, pedidos: [{ gatilho: "JORNADA_EC141", estado: "PROTOCOLADO" }] }, inicio, d("2027-01-10"))).toBeNull();
   });
 });
