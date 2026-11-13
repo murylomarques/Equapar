@@ -69,6 +69,25 @@ interface Envio {
   modelo?: { nome: ModeloWhatsapp; params: Record<string, string> };
 }
 
+/**
+ * G6: e-mail de teste do painel interno, para os endereços de PAINEL_EMAILS. Devolve o erro exato do provedor
+ * (sem segredos: a mensagem do nodemailer não inclui a senha da SMTP_URL).
+ */
+export async function enviarEmailDeTeste(): Promise<{ ok: true; para: number } | { ok: false; erro: string }> {
+  const para = (process.env.PAINEL_EMAILS ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (!para.length) return { ok: false, erro: "PAINEL_EMAILS está vazia: não há para quem enviar." };
+  if (!emailAtivo()) return { ok: false, erro: "SMTP_URL está vazia: o e-mail está em simulação." };
+  try {
+    const nodemailer = await import("nodemailer");
+    const t = nodemailer.createTransport(process.env.SMTP_URL!);
+    await t.sendMail({ from: remetentePadrao(), to: para, subject: "Equapar: e-mail de teste", text: "E-mail de teste enviado pelo painel interno da Equapar. Se chegou, o envio está funcionando." });
+    return { ok: true, para: para.length };
+  } catch (e) {
+    const x = e as { message?: string; code?: string; responseCode?: number; response?: string };
+    return { ok: false, erro: [x.code, x.responseCode, x.response ?? x.message].filter(Boolean).join(" · ").replace(/\/\/[^@\s]+@/g, "//***@").slice(0, 400) };
+  }
+}
+
 async function enviarEmail(para: string, assunto: string, texto: string, html?: string) {
   const nodemailer = await import("nodemailer");
   const t = nodemailer.createTransport(process.env.SMTP_URL!);

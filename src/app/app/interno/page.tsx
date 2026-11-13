@@ -21,7 +21,7 @@ import { Alerta, CabecalhoPagina } from "@/components/ui/estrutura";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { CampoData, CampoSelect, CampoTexto } from "@/components/ui/campos";
-import { registrarTempo, salvarMetricaMensal } from "./acoes";
+import { enviarEmailTeste, registrarTempo, salvarMetricaMensal } from "./acoes";
 import { avisosOperacao, TEXTO_AVISO } from "@/lib/avisos-operacao";
 
 export const metadata: Metadata = { title: "Painel interno | Equapar" };
@@ -102,7 +102,17 @@ export default async function PainelInterno() {
           Faltam: {a.detalhe.join(", ")}.
         </Alerta>
       ))}
-      <CabecalhoPagina titulo="Painel interno" subtitulo="Só para o dono. Contagens e valores, sem dado pessoal. Funil dos últimos 90 dias." />
+      <CabecalhoPagina
+        titulo="Painel interno"
+        subtitulo="Só para o dono. Contagens e valores, sem dado pessoal. Funil dos últimos 90 dias."
+        acao={
+          <FormAcao action={enviarEmailTeste} okNaPagina>
+            <BotaoEnvio className="btn" pendente="Enviando o e-mail de teste…">
+              Enviar e-mail de teste
+            </BotaoEnvio>
+          </FormAcao>
+        }
+      />
       <div className="grade-2 painel-interno">
         <section className="cartao">
           <h2>Funil (90 dias)</h2>

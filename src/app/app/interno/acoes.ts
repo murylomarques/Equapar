@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { ErroUsuario, tentar, texto, type Resultado } from "@/lib/acao";
 import { lerData } from "@/lib/format";
 import { podeVerPainel, TIPOS_TEMPO } from "@/lib/metricas";
+import { enviarEmailDeTeste } from "@/lib/mensagens";
 
 /** Só quem está em PAINEL_EMAILS mexe no painel interno. */
 async function donoDoPainel() {
@@ -50,5 +51,14 @@ export async function registrarTempo(_: Resultado, fd: FormData): Promise<Result
     await db.registroTempo.create({ data: { contaId, tipo: tipo.data!, minutos, data: data!, descricao: texto(fd, "descricao").slice(0, 300) || null, registradoPor: ctx.usuario.nome } });
     revalidatePath("/app/interno");
     return { ok: "Tempo registrado." };
+  });
+}
+
+/** G6: envia um e-mail de teste para PAINEL_EMAILS e mostra o erro exato se falhar. */
+export async function enviarEmailTeste(): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    await donoDoPainel();
+    const r = await enviarEmailDeTeste();
+    return r.ok ? { ok: `E-mail de teste enviado para ${r.para} endereço(s) de PAINEL_EMAILS.` } : { erro: `O e-mail de teste falhou: ${r.erro}` };
   });
 }
