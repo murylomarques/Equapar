@@ -15,14 +15,14 @@ const SENHA_DONO = process.env.SENHA_DONO; // senha impressa pelo seed (npm run 
 if (!SENHA_DONO) throw new Error("Defina SENHA_DONO com a senha do dono@exemplo.local impressa pelo seed.");
 const SAIDA = path.resolve(process.argv[2] ?? "docs/redesenho/acessibilidade.json");
 
-const ex = { contrato: { empresa: { exemplo: true, conta: { demo: false } } } };
-const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false } } } });
-const c19 = await db.contrato.findFirst({ where: { numero: "19/2025", empresa: { exemplo: true, conta: { demo: false } } } });
+const ex = { contrato: { empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } };
+const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } });
+const c19 = await db.contrato.findFirst({ where: { numero: "19/2025", empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } });
 const prot = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", ...ex } });
 const def = await db.pedido.findFirst({ where: { estado: "DEFERIDO", ...ex } });
 await db.$disconnect();
 
-const SITE = ["/", "/raio-x", "/raio-x?cnpj=11111111111111", "/precos", "/assessorias", "/guias", "/guias/prorrogacao-sem-perder-a-repactuacao", "/privacidade", "/termos", "/entrar", "/criar-conta", "/pagina-que-nao-existe"];
+const SITE = ["/", "/raio-x", "/raio-x?cnpj=11111111111111", "/precos", "/assessorias", "/guias", "/guias/prorrogacao-sem-perder-a-repactuacao", "/privacidade", "/termos", "/entrar", "/criar-conta", "/pagina-que-nao-existe", "/guias/jornada-40-horas-contratos-publicos", "/demonstracao"];
 const APP = [
   "/app/hoje", "/app/boas-vindas", "/app/boas-vindas?passo=contratos", "/app/boas-vindas?passo=convencoes", "/app/boas-vindas?passo=pronto",
   "/app/carteira", "/app/carteira?filtro=prazo60", "/app/contratos/novo",
@@ -31,6 +31,8 @@ const APP = [
   ...[1, 2, 3, 4, 5].map((n) => `/app/pedidos/${prot.id}/passo/${n}`),
   `/app/pedidos/${prot.id}/memoria`, `/app/pedidos/${prot.id}/pronto`, `/app/pedidos/${def.id}/pronto`,
   "/app/a-receber", "/app/convencoes", "/app/avisos", "/app/busca?q=Exemplo",
+  // fase 2
+  "/app/mais", "/app/recuperado", "/app/pedido-exemplo", "/app/carteira?filtro=jornada",
   ...["empresa", "pessoas", "avisos", "cobranca", "seguranca", "dados"].map((a) => `/app/configuracoes?aba=${a}`),
 ];
 

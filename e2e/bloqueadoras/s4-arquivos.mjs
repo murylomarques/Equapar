@@ -8,8 +8,8 @@ fs.writeFileSync(falso, "<html><script>alert(1)</script></html>");
 const verdadeiro = path.join(tmp, "Convenção.pdf");
 fs.writeFileSync(verdadeiro, "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
 
-const modelo = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresa: { exemplo: true, conta: { demo: false } } } } });
-const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false } } } });
+const modelo = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } } });
+const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } });
 await db.pedido.deleteMany({ where: { contratoId: c45.id, estado: { in: ["EM_ANALISE", "CALCULO_VALIDADO"] } } }); // só dado fictício
 const ped = await db.pedido.create({
   data: { contratoId: c45.id, convencaoId: modelo.convencaoId, dataBase: modelo.dataBase, dataDeposito: modelo.dataDeposito, planilhaAntes: modelo.planilhaAntes, planilhaAgora: modelo.planilhaAgora, passoAtual: 4 },

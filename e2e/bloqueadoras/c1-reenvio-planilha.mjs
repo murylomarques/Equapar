@@ -33,7 +33,7 @@ const B = path.join(tmp, "B.xlsx");
 await xlsx(A, 1740);
 await xlsx(B, 1800);
 
-const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false } } } });
+const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } });
 await db.pedido.deleteMany({ where: { contratoId: c45.id, estado: "EM_ANALISE" } }); // só dado fictício de exemplo
 const ped = await db.pedido.create({
   data: { contratoId: c45.id, convencaoId: c45.convencaoId, dataBase: new Date(Date.UTC(2026, 0, 1)), dataDeposito: new Date(Date.UTC(2026, 1, 10)), passoAtual: 2 },
@@ -44,6 +44,7 @@ try {
   const p = await entrarComoDono(await b.newContext());
   async function enviar(arq) {
     await p.goto(`${BASE}/app/pedidos/${ped.id}/passo/2`);
+    await p.waitForLoadState("networkidle"); // escolher o arquivo antes da página carregar o JavaScript não envia
     await p.locator("input[type=file]").first().setInputFiles(arq);
     const confirmou = await confirmarSeAbrir(p);
     await p.getByText(/Lemos \d+ linhas/).first().waitFor({ timeout: 180000 });

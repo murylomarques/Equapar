@@ -12,6 +12,7 @@ try {
   const p = await entrarComoDono(await b.newContext());
   await p.goto(`${BASE}/app/carteira?filtro=jornada`);
   const filtro = p.getByRole("link", { name: /Afetados pela jornada de 40 horas/ });
+  await filtro.first().waitFor(); // a Carteira chega por streaming, depois do esqueleto
   conferir((await filtro.count()) === 1, "Carteira tem o filtro Afetados pela jornada de 40 horas");
   const botao = p.getByRole("button", { name: /Montar os pedidos destes \d+ contratos/ });
   conferir((await botao.count()) === 1, "com o filtro, aparece o botão de montar os pedidos em lote");

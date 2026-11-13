@@ -3,8 +3,9 @@
 // troca a data-base no passo 1 e a data "contar até" no passo 3, e lê o pedido no banco.
 import { BASE, db, navegador, entrarComoDono, conferir, fim } from "./util.mjs";
 
-const modelo = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresa: { exemplo: true, conta: { demo: false } } } } });
-const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false } } } });
+const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } });
+// modelo da mesma empresa (a demonstração de assessoria também tem pedidos protocolados de exemplo)
+const modelo = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresaId: c45.empresaId } } });
 await db.pedido.deleteMany({ where: { contratoId: c45.id, estado: { in: ["EM_ANALISE", "CALCULO_VALIDADO"] } } }); // só dado fictício
 const aprovado = () => ({ estado: "CALCULO_VALIDADO", memoriaAprovadaEm: new Date(), memoriaAprovadaPor: "Marcos (exemplo)", geradoEm: new Date() });
 const ped = await db.pedido.create({

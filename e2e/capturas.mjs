@@ -18,10 +18,10 @@ const CNPJ_FICT = "12345678000195";
 fs.mkdirSync(SAIDA, { recursive: true });
 
 async function preparar() {
-  const base = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresa: { exemplo: true, conta: { demo: false } } } } });
-  const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false } } } });
-  const c19 = await db.contrato.findFirst({ where: { numero: "19/2025", empresa: { exemplo: true, conta: { demo: false } } } });
-  const deferido = await db.pedido.findFirst({ where: { estado: "DEFERIDO", contrato: { empresa: { exemplo: true, conta: { demo: false } } } } });
+  const base = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } } });
+  const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } });
+  const c19 = await db.contrato.findFirst({ where: { numero: "19/2025", empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } });
+  const deferido = await db.pedido.findFirst({ where: { estado: "DEFERIDO", contrato: { empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } } });
   await db.pedido.deleteMany({ where: { contratoId: c45.id, estado: "EM_ANALISE" } });
   const andamento = await db.pedido.create({
     data: {
@@ -45,7 +45,7 @@ async function preparar() {
 }
 
 async function limpar() {
-  const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false } } } });
+  const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } });
   if (c45) await db.pedido.deleteMany({ where: { contratoId: c45.id, estado: "EM_ANALISE" } });
   await db.raioXCache.deleteMany({ where: { cnpj: CNPJ_FICT } });
   const us = await db.usuario.findMany({ where: { email: { startsWith: "capturas" } }, include: { membros: true } });
