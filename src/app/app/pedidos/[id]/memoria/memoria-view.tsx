@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { ChevronDown, MessageSquare, Printer } from "lucide-react";
 import { brl, pct } from "@/lib/calculo/motor";
 import type { Comparacao, Retroativo } from "@/lib/calculo/motor";
@@ -9,6 +9,13 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { plural } from "@/lib/mascaras";
 import { comentarLinha } from "../../acoes";
 import { paginaDaFonte } from "@/lib/sugestoes-convencao";
+
+const CELULAR = "(max-width: 720px)";
+function assinarCelular(aviso: () => void) {
+  const m = window.matchMedia(CELULAR);
+  m.addEventListener("change", aviso);
+  return () => m.removeEventListener("change", aviso);
+}
 
 interface Comentario {
   id: string;
@@ -34,12 +41,11 @@ export function MemoriaView({
   linkConvencao: string | null;
 }) {
   const mudaram = comp.linhas.filter((l) => l.variacao !== "0.00").length;
-  const [soMudou, setSoMudou] = useState(false);
   // 5.2: no celular, "Só as linhas com valor diferente" vem ligado e a memória mostra um módulo por vez
+  const celular = useSyncExternalStore(assinarCelular, () => window.matchMedia(CELULAR).matches, () => false);
+  const [escolha, setSoMudou] = useState<boolean | null>(null);
+  const soMudou = escolha ?? (celular && mudaram > 0);
   const [moduloCelular, setModuloCelular] = useState<Record<string, string>>({});
-  useEffect(() => {
-    if (window.matchMedia("(max-width: 720px)").matches && mudaram > 0) setSoMudou(true);
-  }, [mudaram]);
   const [fechados, setFechados] = useState<Set<string>>(new Set());
   const [comentando, setComentando] = useState<string | null>(null);
   const nomeModulo = (m: string) => MODULOS.find((x) => x.id === m)?.nome ?? m;
