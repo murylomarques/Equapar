@@ -45,6 +45,8 @@ export interface LinhaPlanilha {
   salarioBase?: boolean;
   /** De onde saiu o número: "CCT 2026, cláusula 4ª, p. 3" */
   fonte?: string;
+  /** D2 (só a jornada usa): a linha acompanha o número de empregados por posto. Vazio = padrão do módulo. */
+  acompanhaEmpregados?: boolean;
 }
 
 export interface TipoPosto {

@@ -13,7 +13,7 @@
  *   (cobertura × jornada depois ÷ jornada antes). A planilha nova é igual à atual e o documento registra a redução.
  */
 import Decimal from "decimal.js";
-import type { PlanilhaCustos } from "./calculo/tipos";
+import type { LinhaPlanilha, PlanilhaCustos } from "./calculo/tipos";
 
 export type Cenario = "MANTER_HORAS" | "REDUZIR_HORAS";
 
@@ -45,18 +45,69 @@ export function empregadosPorPosto(horasCobertura: number, jornada: number): Dec
   return new Decimal(horasCobertura).div(jornada).toDecimalPlaces(4);
 }
 
-/** Planilha nova do cenário: MANTER_HORAS multiplica as linhas em R$ pelo fator; REDUZIR_HORAS copia. */
+/** D2: fator com 6 casas, só para mostrar (o cálculo usa o fator exato, sem arredondar). */
+export function fatorTexto(antes: number, depois: number) {
+  return fatorJornada(antes, depois).toFixed(6).replace(".", ",");
+}
+
+/**
+ * D2: a linha acompanha o número de empregados? Padrão: sim nos módulos 1 a 4 (remuneração, encargos,
+ * benefícios, rescisão, reposição); não nos materiais e equipamentos do módulo 5, exceto uniformes (sim,
+ * editável). Linhas em percentual acompanham pelo próprio motor (dependem das linhas em R$).
+ */
+export function acompanhaPadrao(l: Pick<LinhaPlanilha, "modulo" | "descricao">) {
+  if (l.modulo === "M5") return /uniform/i.test(l.descricao ?? "");
+  return ["M1", "M2_1", "M2_2", "M2_3", "M3", "M4"].includes(l.modulo);
+}
+export function acompanha(l: LinhaPlanilha) {
+  return l.acompanhaEmpregados ?? acompanhaPadrao(l);
+}
+
+const brlTxt = (v: Decimal) => `R$ ${v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+
+/**
+ * Planilha nova do cenário. D2: o salário e os demais valores por empregado ficam no valor da convenção; o
+ * aumento entra como EMPREGADOS EQUIVALENTES por posto (jornada anterior ÷ nova), só nas linhas que
+ * acompanham o número de empregados. A linha guarda o custo por posto e a fonte mostra a conta:
+ * "R$ 1.820,00 × 1,047619 empregados equivalentes = R$ 1.906,67 por posto". REDUZIR_HORAS: valores iguais
+ * (art. 2º da EC 141); o documento registra a redução das horas entregues.
+ */
 export function planilhaDoCenario(atual: PlanilhaCustos, cenario: Cenario, antes: number, depois: number): PlanilhaCustos {
   const f = fatorJornada(antes, depois);
-  const fonte = cenario === "MANTER_HORAS" ? `EC 141/2026: jornada de ${antes} para ${depois} horas, mantidas as horas de cobertura (× ${f.toDecimalPlaces(4).toString().replace(".", ",")})` : undefined;
   return {
     tipos: atual.tipos.map((t) => ({
       ...t,
-      linhas: t.linhas.map((l) =>
-        cenario === "MANTER_HORAS" && l.tipo === "VALOR" ? { ...l, valor: new Decimal(l.valor || "0").times(f).toDecimalPlaces(2).toFixed(2), fonte } : { ...l },
-      ),
+      linhas: t.linhas.map((l) => {
+        if (cenario !== "MANTER_HORAS" || l.tipo !== "VALOR" || !acompanha(l)) return { ...l };
+        const base = new Decimal(l.valor || "0");
+        const porPosto = base.times(f).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+        return {
+          ...l,
+          valor: porPosto.toFixed(2),
+          fonte: `${brlTxt(base)} × ${fatorTexto(antes, depois)} empregados equivalentes = ${brlTxt(porPosto)} por posto (EC 141/2026, jornada ${antes} para ${depois} h)`,
+        };
+      }),
     })),
   };
+}
+
+/** D2: redução das horas entregues no cenário REDUZIR_HORAS, em % (44 → 42: 4,545%). */
+export function reducaoHorasPct(antes: number, depois: number) {
+  return new Decimal(antes - depois).div(antes).times(100).toDecimalPlaces(3);
+}
+
+/** D3: as etapas da EC 141 e a data em que cada uma vale. Pedido de 44 para 40 h num só aditivo fica fora. */
+export function etapasJornada() {
+  return [
+    { id: "44-42" as const, antes: 44, depois: 42, inicio: JORNADA.inicio42(), fim: JORNADA.inicio40() },
+    { id: "42-40" as const, antes: 42, depois: 40, inicio: JORNADA.inicio40(), fim: null as Date | null },
+  ];
+}
+export type EtapaId = "44-42" | "42-40";
+
+/** D3: a etapa vigente na data (início dos efeitos). Antes do início das 42 h, nenhuma. */
+export function etapaNaData(d: Date) {
+  return etapasJornada().find((e) => d >= e.inicio && (!e.fim || d < e.fim)) ?? null;
 }
 
 /** Horas de serviço por posto no cenário de redução. */

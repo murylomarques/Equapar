@@ -222,6 +222,7 @@ const linhaSchema = z.object({
   base: z.enum(["SALARIO_BASE", "M1", "M1_M21", "M1_M3", "SUBTOTAL", "SUBTOTAL_CI", "POR_DENTRO"]).optional(),
   salarioBase: z.boolean().optional(),
   fonte: z.string().max(300).optional(),
+  acompanhaEmpregados: z.boolean().optional(),
 });
 const planilhaSchema = z.object({
   tipos: z.array(z.object({ id: z.string().min(1), nome: z.string().max(100), quantidade: z.number().int().min(0).max(100000), linhas: z.array(linhaSchema).max(200) })).max(30),
