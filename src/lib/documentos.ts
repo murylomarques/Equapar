@@ -226,7 +226,12 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
   pdf.texto(`Diferença por mês: ${brl(comp.diferencaMensal)}${comp.variacaoPct ? ` (${pct(comp.variacaoPct)})` : ""}`, { tam: 12, negrito: true });
   if (calc.retroativo) {
     pdf.texto(`Desde a data-base (${data(p.dataBase)}) até ${data(calc.dataReferencia)}: ${brl(calc.retroativo.total)}`, { tam: 12, negrito: true, espaco: 4 });
-    pdf.texto(`Regra: diferença ${calc.regraRetroativo}.`, { tam: 9, espaco: 10 });
+    pdf.texto(`Regra: diferença ${calc.regraRetroativo}.`, { tam: 9, espaco: calc.jaPago || calc.comparacaoMes || p.ultimaCompetenciaPaga ? 2 : 10 });
+    // C6: valores já pagos, última competência paga e a regra do caso em análise
+    if (calc.jaPago) pdf.texto(`Retroativo bruto ${brl(calc.retroativoBruto!)}, menos ${brl(calc.jaPago)} já pagos pelo órgão no período.`, { tam: 9, espaco: 2 });
+    if (p.ultimaCompetenciaPaga) pdf.texto(`Última competência paga pelo valor anterior: ${p.ultimaCompetenciaPaga}.`, { tam: 9, espaco: 2 });
+    if (calc.comparacaoMes)
+      pdf.texto(`Regra do caso em análise (mês incompleto): dias corridos ${brl(calc.comparacaoMes.DIAS_CORRIDOS)}; mês de 30 dias ${brl(calc.comparacaoMes.MES_30_DIAS)}. O pedido usa ${p.retroMesIncompleto === "MES_30_DIAS" ? "o mês de 30 dias" : "os dias corridos"}.`, { tam: 9, espaco: 10 });
   }
 
   for (const posto of comp.postos) {

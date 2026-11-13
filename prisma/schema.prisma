@@ -247,6 +247,9 @@ model Pedido {
   dataReferencia      DateTime? // até quando contar a diferença retroativa
   retroContarAte      RetroContarAte  @default(DATA_INFORMADA) // L11: até quando conta a diferença
   retroMesIncompleto  RetroMesIncompleto @default(DIAS_CORRIDOS) // L11: mês incompleto
+  retroCompararMes    Boolean            @default(false) // C6: "regra do caso em análise": memória mostra dias corridos e mês de 30 dias lado a lado
+  valoresJaPagos      Decimal?           @default(0) @db.Decimal(14, 2) // C6: já pago pelo órgão no período, descontado do retroativo
+  ultimaCompetenciaPaga String? // C6: informativo, "2026-03"
   hashCalculo         String? // C2: SHA-256 da base do cálculo no momento da aprovação
   diferencaMensal     Decimal?     @db.Decimal(14, 2)
   diferencaRetroativa Decimal?     @db.Decimal(14, 2)
@@ -262,6 +265,8 @@ model Pedido {
   jornadaDepois       Int? // 5.1: 42 ou 40
   horasCobertura      Decimal?     @db.Decimal(6, 2) // 5.1: horas semanais de cobertura exigidas por posto
   inicioJornada       DateTime? // 5.1: início da nova jornada
+  jornadaDataAditivo  DateTime? // D4: quando o aditivo foi formalizado
+  jornadaInicioEfeitos DateTime? // D4: início dos efeitos financeiros (padrão: início da etapa); o retroativo usa esta
   cenarioJornada      String? // 5.1: MANTER_HORAS ou REDUZIR_HORAS (escolha explícita, sem padrão)
   recursoData         DateTime? // 5.5: recurso depois do indeferimento
   recursoPrazo        DateTime?

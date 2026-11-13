@@ -16,7 +16,7 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { FonteRegra } from "@/components/fonte-regra";
 import { SeloSimples } from "@/components/selo";
 import { AreaArquivo } from "@/components/ui/arquivo";
-import { CampoData, CampoInteiro, CampoSelect, Combobox, RadiosCartao, TextoLongo } from "@/components/ui/campos";
+import { CampoData, CampoDinheiro, CampoInteiro, CampoSelect, CampoTexto, Combobox, RadiosCartao, TextoLongo } from "@/components/ui/campos";
 import { JORNADA, empregadosPorPosto, horasReduzidas, planilhaDoCenario, type Cenario } from "@/lib/jornada";
 import { Alerta, Termo } from "@/components/ui/estrutura";
 import { aprovacaoValida } from "@/lib/pedido-regras";
@@ -407,7 +407,34 @@ function Passo3({ p, leitura }: { p: P; leitura: boolean }) {
               ]}
             />
           </div>
-          <p className="legenda mb-0">Enquanto o protocolo ou o apostilamento não acontecem, vale a data informada.</p>
+          <p className="legenda">Enquanto o protocolo ou o apostilamento não acontecem, vale a data informada.</p>
+          <label className="check mb-16">
+            <input type="checkbox" name="retroCompararMes" defaultChecked={p.retroCompararMes} disabled={leitura} />
+            <span>
+              Regra do caso em análise
+              <span className="ajuda-texto" style={{ display: "block" }}>
+                A memória mostra o resultado com dias corridos e com mês de 30 dias, lado a lado. O pedido usa a opção escolhida acima.
+              </span>
+            </span>
+          </label>
+          {/* C6: valores já pagos e a última competência paga */}
+          <div className="linha-form">
+            <CampoDinheiro
+              nome="valoresJaPagos"
+              rotulo="Valores já pagos pelo órgão no período"
+              opcional
+              valorInicial={p.valoresJaPagos && Number(p.valoresJaPagos) > 0 ? p.valoresJaPagos.toString() : null}
+              ajuda="Se o órgão já pagou parte da diferença, o valor é descontado do retroativo."
+            />
+            <CampoTexto
+              nome="ultimaCompetenciaPaga"
+              rotulo="Última competência paga pelo valor anterior"
+              opcional
+              placeholder="AAAA-MM"
+              valorInicial={p.ultimaCompetenciaPaga}
+              ajuda="Informativo: aparece na memória."
+            />
+          </div>
         </details>
         <Rodape voltar={`/app/pedidos/${p.id}/passo/2`} leitura={leitura} salvandoAntes />
       </FormAcao>

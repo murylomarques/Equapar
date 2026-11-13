@@ -152,6 +152,9 @@ export function hashCalculo(p: BaseCalculo): string {
   // 5.1: no pedido da jornada, os dados da jornada e o cenário fazem parte da base
   const j = p as unknown as Record<string, unknown>;
   if (p.gatilho === "JORNADA_EC141") for (const k of ["jornadaAntes", "jornadaDepois", "horasCobertura", "cenarioJornada"]) base[k] = j[k] == null ? null : String(j[k]);
+  // C6/D4: entram só quando preenchidos (assinaturas antigas continuam valendo)
+  if (j.valoresJaPagos != null && Number(j.valoresJaPagos) > 0) base.valoresJaPagos = String(j.valoresJaPagos);
+  if (p.gatilho === "JORNADA_EC141" && j.jornadaInicioEfeitos) base.jornadaInicioEfeitos = j.jornadaInicioEfeitos;
   // L11: as opções do retroativo entram só quando diferem do padrão (assinaturas antigas continuam valendo)
   if (p.retroContarAte && p.retroContarAte !== "DATA_INFORMADA") base.retroContarAte = p.retroContarAte;
   if (p.retroMesIncompleto && p.retroMesIncompleto !== "DIAS_CORRIDOS") base.retroMesIncompleto = p.retroMesIncompleto;

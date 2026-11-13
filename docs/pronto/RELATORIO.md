@@ -199,3 +199,45 @@ Depois: `remetentePadrao()` (`EMAIL_FROM` ou `Equapar Avisos <avisos@<domínio d
 ### B6. Aviso de dados faltando (feito)
 
 `src/lib/avisos-operacao.ts`: em produção, `/api/saude` devolve `avisos: [{ codigo: "dados_empresa_incompletos", detalhe: ["SITE_CNPJ", ...] }]` (só nomes) e o painel interno mostra o aviso no topo. O status continua 200: o CNPJ faltando não impede a subida. O mesmo mecanismo avisa `email_nao_configurado` (G6). Prova: `src/lib/avisos-operacao.test.ts`.
+
+## Fase C: regras e textos das respostas jurídicas e contábeis
+
+Tudo que é texto jurídico novo sai marcado MINUTA (trava 6). Regras novas só agem quando a pessoa preenche um campo novo (trava 3).
+
+### C1. Frase sobre prorrogação (feito)
+Antes, na landing: "Assinar a prorrogação sem pedir pode encerrar o direito à repactuação". Depois: "Vai prorrogar o contrato? Confira se há repactuação a solicitar e se cabe ressalva no termo aditivo.", com a fonte do TCU e o link "A regra depende do regime do contrato e da fase do pedido", que leva ao guia; o guia diz isso na seção "A regra".
+
+### C2. Modelo de ressalva (feito)
+No guia `prorrogacao-sem-perder-a-repactuacao` e na tela de decisão de prorrogação do app, o modelo antigo ("A CONTRATADA ressalva o direito...") virou o texto C2, marcado "MINUTA, revise com seu jurídico", com a nota de que o Parecer Referencial 00001/2025 da AGU exige pedido expresso para incluir a ressalva no contexto que analisou.
+
+### C3. Descrição do serviço (feito)
+Texto C3 no plano Piloto (Preços e tabela de planos) e nos Termos, com "Análise jurídica individual, estratégia de recurso e consultoria jurídica são atividades de advogado habilitado e não fazem parte do serviço". Busca por "assessoria jurídica" e "consultoria jurídica" como promessa no código: nenhuma ocorrência. A "proposta" do prompt é o modelo do C4.
+
+### C4. Modelos do piloto e da autorização de caso (feito)
+`docs/modelos/contrato-piloto.md` (com o texto C3 no topo) e `docs/modelos/autorizacao-caso.md`, marcados MINUTA. Nenhuma tela usa esses textos.
+
+### C5. Alerta de prorrogação ampliado (feito)
+`avaliarProrrogacao` em `src/lib/prorrogacao.ts`, mostrado antes de assinar (tela de decisão de prorrogação) e ao registrar a prorrogação, com o grau ao lado e "Ver por quê" com a fonte:
+
+| Situação | Mensagem | Grau |
+| --- | --- | --- |
+| Convenção nova depositada, sem pedido protocolado e sem ressalva (o caso de antes, mesmo `riscoPreclusao`) | Revise antes de assinar: há repactuação a pedir. | Confirmado |
+| Data-base passou, convenção nova não depositada, prorrogação a 60 dias ou menos | Registre a solicitação e avalie a ressalva antes de assinar. | Provável |
+| Faltam dados (convenção ou data-base) | Faltam dados para avaliar o risco. Revise antes de assinar. | A conferir |
+
+Prova: `src/lib/prorrogacao.test.ts`, os 5 testes antigos passando iguais e 5 novos.
+
+### C6. Retroativo: valores já pagos e soma por competência (feito, com uma pendência)
+Migração aditiva aplicada (`20261113200000_v4_retroativo_e_jornada`, o SQL mostrado ao dono e aprovado):
+```sql
+ALTER TABLE "Pedido" ADD COLUMN "jornadaDataAditivo" TIMESTAMP(3),
+ADD COLUMN "jornadaInicioEfeitos" TIMESTAMP(3),
+ADD COLUMN "retroCompararMes" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "ultimaCompetenciaPaga" TEXT,
+ADD COLUMN "valoresJaPagos" DECIMAL(14,2) DEFAULT 0;
+```
+- Passo 3: "Valores já pagos pelo órgão no período" (padrão 0, descontado do retroativo; nunca deixa o total negativo), "Última competência paga pelo valor anterior" (informativo) e "Regra do caso em análise".
+- Memória (tela e PDF): bruto, valor descontado, última competência e, com a regra do caso em análise, o resultado com dias corridos e com mês de 30 dias lado a lado; o pedido usa a opção escolhida.
+- O valor pago entra na assinatura do cálculo só quando é maior que zero (as aprovações antigas continuam valendo) e, ao mudar, desfaz a aprovação.
+- Prova: `src/lib/retroativo-pagos.test.ts` (com os campos vazios, o caso de exemplo continua R$ 33.951,94; R$ 1.951,94 pagos dão R$ 32.000,00; os dois resultados lado a lado; assinatura igual com campo vazio).
+- **Pendência (soma por competência):** o modelo de dados guarda uma planilha atual e uma nova por pedido, sem a variação do número de postos ou do valor ao longo do período. Por isso o retroativo é a diferença mensal × meses, com o mês parcial pro rata. Não criei esse modelo (o prompt manda não criar agora). Para somar por competência quando postos ou valores mudam no período, é preciso guardar planilhas por competência.

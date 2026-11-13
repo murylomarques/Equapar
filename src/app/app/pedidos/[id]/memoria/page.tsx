@@ -87,7 +87,22 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
               <span className="legenda">
                 até {data(calc.dataReferencia)} · {calc.regraRetroativo}
               </span>
+              {calc.jaPago && (
+                <span className="legenda">
+                  {brl(calc.retroativoBruto!)} menos {brl(calc.jaPago)} já pagos pelo órgão no período
+                </span>
+              )}
+              {p.ultimaCompetenciaPaga && <span className="legenda">Última competência paga pelo valor anterior: {p.ultimaCompetenciaPaga}</span>}
             </div>
+            {calc.comparacaoMes && (
+              <div>
+                <span className="legenda">Regra do caso em análise: mês incompleto</span>
+                <span className="legenda">
+                  Dias corridos: <strong>{brl(calc.comparacaoMes.DIAS_CORRIDOS)}</strong> · Mês de 30 dias: <strong>{brl(calc.comparacaoMes.MES_30_DIAS)}</strong>
+                </span>
+                <span className="legenda">O pedido usa {p.retroMesIncompleto === "MES_30_DIAS" ? "o mês de 30 dias" : "os dias corridos"}.</span>
+              </div>
+            )}
           </div>
           <MemoriaView
             pedidoId={p.id}

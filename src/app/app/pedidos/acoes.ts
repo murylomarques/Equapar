@@ -338,8 +338,16 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
     // L11: regra do retroativo escolhida no pedido (padrão = regra original)
     const retroContarAte = z.enum(["DATA_INFORMADA", "DATA_PROTOCOLO", "DATA_APOSTILAMENTO"]).catch(p.retroContarAte).parse(texto(fd, "retroContarAte") || p.retroContarAte);
     const retroMesIncompleto = z.enum(["DIAS_CORRIDOS", "MES_30_DIAS"]).catch(p.retroMesIncompleto).parse(texto(fd, "retroMesIncompleto") || p.retroMesIncompleto);
-    const calc = calcularPedido({ ...p, dataReferencia: ref, retroContarAte, retroMesIncompleto });
-    const mudouRegra = retroContarAte !== p.retroContarAte || retroMesIncompleto !== p.retroMesIncompleto || (!!jornadaDados.cenarioJornada && jornadaDados.cenarioJornada !== cenarioAnterior);
+    // C6: valores já pagos pelo órgão (descontados), última competência paga (informativa) e "regra do caso em análise"
+    const pagoTxt = texto(fd, "valoresJaPagos");
+    const valoresJaPagos = pagoTxt ? lerDinheiro(pagoTxt) : "0";
+    if (valoresJaPagos == null || Number(valoresJaPagos) < 0) return { erro: "Confira os valores já pagos.", campos: { valoresJaPagos: "Digite um valor em reais (ou deixe em branco)." } };
+    const ultimaTxt = texto(fd, "ultimaCompetenciaPaga");
+    if (ultimaTxt && !/^\d{4}-\d{2}$/.test(ultimaTxt)) return { erro: "Confira a última competência paga.", campos: { ultimaCompetenciaPaga: "Use o formato AAAA-MM (ex.: 2026-03)." } };
+    const retroCompararMes = fd.get("retroCompararMes") === "on";
+    const calc = calcularPedido({ ...p, dataReferencia: ref, retroContarAte, retroMesIncompleto, valoresJaPagos: valoresJaPagos as never, retroCompararMes });
+    const mudouPago = Number(valoresJaPagos) !== Number(p.valoresJaPagos ?? 0);
+    const mudouRegra = retroContarAte !== p.retroContarAte || retroMesIncompleto !== p.retroMesIncompleto || mudouPago || (!!jornadaDados.cenarioJornada && jornadaDados.cenarioJornada !== cenarioAnterior);
     const invalidar =
       p.dataReferencia?.getTime() !== ref.getTime() || mudouRegra
         ? await invalidarAprovacao(ctx, p, mudouRegra ? "Alterou a regra da diferença retroativa" : "Alterou a data até onde a diferença é contada")
@@ -351,6 +359,9 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
         ...jornadaDados,
         retroContarAte,
         retroMesIncompleto,
+        retroCompararMes,
+        valoresJaPagos,
+        ultimaCompetenciaPaga: ultimaTxt || null,
         dataReferencia: ref,
         diferencaMensal: calc.comparacao!.diferencaMensal,
         diferencaRetroativa: calc.retroativo?.total ?? null,
