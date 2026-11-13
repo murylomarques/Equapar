@@ -41,7 +41,7 @@ export async function apagarPastaConta(contaId: string) {
 }
 
 /** Link de download curto direto do bucket (S3); null no disco (o download passa pelo app). */
-export async function linkTemporario(relativo: string, nomeArquivo: string) {
+export async function linkTemporario(relativo: string, nomeArquivo: string, inline = false) {
   const a = await armazenamento();
-  return a.linkTemporario ? a.linkTemporario(relativo, nomeArquivo) : null;
+  return a.linkTemporario ? a.linkTemporario(relativo, nomeArquivo, 300, inline) : null;
 }

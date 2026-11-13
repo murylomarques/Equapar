@@ -1957,3 +1957,18 @@ mark {
   flex: 1;
   min-width: 220px;
 }
+
+/* 5.5: conferência da leitura da convenção com IA */
+.sugestao-ia {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-top: 1px solid var(--linha);
+}
+.sugestao-ia.baixa {
+  border-left: 3px solid var(--selo-ambar-tx);
+  padding-left: 10px;
+}

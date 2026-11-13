@@ -17,7 +17,7 @@ export interface Armazenamento {
   /** Apaga tudo com o prefixo (ex.: a pasta de uma conta). */
   apagarPrefixo(prefixo: string): Promise<void>;
   /** Link de download de curta duração (só no S3; no disco, o download passa pelo app). */
-  linkTemporario?(chave: string, nomeArquivo: string, segundos?: number): Promise<string>;
+  linkTemporario?(chave: string, nomeArquivo: string, segundos?: number, inline?: boolean): Promise<string>;
 }
 
 /** Chave sempre relativa, com "/" e sem subir de pasta. */
@@ -88,10 +88,10 @@ export class ArmazenamentoS3 implements Armazenamento {
       token = r.NextContinuationToken;
     } while (token);
   }
-  async linkTemporario(chave: string, nomeArquivo: string, segundos = 300) {
+  async linkTemporario(chave: string, nomeArquivo: string, segundos = 300, inline = false) {
     if (!this.assinar) throw new Error("Assinatura de link indisponível.");
     const nome = encodeURIComponent(nomeArquivo);
-    const cmd = new this.sdk.GetObjectCommand({ Bucket: this.bucket, Key: normalizarChave(chave), ResponseContentDisposition: `attachment; filename*=UTF-8''${nome}` });
+    const cmd = new this.sdk.GetObjectCommand({ Bucket: this.bucket, Key: normalizarChave(chave), ResponseContentDisposition: `${inline ? "inline" : "attachment"}; filename*=UTF-8''${nome}` });
     return this.assinar(this.cliente, cmd, { expiresIn: segundos });
   }
 }

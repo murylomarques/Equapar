@@ -13,7 +13,7 @@ import { calcularPedido } from "@/lib/pedido";
 import { validarPlanilha } from "@/lib/calculo/motor";
 import { clonarPlanilha, planilhaModelo } from "@/lib/calculo/modelo";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
-import { iaAtiva, lerPlanilhaPdf } from "@/lib/ia";
+import { iaAtiva, lerConvencaoPdf, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
 import { apagarArquivo, gravarArquivo, lerArquivo, salvarArquivo } from "@/lib/storage";
 import crypto from "node:crypto";
@@ -26,6 +26,7 @@ import { limiteDoPlano } from "@/lib/planos";
 import { planilhaDoCenario, type Cenario } from "@/lib/jornada";
 import { JORNADA } from "@/lib/jornada";
 import { proximaVersao } from "@/lib/versao-documento";
+import { aplicarConfirmadas, filtrarSugestoes, fonteDaSugestao, linhasParaConvencao, normalizarNumero, type SugestoesConvencao } from "@/lib/sugestoes-convencao";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -653,4 +654,88 @@ export async function novoPedidoAPartirDe(_: Resultado, fd: FormData): Promise<R
   });
   if (r.erro) return r;
   redirect(`/app/pedidos/${novoId}`);
+}
+
+// ---------------------------------------------------------------------------
+// 5.5: leitura da convenção com IA (sugere; a pessoa confirma linha a linha)
+// ---------------------------------------------------------------------------
+
+/** Envia o PDF da convenção; a IA sugere o valor novo de cada linha que a convenção define. Nada muda na planilha ainda. */
+export async function lerConvencaoComIa(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const { ctx, p } = await pedidoEditavel(fd);
+    if (!iaAtiva()) return { erro: "A leitura com IA não está ligada. Atualize as linhas à mão." };
+    if (!p.planilhaAgora) return { erro: "Conclua o passo 2 antes." };
+    const arquivo = fd.get("arquivo");
+    if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o PDF da convenção." };
+    const s = await salvarArquivo(ctx.conta.id, arquivo);
+    if (s.mime !== "application/pdf") return { erro: "Envie a convenção em PDF." };
+    const doc = await db.documento.create({
+      data: {
+        pedidoId: p.id,
+        contratoId: p.contratoId,
+        convencaoId: p.convencaoId,
+        tipo: "CONVENCAO",
+        nome: s.nome,
+        versao: await proximaVersao({ pedidoId: p.id }, "CONVENCAO"),
+        mime: s.mime,
+        tamanho: s.tamanho,
+        caminho: s.caminho,
+        enviadoPor: ctx.usuario.nome,
+      },
+    });
+    const linhas = linhasParaConvencao(p.planilhaAgora as unknown as PlanilhaCustos);
+    const leitura = await lerConvencaoPdf(s.buffer, linhas);
+    const itens = filtrarSugestoes(leitura, linhas);
+    const sugestoes: SugestoesConvencao = { documentoId: doc.id, lidoEm: new Date().toISOString(), observacoes: leitura.observacoes.slice(0, 1000), itens };
+    const checklist = { ...((p.checklist as Record<string, string> | null) ?? {}), convencao_nova: "ANEXADO" };
+    await db.pedido.update({ where: { id: p.id }, data: { sugestoesConvencao: json(sugestoes), checklist: json(checklist) } });
+    await registrarHistorico(ctx, `Leu a convenção ${s.nome} com IA: ${itens.length} sugestões para conferir`, { pedidoId: p.id, contratoId: p.contratoId });
+    revalidatePath(`/app/pedidos/${p.id}/passo/3`);
+    return { ok: itens.length ? `${itens.length} sugestões para conferir.` : "A leitura não achou valores para as linhas da planilha. Atualize à mão." };
+  });
+}
+
+/** Aplica só as linhas que a pessoa marcou, com o valor que ela confirmou (pode corrigir). */
+export async function aplicarSugestoesConvencao(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const { ctx, p } = await pedidoEditavel(fd);
+    const sug = p.sugestoesConvencao as unknown as SugestoesConvencao | null;
+    if (!sug || !p.planilhaAgora) return { erro: "Não há sugestões para aplicar." };
+    const confirmadas: { postoId: string; linhaId: string; valor: string; fonte: string }[] = [];
+    const campos: Record<string, string> = {};
+    for (const it of sug.itens) {
+      const k = `${it.postoId}:${it.linhaId}`;
+      if (fd.get(`ok:${k}`) !== "on") continue;
+      const valor = normalizarNumero(texto(fd, `valor:${k}`) || it.valorNovo);
+      if (valor == null) {
+        campos[`valor:${k}`] = "Digite um número.";
+        continue;
+      }
+      confirmadas.push({ postoId: it.postoId, linhaId: it.linhaId, valor, fonte: fonteDaSugestao(it.clausula, it.pagina) });
+    }
+    if (Object.keys(campos).length) return { erro: "Confira os valores marcados.", campos };
+    if (!confirmadas.length) return { erro: "Marque as linhas que você conferiu na convenção." };
+    const { planilha } = aplicarConfirmadas(p.planilhaAgora as unknown as PlanilhaCustos, confirmadas);
+    const restantes = sug.itens.filter((it) => !confirmadas.some((c) => c.postoId === it.postoId && c.linhaId === it.linhaId));
+    const data: Prisma.PedidoUpdateInput = {
+      planilhaAgora: json(planilha),
+      sugestoesConvencao: restantes.length ? json({ ...sug, itens: restantes }) : Prisma.DbNull,
+      ...totaisGravados({ ...p, planilhaAgora: json(planilha) as Prisma.JsonValue }),
+      ...(await invalidarAprovacao(ctx, p, "Confirmou valores lidos da convenção")),
+    };
+    await db.pedido.update({ where: { id: p.id }, data });
+    await registrarHistorico(ctx, `Confirmou ${confirmadas.length} ${confirmadas.length === 1 ? "linha lida" : "linhas lidas"} da convenção (fonte: cláusula e página)`, { pedidoId: p.id, contratoId: p.contratoId });
+    revalidatePath(`/app/pedidos/${p.id}/passo/3`);
+    return { ok: `${confirmadas.length} ${confirmadas.length === 1 ? "linha atualizada" : "linhas atualizadas"}.` };
+  });
+}
+
+export async function descartarSugestoesConvencao(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const { p } = await pedidoEditavel(fd);
+    await db.pedido.update({ where: { id: p.id }, data: { sugestoesConvencao: Prisma.DbNull } });
+    revalidatePath(`/app/pedidos/${p.id}/passo/3`);
+    return { ok: "Sugestões descartadas." };
+  });
 }

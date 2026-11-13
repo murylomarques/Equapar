@@ -242,6 +242,7 @@ model Pedido {
   planilhaAntes       Json?
   planilhaAgora       Json?
   linhasNaoLidas      Json? // linhas que a leitura não entendeu
+  sugestoesConvencao  Json? // 5.5: sugestões da leitura da convenção com IA, esperando confirmação linha a linha
   checklist           Json? // { [id]: "ANEXADO" | "FALTA" | "OPCIONAL" }
   dataReferencia      DateTime? // até quando contar a diferença retroativa
   retroContarAte      RetroContarAte  @default(DATA_INFORMADA) // L11: até quando conta a diferença

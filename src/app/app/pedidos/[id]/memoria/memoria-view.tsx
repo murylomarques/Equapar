@@ -8,6 +8,7 @@ import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { plural } from "@/lib/mascaras";
 import { comentarLinha } from "../../acoes";
+import { paginaDaFonte } from "@/lib/sugestoes-convencao";
 
 interface Comentario {
   id: string;
@@ -42,6 +43,11 @@ export function MemoriaView({
   const [fechados, setFechados] = useState<Set<string>>(new Set());
   const [comentando, setComentando] = useState<string | null>(null);
   const nomeModulo = (m: string) => MODULOS.find((x) => x.id === m)?.nome ?? m;
+  // 5.5: a fonte "Cláusula 4ª, p. 3" leva à página 3 do PDF da convenção
+  const linkFonte = (fonte: string) => {
+    const pg = paginaDaFonte(fonte);
+    return pg ? `${linkConvencao}?ver=1#page=${pg}` : linkConvencao!;
+  };
 
   return (
     <div className="pilha" style={{ gap: 24 }}>
@@ -113,7 +119,7 @@ export function MemoriaView({
                           <div className="legenda">{l.contaAgora}</div>
                           {l.fonte && (
                             <div className="legenda">
-                              Fonte: {linkConvencao && /cl[aá]usula|cct|conven/i.test(l.fonte) ? <a href={linkConvencao}>{l.fonte}</a> : l.fonte}
+                              Fonte: {linkConvencao && /cl[aá]usula|cct|conven/i.test(l.fonte) ? <a href={linkFonte(l.fonte)}>{l.fonte}</a> : l.fonte}
                             </div>
                           )}
                         </li>
@@ -184,7 +190,7 @@ export function MemoriaView({
                                 <div className="legenda">{l.contaAgora}</div>
                                 {l.fonte && (
                                   <div className="legenda">
-                                    Fonte: {linkConvencao && /cl[aá]usula|cct|conven/i.test(l.fonte) ? <a href={linkConvencao}>{l.fonte}</a> : l.fonte}
+                                    Fonte: {linkConvencao && /cl[aá]usula|cct|conven/i.test(l.fonte) ? <a href={linkFonte(l.fonte)}>{l.fonte}</a> : l.fonte}
                                   </div>
                                 )}
                               </td>

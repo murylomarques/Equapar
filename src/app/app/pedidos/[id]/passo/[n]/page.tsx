@@ -27,6 +27,8 @@ import { anexarDocumentoPedido, concluirPasso2, concluirPasso3, concluirPasso4, 
 import type { LinhaNaoLida } from "@/lib/planilha-import";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { DICAS_PASSO, mostrarDica } from "@/lib/dicas";
+import type { SugestoesConvencao } from "@/lib/sugestoes-convencao";
+import { ConvencaoIa } from "./convencao-ia";
 import { dispensarDica } from "../../../../acoes";
 import { Lightbulb } from "lucide-react";
 
@@ -365,6 +367,7 @@ function Passo3({ p, leitura }: { p: P; leitura: boolean }) {
       <p className="secundario mb-0 leitura">
         Atualize pisos, benefícios e encargos com os números da convenção nova. Em cada linha alterada, informe a fonte (a cláusula). A memória ao lado mostra cada conta.
       </p>
+      {!leitura && (iaAtiva() || p.sugestoesConvencao) && <ConvencaoIa pedidoId={p.id} sugestoes={(p.sugestoesConvencao as unknown as SugestoesConvencao | null) ?? null} />}
       <EditorPlanilha
         key={p.atualizadoEm.getTime()}
         pedidoId={p.id}
