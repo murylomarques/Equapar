@@ -70,8 +70,8 @@ function posto(id: string, nome: string, qtd: number, salario: string, vt: strin
   };
 }
 
-const antes: PlanilhaCustos = { tipos: [posto("srv", "Servente 44h", 10, "1740.00", "220.00", "440.00", "303.60"), posto("enc", "Encarregado 44h", 1, "2400.00", "220.00", "440.00", "303.60")] };
-const agora: PlanilhaCustos = { tipos: [posto("srv", "Servente 44h", 10, "1820.00", "240.00", "480.00", "324.20"), posto("enc", "Encarregado 44h", 1, "2510.00", "240.00", "480.00", "324.20")] };
+export const antes: PlanilhaCustos = { tipos: [posto("srv", "Servente 44h", 10, "1740.00", "220.00", "440.00", "303.60"), posto("enc", "Encarregado 44h", 1, "2400.00", "220.00", "440.00", "303.60")] };
+export const agora: PlanilhaCustos = { tipos: [posto("srv", "Servente 44h", 10, "1820.00", "240.00", "480.00", "324.20"), posto("enc", "Encarregado 44h", 1, "2510.00", "240.00", "480.00", "324.20")] };
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
 /** Recria a conta modelo fictícia (apaga só a conta modelo anterior, a do usuário da demonstração). */

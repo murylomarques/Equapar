@@ -1,78 +1,68 @@
 # Equapar: sistema
 
-Software que leva cada repactuação do cálculo ao recebimento, com prova. Implementa o "Dossiê da Startup Equapar (v2)" e a aba "Produto e experiência" (pasta acima desta).
+Software que leva cada repactuação de contrato público de mão de obra (limpeza, portaria, recepção) do cálculo ao recebimento, com prova.
 
-## Como rodar (Windows, macOS ou Linux)
+Documentação: [arquitetura](docs/ARQUITETURA.md) · [regras de cálculo](docs/CALCULO.md) · [operação](docs/OPERACAO.md) · [segurança](docs/SEGURANCA.md) · [LGPD](docs/LGPD.md) · [mudanças](CHANGELOG.md).
 
-Requisitos: Node 22 ou superior (testado no 24) e Docker.
+## Do zero até rodar
+
+Requisitos: **Node 22.12 ou superior (testado no 24) com npm 11**, e **Docker** (para o PostgreSQL). Funciona em Windows, macOS e Linux.
 
 ```bash
-npm install
-cp .env.example .env        # gere APP_SECRET (o comando está no arquivo)
-npm run setup               # sobe o Postgres (porta 5440), aplica as migrações e cria os dados de demonstração
-npm run dev                 # http://localhost:3000
+git clone https://github.com/murylomarques/Equapar.git
+cd Equapar/sistema            # se o repositório tiver a pasta sistema; senão, fique na raiz
+npm ci                        # instala exatamente o que está no package-lock.json
+cp .env.example .env          # no Windows (PowerShell): Copy-Item .env.example .env
 ```
 
-O `setup` imprime a senha do usuário de teste `dono@exemplo.local` (papel Dono, dados fictícios). A demonstração somente leitura abre em `/demonstracao`.
+Abra o `.env` e preencha **`APP_SECRET`** (32+ caracteres). Para gerar:
 
-Outros comandos:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Depois:
+
+```bash
+docker compose up -d          # PostgreSQL 17 na porta 5440 (usuário e senha de desenvolvimento no docker-compose.yml)
+npx prisma migrate deploy     # cria as tabelas
+npm run db:seed               # dados fictícios + usuário de teste; imprime a senha do dono@exemplo.local
+npm run dev                   # http://localhost:3000
+```
+
+- Entre com `dono@exemplo.local` e a senha impressa pelo `db:seed`.
+- A demonstração (cópia própria dos dados fictícios, por 4 horas) abre em `/demonstracao`.
+- Sem as chaves de serviço no `.env`, e-mail, WhatsApp, captcha e alerta de erro ficam **em simulação**: nada sai do servidor, tudo aparece no log e na tela Avisos.
+
+O `DATABASE_URL` do `.env.example` usa `127.0.0.1` de propósito: no Windows, `localhost` pode resolver para IPv6 e o Postgres do Docker não responde.
+
+## Comandos
 
 | Comando | O que faz |
 | --- | --- |
-| `npm test` | Testes do motor de cálculo e da leitura de Excel (16 testes) |
-| `npm run build && npm start` | Versão de produção |
-| `npm run e2e` | Testes ponta a ponta no navegador (Edge; com o servidor no ar; `BASE_URL` e `NAVEGADOR=chrome` opcionais) |
-| `npm run avisos` | Roda a verificação de avisos uma vez |
-| `npm run db:seed` | Recria só a conta de exemplo (gera nova senha) |
+| `npm test` | Testes de unidade (motor de cálculo, regras de pedido, segurança, máscaras) |
 | `npm run typecheck` / `npm run lint` | Checagens estáticas |
+| `npm run build && npm start` | Versão de produção |
+| `npm run db:seed` | Recria os dados fictícios e o Dono de teste (nova senha). Recusa rodar com `NODE_ENV=production` |
+| `npm run db:seed:demo` | Só a conta modelo da demonstração, sem usuário Dono (este pode rodar em produção) |
+| `npm run avisos` | Roda a verificação de avisos uma vez |
+| `npm run e2e` | Testes no navegador (servidor no ar). Antes, uma vez: `npx playwright install chromium` |
+| `npm run e2e:a11y` / `npm run e2e:teclado` | Acessibilidade (axe) e uso só com teclado |
 
-## O que está pronto
+Os testes de navegador leem `BASE_URL` (padrão `http://localhost:3000`), `SENHA_DONO` (a senha impressa pelo `db:seed`) e, opcional, `NAVEGADOR` (ex.: `msedge` para usar o Edge instalado). As falhas bloqueadoras corrigidas têm testes próprios em `e2e/bloqueadoras/`.
 
-**Site:** landing com os 12 blocos e textos da aba de produto, Raio-X por CNPJ (PNCP), relatório em PDF com consentimento, Preços, Para assessorias, 4 guias para o Google, Privacidade e Termos (minutas).
+## Produção
 
-**Produto:** Hoje, Carteira (filtros e ação em lote por convenção), Contrato (Resumo, Prazos com regra e fonte, Pedidos, Documentos, Histórico), Decisão de prorrogação (3 casos, texto da ressalva para copiar), assistente de pedido em 5 passos com salvamento automático, Memória de cálculo (linha a linha, comentários, aprovação só por Contador ou Dono), Pedido pronto (ofício em Word e PDF, planilha em Excel, memória em PDF, ZIP), os 6 estados do dinheiro até "recebido", A receber, Convenções, Clientes e seletor para assessorias (PDFs com a marca da assessoria), Avisos, Busca e Configurações (empresa, pessoas e papéis, avisos, cobrança, 2FA e sessões, exportar e excluir conta).
+Veja [docs/OPERACAO.md](docs/OPERACAO.md): imagem Docker (`Dockerfile`, aplica as migrações ao subir), `/api/saude`, armazenamento S3, backup, segredos e como ligar cada integração.
 
-**Avisos:** 60, 30 e 7 dias, protocolo, deferimento, 30 dias sem apostilamento e resumo semanal de segunda-feira. Modelos de WhatsApp como no documento, "SAIR" encerra os avisos e os eventos de métrica não levam dado pessoal.
+## Pastas
 
-**Motor de cálculo** (`src/lib/calculo`): estrutura da IN SEGES/MP 05/2017, Anexo VII-D (módulos 1 a 6). Usa aritmética decimal exata, arredonda cada linha a 2 casas (meio para cima), calcula os tributos por dentro e o retroativo mês a mês, com pro rata por dia. **Nenhum percentual vem pré-definido:** o usuário digita ou confirma tudo. A IA nunca produz o número final.
-
-**Qualidade:** testes de unidade com valores conferidos por cálculo independente, mais um teste ponta a ponta em navegador real cobrindo do cadastro ao "recebido", assessoria, 2FA e telas de celular sem rolagem horizontal.
-
-## Modo simulação (integrações sem chave)
-
-Com as chaves vazias no `.env`, nada sai da máquina. As mensagens são montadas e registradas em **Avisos**.
-
-| Integração | Variáveis | Sem a chave |
-| --- | --- | --- |
-| E-mail (SMTP) | `SMTP_URL`, `EMAIL_FROM` | Simulado |
-| WhatsApp Cloud API (Meta) | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` | Simulado |
-| Leitura de planilha em PDF (Claude) | `ANTHROPIC_API_KEY` | Só Excel ou digitação |
-| Entrar com Google | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Botão escondido |
-| Agendador externo | `CRON_SECRET` (e `AVISOS_AUTOMATICOS=false`) | Verificação a cada hora dentro do servidor |
-
-Os modelos de WhatsApp precisam ser aprovados na Meta com estes nomes: `equapar_prazo_60`, `equapar_prazo_30`, `equapar_prazo_7`, `equapar_prazo_resposta` e `equapar_deferido` (textos em `src/lib/mensagens.ts`).
-
-## O que ainda depende de você antes de vender
-
-1. **PNCP:** a busca por fornecedor usa a pesquisa pública do portal (`/api/search`), porque a API de consulta não filtra por CNPJ do fornecedor. Neste ambiente de desenvolvimento, o firewall do PNCP derrubou as conexões do servidor (ECONNRESET), enquanto o mesmo endereço respondia pelo navegador e pelo curl. O sistema mostra a mensagem de "PNCP não respondeu" e oferece o aviso por e-mail. Confirme o acesso a partir do servidor de produção e as regras de uso do portal.
-2. **Revisão jurídica:** do modelo de ofício, do texto de ressalva, da política de privacidade e dos termos (o Dossiê prevê de R$ 5 mil a R$ 10 mil).
-3. **Validação do cálculo com especialista** usando planilhas reais dos pilotos. As bases de cada linha seguem o modelo da IN, mas cada planilha real pode ter particularidades.
-4. **Dados institucionais** em `src/lib/site.ts` (razão social, CNPJ, endereço, WhatsApp, nome e foto do fundador), marcados com `[PREENCHER]`.
-5. **Pagamento online:** a tela de cobrança registra o plano e calcula R$ 4 por posto (mínimo R$ 297), mas não cobra cartão nem boleto.
-6. **Hospedagem e domínio:** nada foi publicado. Para produção, use um Postgres gerenciado, armazenamento de arquivos persistente (`STORAGE_DIR`) e HTTPS.
-7. **Vídeo da landing:** no lugar do vídeo de 2 minutos, o link "Ver a tela por dentro" abre a demonstração ao vivo, só leitura e com dados fictícios.
-
-## Estrutura
-
-```
-prisma/schema.prisma      modelo de dados (contas, empresas, contratos, convenções, pedidos, avisos, eventos)
-prisma/seed.ts            dados de demonstração fictícios
-src/lib/calculo/          motor de cálculo + testes
-src/lib/prazos.ts         regras de prazo, com fonte (TCU, Lei 14.133)
-src/lib/documentos.ts     ofício, planilha, memória, ZIP, relatório do Raio-X
-src/lib/avisos.ts         rotina de avisos
-src/lib/pncp.ts           consulta ao PNCP (descarta pessoa física)
-src/app/(site)/           site público
-src/app/(auth)/           entrar, criar conta, 2FA
-src/app/app/              produto
-```
+| Pasta | Conteúdo |
+| --- | --- |
+| `src/app` | Telas e ações (Next.js App Router): `(site)` público, `(auth)` acesso, `app` produto, `api` rotas |
+| `src/lib/calculo` | Motor de cálculo determinístico (decimal.js) e seus testes |
+| `src/lib` | Regras de negócio, segurança, avisos, documentos, armazenamento |
+| `prisma` | Esquema, migrações e dados fictícios (`seed-demo.ts`, `seed-dev.ts`) |
+| `scripts` | Rotinas avulsas; as de limpeza rodam em simulação por padrão |
+| `e2e` | Testes no navegador (Playwright) |
+| `docs` | Documentação, relatórios e capturas |
