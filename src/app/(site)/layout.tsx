@@ -8,6 +8,15 @@ import "./site.css";
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      {/* 5.1: faixa da jornada. Liga com SITE_FAIXA_JORNADA=true depois que o dono aprovar o texto */}
+      {process.env.SITE_FAIXA_JORNADA === "true" && (
+        <div className="site-faixa">
+          <div className="site-largura">
+            Jornada de 40 horas: seus contratos com mão de obra precisam de reequilíbrio.{" "}
+            <Link href="/guias/jornada-40-horas-contratos-publicos">Entenda e veja quais são afetados</Link>
+          </div>
+        </div>
+      )}
       <header className="site-topo">
         <div className="site-largura site-topo-in">
           <Logo largura={118} />

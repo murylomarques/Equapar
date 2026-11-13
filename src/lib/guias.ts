@@ -134,4 +134,36 @@ export const GUIAS: Guia[] = [
       { nome: "Zênite: prazo do pedido de reequilíbrio", url: "https://zenite.blog.br/?p=21116" },
     ],
   },
+  {
+    // 5.1: texto para aprovação do dono (listado no relatório). Datas vêm da configuração, "a confirmar com o jurídico".
+    slug: "jornada-40-horas-contratos-publicos",
+    titulo: "Jornada de 40 horas e contratos públicos: como pedir o reequilíbrio",
+    descricao: "A EC 141/2026 reduz a jornada semanal em etapas. Nos contratos com mão de obra dedicada, o preço precisa ser recomposto por aditivo.",
+    secoes: [
+      {
+        titulo: "O que muda",
+        paragrafos: [
+          "A Emenda Constitucional 141/2026 reduz a jornada semanal de 44 para 40 horas, em etapas: primeiro 42 horas, depois 40. As datas exatas de cada etapa devem ser confirmadas com o seu jurídico.",
+        ],
+      },
+      {
+        titulo: "Dois caminhos para cada contrato",
+        paragrafos: ["Em cada contrato, a empresa e o órgão precisam escolher um caminho. A Equapar mostra os dois lado a lado, com os números do seu contrato."],
+        lista: [
+          "Manter as horas de serviço: o órgão continua recebendo as mesmas horas por posto, com mais gente. O custo do posto sobe na proporção da jornada (44 ÷ 40 = 1,10).",
+          "Reduzir as horas de serviço: o valor mensal não muda e o órgão passa a receber menos horas por posto.",
+        ],
+      },
+      {
+        titulo: "O que o pedido precisa ter",
+        paragrafos: ["O pedido de reequilíbrio vai por termo aditivo, com a demonstração da variação dos custos."],
+        lista: [
+          "A planilha de custos atual do contrato.",
+          "A planilha nova e a memória de cálculo do cenário escolhido.",
+          "O ofício com o pedido e a minuta do aditivo, revisados pelo seu jurídico.",
+        ],
+      },
+    ],
+    fontes: [{ nome: "Conjur: o fim da escala 6x1 e a repercussão nos contratos públicos", url: "https://conjur.com.br/2026-out-24/o-fim-da-escala-6x1-e-a-repercussao-nos-contratos-publicos/" }],
+  },
 ];

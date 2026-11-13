@@ -372,3 +372,7 @@
   box-shadow: var(--e3);
   animation: painel-entra 250ms var(--entra);
 }
+
+/* 5.1: faixa no topo do site */
+.site-faixa { background: var(--tinta); color: var(--papel); font-size: 14px; padding: 8px 0; text-align: center; }
+.site-faixa a { color: var(--papel); text-decoration: underline; font-weight: 500; }
