@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { contexto, contratoDaConta, exigir, exigirUsuario, registrarHistorico } from "@/lib/auth";
+import { contexto, contratoDaConta, ehDemo, exigir, exigirUsuario, registrarHistorico } from "@/lib/auth";
 import { enviarConfirmacaoEmail } from "@/lib/confirmacao-envio";
 import { db } from "@/lib/db";
 import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/acao";
@@ -424,5 +424,23 @@ export async function adicionarCliente(_: Resultado, fd: FormData): Promise<Resu
     }
     revalidatePath("/app", "layout");
     return { ok: "Cliente adicionado." };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 5.4: dicas do primeiro pedido
+// ---------------------------------------------------------------------------
+
+/** Dispensa a dica de um passo; ela não volta mais para a conta. */
+export async function dispensarDica(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await contexto();
+    if (ehDemo(ctx) && !ctx.conta.demo) return; // demonstração compartilhada (só leitura): não grava
+    const chave = `passo${Number(texto(fd, "passo"))}`;
+    if (!/^passo[1-5]$/.test(chave)) return { erro: "Dica desconhecida." };
+    const conta = await db.conta.findUniqueOrThrow({ where: { id: ctx.conta.id }, select: { dicasDispensadas: true } });
+    const atuais = Array.isArray(conta.dicasDispensadas) ? (conta.dicasDispensadas as string[]) : [];
+    if (!atuais.includes(chave)) await db.conta.update({ where: { id: ctx.conta.id }, data: { dicasDispensadas: [...atuais, chave] } });
+    revalidatePath("/app/pedidos");
   });
 }

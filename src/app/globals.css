@@ -1939,3 +1939,21 @@ mark {
     display: block !important;
   }
 }
+
+/* 5.4: dica do primeiro pedido */
+.dica-passo {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border: 1px dashed var(--borda-campo);
+  border-radius: var(--raio-cartao);
+  background: var(--superficie);
+  font: var(--t-tabela);
+}
+.dica-passo > p {
+  flex: 1;
+  min-width: 220px;
+}

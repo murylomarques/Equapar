@@ -79,3 +79,17 @@ export async function criarContaDemo(tipo: "EMPRESA" | "ASSESSORIA" = "EMPRESA")
     { timeout: 30_000 },
   );
 }
+
+/**
+ * 5.4: pedido pronto de exemplo (dados fictícios da conta modelo da demonstração), para quem monta o
+ * primeiro pedido ver o resultado sem sair da própria conta. Só leitura.
+ */
+export async function pedidoExemplo() {
+  const modeloId = await contaModelo("EMPRESA");
+  if (!modeloId) return null;
+  return db.pedido.findFirst({
+    where: { contrato: { empresa: { contaId: modeloId, exemplo: true } }, estado: { in: ["PROTOCOLADO", "DEFERIDO"] } },
+    include: { contrato: true, convencao: true },
+    orderBy: { criadoEm: "asc" },
+  });
+}

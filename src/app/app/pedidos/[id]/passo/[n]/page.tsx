@@ -26,6 +26,9 @@ import { EditorPlanilha } from "../../../editor-planilha";
 import { anexarDocumentoPedido, concluirPasso2, concluirPasso3, concluirPasso4, enviarPlanilha, gerarPedido, marcarItem, salvarPasso1, usarModelo } from "../../../acoes";
 import type { LinhaNaoLida } from "@/lib/planilha-import";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
+import { DICAS_PASSO, mostrarDica } from "@/lib/dicas";
+import { dispensarDica } from "../../../../acoes";
+import { Lightbulb } from "lucide-react";
 
 export const metadata: Metadata = { title: "Pedido de repactuação | Equapar" };
 
@@ -47,6 +50,7 @@ export default async function Passo({ params }: { params: Promise<{ id: string; 
           Seu papel é só de leitura: você vê o pedido, mas não altera.
         </Alerta>
       )}
+      <DicaPasso contaId={ctx.conta.id} dispensadas={ctx.conta.dicasDispensadas} passo={n} />
       <div className="passo-conteudo">
         {n === 1 && <Passo1 p={p} contaId={ctx.conta.id} leitura={leitura} />}
         {n === 2 && <Passo2 p={p} leitura={leitura} />}
@@ -59,6 +63,29 @@ export default async function Passo({ params }: { params: Promise<{ id: string; 
 }
 
 type P = Awaited<ReturnType<typeof pedidoDaConta>>;
+
+/** 5.4: dica curta do passo no primeiro pedido da conta, com o pedido de exemplo ao lado. */
+async function DicaPasso({ contaId, dispensadas, passo }: { contaId: string; dispensadas: unknown; passo: number }) {
+  const gerados = await db.pedido.count({ where: { contrato: { empresa: { contaId } }, geradoEm: { not: null } } });
+  if (!mostrarDica(passo, gerados, dispensadas)) return null;
+  return (
+    <div className="dica-passo" role="note" aria-label="Dica do passo">
+      <Lightbulb size={18} strokeWidth={1.5} aria-hidden />
+      <p className="mb-0">
+        {DICAS_PASSO[passo]}{" "}
+        <a href="/app/pedido-exemplo" target="_blank" rel="noopener">
+          Ver um pedido pronto de exemplo
+        </a>
+      </p>
+      <FormAcao action={dispensarDica} semToast>
+        <input type="hidden" name="passo" value={passo} />
+        <BotaoEnvio className="btn btn-discreto btn-pequeno" pendente="Dispensando…">
+          Entendi, não mostrar mais
+        </BotaoEnvio>
+      </FormAcao>
+    </div>
+  );
+}
 
 function Rodape({ voltar, continuar = "Continuar", leitura, salvandoAntes }: { voltar?: string; continuar?: string; leitura: boolean; salvandoAntes?: boolean }) {
   return (
