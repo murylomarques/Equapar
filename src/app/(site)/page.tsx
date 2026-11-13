@@ -7,6 +7,7 @@ import { SITE, dadoSite } from "@/lib/site";
 import { TabelaPlanos } from "@/components/planos";
 import { FONTES } from "@/lib/prazos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
+import { modoPiloto } from "@/lib/chaves";
 
 export default function Landing() {
   return (
@@ -47,7 +48,9 @@ export default function Landing() {
         <section aria-label="Fatos públicos" className="fatos">
           <div>
             <strong>{SITE.levantamentoLimpeza.empresas} empresas têm contratos de limpeza vigentes no PNCP</strong>
-            <small>Fonte: levantamento Equapar no PNCP, {SITE.levantamentoLimpeza.data}.</small>
+            <small>
+              Fonte: levantamento Equapar no PNCP, {SITE.levantamentoLimpeza.data}. <Link href="/metodo/levantamento-limpeza">Veja o método</Link>.
+            </small>
           </div>
           <div>
             <strong>Assinar a prorrogação sem pedir pode encerrar o direito à repactuação</strong>
@@ -232,7 +235,8 @@ export default function Landing() {
         </div>
       </Revelar>
 
-      {/* 9. Para assessorias */}
+      {/* 9. Para assessorias (A6: escondido no modo piloto) */}
+      {!modoPiloto() && (
       <Revelar className="secao">
         <div className="site-largura grade-2" style={{ alignItems: "center" }}>
           <div>
@@ -245,6 +249,7 @@ export default function Landing() {
           <PreviaPronto />
         </div>
       </Revelar>
+      )}
 
       {/* 10. Quem faz (5.2: sem o nome do fundador preenchido, a seção não aparece em produção) */}
       {dadoSite(SITE.fundador.nome) && (
