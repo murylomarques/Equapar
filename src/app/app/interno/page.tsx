@@ -76,7 +76,7 @@ export default async function PainelInterno() {
   return (
     <>
       <CabecalhoPagina titulo="Painel interno" subtitulo="Só para o dono. Contagens e valores, sem dado pessoal. Funil dos últimos 90 dias." />
-      <div className="grade-2">
+      <div className="grade-2 painel-interno">
         <section className="cartao">
           <h2>Funil (90 dias)</h2>
           <table className="tabela">
