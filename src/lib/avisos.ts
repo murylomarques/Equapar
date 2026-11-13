@@ -7,6 +7,7 @@ import { db } from "./db";
 import { appUrl, enviar, MODELOS, type ModeloWhatsapp } from "./mensagens";
 import { acoesDoContrato, contratosComPrazoEm, prazoResposta } from "./prazos";
 import { data, diasAte, hojeUTC, plural, reais, reaisResumo, somarReais } from "./format";
+import { JORNADA, afetadoPelaJornada } from "./jornada";
 
 type Prefs = { prazo?: "EMAIL" | "WHATSAPP" | "AMBOS"; resposta?: "EMAIL" | "WHATSAPP" | "AMBOS"; deferido?: "EMAIL" | "WHATSAPP" | "AMBOS"; semanal?: boolean; hora?: number };
 
@@ -137,7 +138,7 @@ function semanaIso(d: Date) {
 /** Roda os avisos. Com `contaId`, só daquela conta (S5: "Verificar prazos agora" não toca nas outras). */
 export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: string; agora?: Date } = {}) {
   const hoje = hojeUTC(agora);
-  const resumo = { prazos: 0, semanais: 0, apostilamento: 0 };
+  const resumo = { prazos: 0, semanais: 0, apostilamento: 0, jornada: 0 };
   const horaBr = Number(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo", hour: "numeric", hour12: false }));
   const segunda = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getDay() === 1;
 
@@ -179,6 +180,33 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
           }
         }
       }
+    }
+
+    // 5.1: aviso único por conta sobre a jornada (EC 141/2026), com a fonte, quando há contrato afetado
+    const afetados = contratos.filter((c) => afetadoPelaJornada(c));
+    if (!conta.avisoJornadaEm && afetados.length > 0) {
+      for (const u of usuarios) {
+        if (!u.emailVerificadoEm) continue;
+        const r = await enviar({
+          contaId: conta.id,
+          chave: `JORNADA:${conta.id}:${u.id}`,
+          tipo: "JORNADA",
+          canal: "EMAIL",
+          destino: u.email,
+          assunto: `Jornada de 40 horas: ${plural(afetados.length, "contrato seu é afetado", "contratos seus são afetados")}`,
+          corpo: [
+            `Equapar: ${JORNADA.fonte.texto}`,
+            ``,
+            `Pelas datas que usamos (a confirmar com o seu jurídico), a jornada cai para 42 horas em ${data(JORNADA.inicio42())} e para 40 horas em ${data(JORNADA.inicio40())}.`,
+            `${plural(afetados.length, "contrato de mão de obra dedicada segue", "contratos de mão de obra dedicada seguem")} vigente${afetados.length > 1 ? "s" : ""} depois disso.`,
+            ``,
+            `Ver os contratos e montar os pedidos: ${appUrl("/app/carteira?filtro=jornada")}`,
+            `Fonte: ${JORNADA.fonte.fonte}. ${JORNADA.fonte.url}`,
+          ].join("\n"),
+        });
+        if (r) resumo.jornada++;
+      }
+      await db.conta.update({ where: { id: conta.id }, data: { avisoJornadaEm: agora } });
     }
 
     // Resumo semanal: segunda às 7h (ou no horário escolhido)
