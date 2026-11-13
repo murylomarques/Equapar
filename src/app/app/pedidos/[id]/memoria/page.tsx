@@ -12,6 +12,7 @@ import { Alerta, CabecalhoPagina } from "@/components/ui/estrutura";
 import { aprovarMemoria } from "../../acoes";
 import { MemoriaView } from "./memoria-view";
 import { aprovacaoValida } from "@/lib/pedido-regras";
+import { jornadaEmSimulacao, MARCA_SIMULACAO_JORNADA } from "@/lib/jornada-acesso";
 
 export const metadata: Metadata = { title: "Memória de cálculo | Equapar" };
 
@@ -60,6 +61,7 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
         }
       />
 
+      {p.gatilho === "JORNADA_EC141" && jornadaEmSimulacao() && <Alerta tipo="erro" className="mb-16" titulo={MARCA_SIMULACAO_JORNADA} />}
       {!comp || comp.erros.length ? (
         <Alerta tipo="erro" titulo="A memória ainda não pode ser montada">
           <ul style={{ margin: "4px 0 8px", paddingLeft: 18 }}>

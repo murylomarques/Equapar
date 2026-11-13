@@ -4,6 +4,7 @@ import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { PRECOS } from "@/lib/planos";
 import { Contato } from "./contato";
 import { modoPiloto } from "@/lib/chaves";
+import { jornadaLiberada } from "@/lib/chaves";
 
 export function TabelaPlanos() {
   const min = PRECOS.carteiraMinimo;
@@ -42,6 +43,18 @@ export function TabelaPlanos() {
             Criar conta
           </Link>
         </div>
+        {/* D0: o pacote da jornada só aparece com a jornada liberada */}
+        {jornadaLiberada() && (
+          <div className="plano">
+            <h3 className="mb-0">Jornada 40 horas</h3>
+            <div className="preco">R$ {PRECOS.jornada40PorContrato().toLocaleString("pt-BR")}</div>
+            <small>por contrato, nas duas etapas</small>
+            <p className="secundario mb-0">Pedido de reequilíbrio pela EC 141/2026, com os dois cenários (manter ou reduzir as horas) lado a lado.</p>
+            <div className="mt-16">
+              <Contato agenda={false} />
+            </div>
+          </div>
+        )}
         {!modoPiloto() && (
         <div className="plano">
           <h3 className="mb-0">Assessoria</h3>

@@ -13,6 +13,7 @@ import { importarPncp } from "../acoes";
 import { iniciarPedidosEmLote } from "../pedidos/acoes";
 import { TabelaCarteira, type LinhaCarteira } from "./tabela-carteira";
 import { JORNADA, afetadoPelaJornada } from "@/lib/jornada";
+import { jornadaEmSimulacao, jornadaVisivelPara, MARCA_SIMULACAO_JORNADA } from "@/lib/jornada-acesso";
 
 export const metadata: Metadata = { title: "Carteira | Equapar" };
 
@@ -42,7 +43,10 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
   const ufs = [...new Set(todos.map((c) => c.uf).filter(Boolean))].sort() as string[];
   const esferas = [...new Set(todos.map((c) => c.esfera).filter(Boolean))] as string[];
 
-  const filtro = FILTROS.find((f) => f.id === sp.filtro);
+  // D0: o filtro e o lote da jornada só existem para quem pode ver a jornada
+  const verJornada = jornadaVisivelPara(ctx.usuario.email);
+  const filtros = FILTROS.filter((f) => f.id !== "jornada" || verJornada);
+  const filtro = filtros.find((f) => f.id === sp.filtro);
   let contratos = todos;
   if (filtro) contratos = contratos.filter(filtro.teste);
   if (sp.uf) contratos = contratos.filter((c) => c.uf === sp.uf);
@@ -139,7 +143,10 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
             </Alerta>
           ))}
 
-      {podeLote && sp.filtro === "jornada" && semPedidoJornada.length > 0 && (
+      {verJornada && jornadaEmSimulacao() && sp.filtro === "jornada" && (
+        <Alerta tipo="atencao" className="mb-16" titulo={MARCA_SIMULACAO_JORNADA} />
+      )}
+      {verJornada && podeLote && sp.filtro === "jornada" && semPedidoJornada.length > 0 && (
         <Alerta
           tipo="atencao"
           className="mb-16"
@@ -164,7 +171,7 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
         <Link href={link({ filtro: undefined })} className="filtro" aria-current={!sp.filtro ? "true" : undefined}>
           Todos <span className="n">({todos.length})</span>
         </Link>
-        {FILTROS.map((f) => (
+        {filtros.map((f) => (
           <Link key={f.id} href={link({ filtro: sp.filtro === f.id ? undefined : f.id })} className="filtro" aria-current={sp.filtro === f.id ? "true" : undefined}>
             {f.nome} <span className="n">({n(f.teste)})</span>
           </Link>

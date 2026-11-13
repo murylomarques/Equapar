@@ -11,6 +11,8 @@ import { EMAIL_DEMO } from "./site";
 import { opcoesCookieSessao } from "./cookie-sessao";
 import { ErroUsuario } from "./acao";
 import { situacaoEfetiva } from "./planos";
+import { jornadaLiberada } from "./chaves";
+import { podeVerPainel } from "./metricas";
 
 const { nome: COOKIE, secure: COOKIE_SEGURO } = opcoesCookieSessao(); // S8
 const DURACAO_DIAS = 30;
@@ -214,6 +216,9 @@ export async function pedidoDaConta(ctx: Contexto, pedidoId: string) {
     include: { contrato: { include: { empresa: true, convencao: true } }, convencao: true },
   });
   if (!p) throw new ErroUsuario("Pedido não encontrado nesta conta.");
+  // D0: com a chave da jornada desligada, o pedido da jornada não existe para quem não está em PAINEL_EMAILS
+  // (vale para todas as telas, ações e arquivos que carregam o pedido por aqui)
+  if (p.gatilho === "JORNADA_EC141" && !jornadaLiberada() && !podeVerPainel(ctx.usuario.email)) throw new ErroUsuario("Pedido não encontrado nesta conta.");
   return p;
 }
 

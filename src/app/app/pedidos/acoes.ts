@@ -23,10 +23,10 @@ import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendencias
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { limiteDoPlano } from "@/lib/planos";
-import { planilhaDoCenario, type Cenario } from "@/lib/jornada";
-import { JORNADA } from "@/lib/jornada";
+import { etapaNaData, etapasJornada, JORNADA, planilhaDoCenario, type Cenario } from "@/lib/jornada";
 import { proximaVersao } from "@/lib/versao-documento";
 import { aplicarConfirmadas, filtrarSugestoes, fonteDaSugestao, linhasParaConvencao, normalizarNumero, type SugestoesConvencao } from "@/lib/sugestoes-convencao";
+import { acaoJornada } from "@/lib/jornada-acesso";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -59,6 +59,7 @@ async function criarPedido(ctx: Awaited<ReturnType<typeof exigir>>, contratoId: 
           gatilho: "JORNADA_EC141",
           dataBase: inicio,
           inicioJornada: inicio,
+          jornadaInicioEfeitos: inicio, // D4: padrão = início da etapa
           jornadaAntes: de40 ? 42 : 44,
           jornadaDepois: de40 ? 40 : 42,
           horasCobertura: "44.00",
@@ -94,6 +95,7 @@ export async function iniciarPedidosEmLote(_: Resultado, fd: FormData): Promise<
     const ids = fd.getAll("contratoId").map(String);
     if (!ids.length) return { erro: "Nenhum contrato selecionado." };
     const motivo = texto(fd, "motivo") === "JORNADA" ? "JORNADA" : "CONVENCAO";
+    if (motivo === "JORNADA") acaoJornada(ctx.usuario.email, "JORNADA_EC141"); // D0
     for (const id of ids) await criarPedido(ctx, id, motivo);
   });
   if (r.erro) return r;
@@ -150,12 +152,18 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
     const gatilho = z.enum(["NOVA_CONVENCAO", "ACORDO_DISSIDIO", "OUTRO_CUSTO", "JORNADA_EC141"]).parse(texto(fd, "gatilho") || "NOVA_CONVENCAO");
+    acaoJornada(ctx.usuario.email, gatilho); // D0: cliente não escolhe a jornada com a chave desligada
     const jornada = gatilho === "JORNADA_EC141";
     const convencaoId = jornada ? null : texto(fd, "convencaoId") || null;
-    // 5.1: na jornada, a diferença conta a partir do início da nova jornada
-    const inicioJornada = jornada ? lerData(fd.get("inicioJornada")) : null;
-    const jornadaAntes = jornada ? Number(texto(fd, "jornadaAntes") || 44) : null;
-    const jornadaDepois = jornada ? Number(texto(fd, "jornadaDepois") || 0) : null;
+    // D3/D4: a etapa vale pela data (44 → 42 a partir de JORNADA_42H_INICIO; 42 → 40 a partir de JORNADA_40H_INICIO).
+    // Três datas: início da etapa (a data geral), data do aditivo (quando formalizado) e início dos efeitos
+    // financeiros (padrão: o início da etapa; o retroativo usa esta). 44 → 40 num só aditivo fica fora.
+    const etapa = jornada ? etapasJornada().find((e) => e.id === texto(fd, "etapa")) ?? null : null;
+    const inicioJornada = etapa?.inicio ?? null;
+    const jornadaInicioEfeitos = jornada ? lerData(fd.get("jornadaInicioEfeitos")) ?? inicioJornada : null;
+    const jornadaDataAditivo = jornada ? lerData(fd.get("jornadaDataAditivo")) : null;
+    const jornadaAntes = etapa?.antes ?? null;
+    const jornadaDepois = etapa?.depois ?? null;
     const horasCobertura = jornada ? Number(texto(fd, "horasCobertura").replace(",", ".") || 0) : null;
     const dataBase = jornada ? inicioJornada : lerData(fd.get("dataBase"));
     const dataDeposito = lerData(fd.get("dataDeposito"));
@@ -164,9 +172,10 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
     if (convencaoId && !conv) return { erro: "Convenção inválida." };
     const campos: Record<string, string> = {};
     if (jornada) {
-      if (!inicioJornada) campos.inicioJornada = "Digite a data de início da nova jornada.";
-      if (![42, 40].includes(jornadaDepois ?? 0)) campos.jornadaDepois = "Escolha a nova jornada: 42 ou 40 horas.";
-      if (!(jornadaAntes! > jornadaDepois!)) campos.jornadaAntes = "A jornada atual precisa ser maior que a nova.";
+      if (!etapa) campos.etapa = "Escolha a etapa: de 44 para 42 horas ou de 42 para 40 horas.";
+      // D3: os efeitos financeiros precisam cair dentro da etapa escolhida
+      else if (jornadaInicioEfeitos && etapaNaData(jornadaInicioEfeitos)?.id !== etapa.id)
+        campos.jornadaInicioEfeitos = `Os efeitos desta etapa começam em ${data(etapa.inicio)}${etapa.fim ? ` e vão até a véspera de ${data(etapa.fim)}` : ""}.`;
       if (!(horasCobertura! > 0)) campos.horasCobertura = "Digite as horas semanais de cobertura que o contrato exige por posto (ex.: 44).";
     }
     if (gatilho !== "OUTRO_CUSTO" && !jornada && !convencaoId) campos.convencaoId = "Escolha a convenção. Se ela não estiver na lista, cadastre em Convenções.";
@@ -178,7 +187,8 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
     if (p.gatilho !== gatilho) mudou.push("o motivo");
     if ((p.convencaoId ?? null) !== convencaoId) mudou.push("a convenção");
     if (p.dataBase?.getTime() !== dataBase?.getTime()) mudou.push("a data-base");
-    if (p.jornadaAntes !== jornadaAntes || p.jornadaDepois !== jornadaDepois || Number(p.horasCobertura ?? 0) !== Number(horasCobertura ?? 0)) mudou.push("os dados da jornada");
+    if (p.jornadaAntes !== jornadaAntes || p.jornadaDepois !== jornadaDepois || Number(p.horasCobertura ?? 0) !== Number(horasCobertura ?? 0) || p.jornadaInicioEfeitos?.getTime() !== jornadaInicioEfeitos?.getTime())
+      mudou.push("os dados da jornada");
     const invalidar = mudou.length ? await invalidarAprovacao(ctx, p, `Alterou ${mudou.join(", ")}`) : {};
     await db.pedido.update({
       where: { id: p.id },
@@ -194,6 +204,8 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
         jornadaDepois,
         horasCobertura: horasCobertura == null ? null : horasCobertura.toFixed(2),
         inicioJornada,
+        jornadaInicioEfeitos,
+        jornadaDataAditivo,
         ...(jornada ? {} : { cenarioJornada: null }),
         passoAtual: Math.max(p.passoAtual, 2),
       },
@@ -326,13 +338,22 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
     const cenarioAnterior = p.cenarioJornada;
     const ref = lerData(fd.get("dataReferencia")) ?? hojeUTC();
     // 5.1: no pedido da jornada, a planilha nova sai do cenário escolhido (escolha obrigatória, sem padrão)
-    let jornadaDados: { cenarioJornada?: Cenario; planilhaAgora?: Prisma.InputJsonValue } = {};
+    let jornadaDados: { cenarioJornada?: Cenario; planilhaAntes?: Prisma.InputJsonValue; planilhaAgora?: Prisma.InputJsonValue } = {};
     if (p.gatilho === "JORNADA_EC141") {
       const cen = z.enum(["MANTER_HORAS", "REDUZIR_HORAS"]).safeParse(texto(fd, "cenarioJornada"));
       if (!cen.success) return { erro: "Escolha o cenário: manter ou reduzir as horas de serviço.", campos: { cenarioJornada: "Escolha um cenário." } };
       if (!p.planilhaAntes || !p.jornadaAntes || !p.jornadaDepois) return recusarPorPendencias(p.id, pendenciasParaGerar(p, [], 3), "Antes de continuar, resolva:");
-      jornadaDados = { cenarioJornada: cen.data, planilhaAgora: json(planilhaDoCenario(p.planilhaAntes as unknown as PlanilhaCustos, cen.data, p.jornadaAntes, p.jornadaDepois)) };
-      p = { ...p, cenarioJornada: cen.data, planilhaAgora: jornadaDados.planilhaAgora as Prisma.JsonValue };
+      // D2: a escolha das linhas do módulo 5 que acompanham o número de empregados fica gravada na planilha atual
+      let atual = p.planilhaAntes as unknown as PlanilhaCustos;
+      if (fd.get("acompanhaEditado") === "1")
+        atual = {
+          tipos: atual.tipos.map((t) => ({
+            ...t,
+            linhas: t.linhas.map((l) => (l.modulo === "M5" && l.tipo === "VALOR" ? { ...l, acompanhaEmpregados: fd.get(`acompanha:${t.id}:${l.id}`) === "on" } : l)),
+          })),
+        };
+      jornadaDados = { cenarioJornada: cen.data, planilhaAntes: json(atual), planilhaAgora: json(planilhaDoCenario(atual, cen.data, p.jornadaAntes, p.jornadaDepois)) };
+      p = { ...p, cenarioJornada: cen.data, planilhaAntes: jornadaDados.planilhaAntes as Prisma.JsonValue, planilhaAgora: jornadaDados.planilhaAgora as Prisma.JsonValue };
     }
     const pend = pendenciasParaGerar({ ...p, dataReferencia: ref }, [], 3);
     if (pend.length) return recusarPorPendencias(p.id, pend, "Antes de continuar, resolva:");

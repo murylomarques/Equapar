@@ -19,7 +19,14 @@ vi.mock("./mensagens", () => ({ appUrl: (p = "") => p, enviar: vi.fn(async (e: {
 const { rodarAvisos } = await import("./avisos");
 
 describe("5.1: aviso da jornada", () => {
+  it("D0: com a chave da jornada desligada, nenhum cliente recebe o aviso", async () => {
+    vi.stubEnv("JORNADA_REGRA_CONFIRMADA", "false");
+    await rodarAvisos({ agora: new Date("2026-11-13T15:00:00Z") });
+    expect(enviados.filter((e) => e.chave.startsWith("JORNADA:"))).toHaveLength(0);
+    expect(conta.avisoJornadaEm).toBeNull();
+  });
   it("envia uma vez com a fonte e marca a conta; na segunda rodada não repete", async () => {
+    vi.stubEnv("JORNADA_REGRA_CONFIRMADA", "true");
     const agora = new Date("2026-11-13T15:00:00Z"); // sexta: sem resumo semanal
     await rodarAvisos({ agora });
     const j = enviados.filter((e) => e.chave.startsWith("JORNADA:"));

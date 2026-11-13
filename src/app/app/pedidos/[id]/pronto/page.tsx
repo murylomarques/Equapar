@@ -15,6 +15,7 @@ import { CampoData, CampoDinheiro, CampoTexto, RadiosCartao, TextoLongo } from "
 import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
 import { gerarCobranca, marcarRecebido, novoPedidoAPartirDe, registrarApostilamento, registrarProtocolo, registrarRecurso, registrarResposta } from "../../acoes";
 import { HistoricoOrgao } from "@/components/historico-orgao";
+import { jornadaEmSimulacao, MARCA_SIMULACAO_JORNADA } from "@/lib/jornada-acesso";
 
 export const metadata: Metadata = { title: "Pedido | Equapar" };
 
@@ -87,6 +88,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
         subtitulo={`Contrato ${p.contrato.numero} · ${p.contrato.orgao}`}
       />
 
+      {p.gatilho === "JORNADA_EC141" && jornadaEmSimulacao() && <Alerta tipo="erro" className="mb-16" titulo={MARCA_SIMULACAO_JORNADA} />}
       <ol className="estados" tabIndex={0} aria-label="Etapas do pedido até o dinheiro entrar">
         {ESTADOS.map((e, i) => (
           <li key={e.id} className={`${i <= idx && p.estado !== "INDEFERIDO" ? "feito" : ""} ${i === idx ? "atual" : ""}`} aria-current={i === idx ? "step" : undefined}>

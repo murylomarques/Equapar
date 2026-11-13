@@ -17,7 +17,7 @@ import { FonteRegra } from "@/components/fonte-regra";
 import { SeloSimples } from "@/components/selo";
 import { AreaArquivo } from "@/components/ui/arquivo";
 import { CampoData, CampoDinheiro, CampoInteiro, CampoSelect, CampoTexto, Combobox, RadiosCartao, TextoLongo } from "@/components/ui/campos";
-import { JORNADA, empregadosPorPosto, horasReduzidas, planilhaDoCenario, type Cenario } from "@/lib/jornada";
+import { JORNADA, acompanha, empregadosPorPosto, etapasJornada, fatorTexto, horasReduzidas, planilhaDoCenario, reducaoHorasPct, type Cenario } from "@/lib/jornada";
 import { Alerta, Termo } from "@/components/ui/estrutura";
 import { aprovacaoValida } from "@/lib/pedido-regras";
 import { NOME_CONTAR_ATE, NOME_MES_INCOMPLETO } from "@/lib/pedido";
@@ -31,6 +31,7 @@ import type { SugestoesConvencao } from "@/lib/sugestoes-convencao";
 import { ConvencaoIa } from "./convencao-ia";
 import { dispensarDica } from "../../../../acoes";
 import { Lightbulb } from "lucide-react";
+import { jornadaEmSimulacao, jornadaVisivelPara, MARCA_SIMULACAO_JORNADA } from "@/lib/jornada-acesso";
 
 export const metadata: Metadata = { title: "Pedido de repactuação | Equapar" };
 
@@ -52,9 +53,11 @@ export default async function Passo({ params }: { params: Promise<{ id: string; 
           Seu papel é só de leitura: você vê o pedido, mas não altera.
         </Alerta>
       )}
+      {/* D0: marca de simulação em toda tela do pedido da jornada enquanto a chave mestra está desligada */}
+      {p.gatilho === "JORNADA_EC141" && jornadaEmSimulacao() && <Alerta tipo="erro" className="mb-16" titulo={MARCA_SIMULACAO_JORNADA} />}
       <DicaPasso contaId={ctx.conta.id} dispensadas={ctx.conta.dicasDispensadas} passo={n} />
       <div className="passo-conteudo">
-        {n === 1 && <Passo1 p={p} contaId={ctx.conta.id} leitura={leitura} />}
+        {n === 1 && <Passo1 p={p} contaId={ctx.conta.id} leitura={leitura} verJornada={jornadaVisivelPara(ctx.usuario.email)} />}
         {n === 2 && <Passo2 p={p} leitura={leitura} />}
         {n === 3 && <Passo3 p={p} leitura={leitura} />}
         {n === 4 && <Passo4 p={p} leitura={leitura} />}
@@ -104,7 +107,7 @@ function Rodape({ voltar, continuar = "Continuar", leitura, salvandoAntes }: { v
   );
 }
 
-async function Passo1({ p, contaId, leitura }: { p: P; contaId: string; leitura: boolean }) {
+async function Passo1({ p, contaId, leitura, verJornada }: { p: P; contaId: string; leitura: boolean; verJornada: boolean }) {
   const convs = await db.convencao.findMany({ where: { contaId }, orderBy: { ano: "desc" } });
   const usamConvencao = p.convencaoId ? await db.contrato.count({ where: { convencaoId: p.convencaoId } }) : 0;
   return (
@@ -121,7 +124,8 @@ async function Passo1({ p, contaId, leitura }: { p: P; contaId: string; leitura:
               { valor: "NOVA_CONVENCAO", titulo: NOME_GATILHO.NOVA_CONVENCAO, descricao: "O caso mais comum: novos pisos e benefícios da categoria." },
               { valor: "ACORDO_DISSIDIO", titulo: NOME_GATILHO.ACORDO_DISSIDIO, descricao: "Acordo coletivo ou sentença de dissídio." },
               { valor: "OUTRO_CUSTO", titulo: NOME_GATILHO.OUTRO_CUSTO, descricao: "Outra mudança de custo que precisa ser explicada." },
-              { valor: "JORNADA_EC141", titulo: NOME_GATILHO.JORNADA_EC141, descricao: "Redução da jornada semanal para 42 e depois 40 horas. Pedido de reequilíbrio por aditivo." },
+              // D0: a jornada só aparece para quem pode ver (chave mestra ou PAINEL_EMAILS)
+              ...(verJornada ? [{ valor: "JORNADA_EC141", titulo: NOME_GATILHO.JORNADA_EC141, descricao: "Redução da jornada semanal para 42 e depois 40 horas. Pedido de reequilíbrio por aditivo." }] : []),
             ]}
           />
           <fieldset className="so-jornada" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
@@ -134,31 +138,38 @@ async function Passo1({ p, contaId, leitura }: { p: P; contaId: string; leitura:
                 </a>
               </Alerta>
             )}
+            {/* D3: a etapa vale pela data; 44 → 40 num só aditivo fica fora até o advogado confirmar */}
             <div className="linha-form">
-              <CampoInteiro nome="jornadaAntes" rotulo="Jornada atual (horas por semana)" valorInicial={p.jornadaAntes ?? 44} />
               <CampoSelect
-                nome="jornadaDepois"
-                rotulo="Nova jornada"
-                valorInicial={p.jornadaDepois ? String(p.jornadaDepois) : "42"}
-                opcoes={[
-                  { valor: "42", rotulo: "42 horas por semana" },
-                  { valor: "40", rotulo: "40 horas por semana" },
-                ]}
+                nome="etapa"
+                rotulo="Etapa da jornada"
+                valorInicial={p.jornadaDepois === 40 ? "42-40" : "44-42"}
+                opcoes={etapasJornada().map((e) => ({ valor: e.id, rotulo: `De ${e.antes} para ${e.depois} horas (a partir de ${data(e.inicio)})` }))}
               />
-            </div>
-            <div className="linha-form">
               <CampoInteiro
                 nome="horasCobertura"
                 rotulo="Horas de cobertura por posto (por semana)"
                 valorInicial={p.horasCobertura != null ? Number(p.horasCobertura) : 44}
                 ajuda="Quantas horas por semana o contrato exige em cada posto."
               />
+            </div>
+            {/* D4: as três datas. O início da etapa é a data geral; os efeitos financeiros vêm da empresa. */}
+            <div className="linha-form">
               <CampoData
-                nome="inicioJornada"
-                rotulo="Início da nova jornada"
-                valorInicial={paraInputData(p.inicioJornada ?? JORNADA.inicio42())}
+                nome="jornadaInicioEfeitos"
+                rotulo="Início dos efeitos financeiros"
+                opcional
+                valorInicial={p.jornadaInicioEfeitos ? paraInputData(p.jornadaInicioEfeitos) : null}
                 mostrarRelativo={false}
-                ajuda="A diferença conta a partir desta data."
+                ajuda="Em branco: o início da etapa. A diferença conta a partir desta data."
+              />
+              <CampoData
+                nome="jornadaDataAditivo"
+                rotulo="Data do aditivo"
+                opcional
+                valorInicial={p.jornadaDataAditivo ? paraInputData(p.jornadaDataAditivo) : null}
+                mostrarRelativo={false}
+                ajuda="Quando o aditivo for formalizado."
               />
             </div>
           </fieldset>
@@ -295,6 +306,7 @@ function CenariosJornada({ p, leitura }: { p: P; leitura: boolean }) {
   const ref = p.dataReferencia ?? hojeUTC();
   const cen = (c: Cenario) => calcularPedido({ ...p, dataReferencia: ref, planilhaAgora: planilhaDoCenario(atual, c, antes, depois) as never });
   const manter = cen("MANTER_HORAS");
+  const linhasM5 = atual.tipos.flatMap((posto) => posto.linhas.filter((l) => l.modulo === "M5" && l.tipo === "VALOR").map((l) => ({ posto, l })));
   const reduzir = cen("REDUZIR_HORAS");
   const linha = (rot: string, v: React.ReactNode) => (
     <div className="entre">
@@ -336,12 +348,33 @@ function CenariosJornada({ p, leitura }: { p: P; leitura: boolean }) {
           </div>
         </label>
       </div>
-      <p className="legenda mt-8 mb-0">
-        Manter as horas: as linhas em reais da planilha atual são multiplicadas por {antes} ÷ {depois}; percentuais e tributos acompanham. Regra nova, a confirmar com o jurídico.{" "}
+      <p className="legenda mt-8">
+        Manter as horas: o salário e os demais valores por empregado ficam no valor da convenção; o posto passa a precisar de {fatorTexto(antes, depois)} empregados equivalentes ({antes} ÷ {depois}), só nas linhas que
+        acompanham o número de empregados. Reduzir as horas: os valores por empregado não mudam (art. 2º da EC 141) e as horas entregues caem {reducaoHorasPct(antes, depois).toFixed(3).replace(".", ",")}%. Regra nova, a confirmar com o jurídico.{" "}
         <a href={JORNADA.fonte.url} target="_blank" rel="noreferrer">
           Fonte
         </a>
       </p>
+      {/* D2: linhas do módulo 5 (materiais, equipamentos, uniformes): a pessoa decide quais acompanham o número de empregados */}
+      {linhasM5.length > 0 && (
+        <details className="cartao" open>
+          <summary style={{ cursor: "pointer" }}>Insumos do módulo 5: quais acompanham o número de empregados?</summary>
+          <p className="ajuda-texto mt-8">Materiais e equipamentos não mudam com a jornada; uniformes, sim (cada empregado recebe o seu). Ajuste se o seu caso for diferente.</p>
+          <ul className="lista-limpa pilha-8">
+            {linhasM5.map(({ posto, l }) => (
+              <li key={`${posto.id}:${l.id}`}>
+                <label className="check">
+                  <input type="checkbox" name={`acompanha:${posto.id}:${l.id}`} defaultChecked={acompanha(l)} form="form-passo3" />
+                  <span>
+                    {l.descricao} · {posto.nome}
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <input type="hidden" name="acompanhaEditado" value="1" form="form-passo3" />
+        </details>
+      )}
     </fieldset>
   );
 }

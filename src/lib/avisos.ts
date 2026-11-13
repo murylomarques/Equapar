@@ -8,6 +8,7 @@ import { appUrl, enviar, MODELOS, type ModeloWhatsapp } from "./mensagens";
 import { acoesDoContrato, contratosComPrazoEm, prazoResposta } from "./prazos";
 import { data, diasAte, hojeUTC, plural, reais, reaisResumo, somarReais } from "./format";
 import { JORNADA, afetadoPelaJornada } from "./jornada";
+import { jornadaLiberada } from "./chaves";
 
 type Prefs = { prazo?: "EMAIL" | "WHATSAPP" | "AMBOS"; resposta?: "EMAIL" | "WHATSAPP" | "AMBOS"; deferido?: "EMAIL" | "WHATSAPP" | "AMBOS"; semanal?: boolean; hora?: number };
 
@@ -184,7 +185,7 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
 
     // 5.1: aviso único por conta sobre a jornada (EC 141/2026), com a fonte, quando há contrato afetado
     const afetados = contratos.filter((c) => afetadoPelaJornada(c));
-    if (!conta.avisoJornadaEm && afetados.length > 0) {
+    if (jornadaLiberada() && !conta.avisoJornadaEm && afetados.length > 0) {
       for (const u of usuarios) {
         if (!u.emailVerificadoEm) continue;
         const r = await enviar({

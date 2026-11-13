@@ -5,6 +5,7 @@ import { Contato } from "@/components/contato";
 import { MenuSite } from "@/components/menu-site";
 import "./site.css";
 import { modoPiloto } from "@/lib/chaves";
+import { jornadaLiberada } from "@/lib/chaves";
 
 // A6/B1: as páginas do site são estáticas e se refazem a cada 60 s com o ambiente de execução (.env da imagem).
 // Depois de subir ou mudar uma chave, o site reflete o .env em até 1 minuto. As rotas escondidas valem na hora (proxy).
@@ -16,7 +17,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       {/* 5.1: faixa da jornada. Liga com SITE_FAIXA_JORNADA=true depois que o dono aprovar o texto */}
-      {process.env.SITE_FAIXA_JORNADA === "true" && (
+      {process.env.SITE_FAIXA_JORNADA === "true" && jornadaLiberada() && (
         <div className="site-faixa">
           <div className="site-largura">
             {/* texto sugerido no prompt; passa pelo dono (trava 6) */}
