@@ -84,8 +84,17 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
         </div>
       )}
       {/* 5.2: cinco colunas, sem quebrar órgão e convenção em várias linhas; cabeçalho fixo; linha inteira clicável */}
-      <div className="tabela-rolagem so-desktop cab-fixo">
-        <table className="tabela">
+      <div className="tabela-rolagem carteira-larga cab-fixo">
+        {/* A1: largura fixa por coluna; cabe em 1.150 px sem rolagem lateral. Abaixo de 1.024 px, cartões. */}
+        <table className="tabela tabela-carteira">
+          <colgroup>
+            {podeLote && <col style={{ width: 44 }} />}
+            <col />
+            <col style={{ width: 170 }} />
+            <col style={{ width: 190 }} />
+            <col style={{ width: 140 }} />
+            <col style={{ width: 150 }} />
+          </colgroup>
           <caption className="sr-only">Contratos da carteira. Clique no cabeçalho para ordenar.</caption>
           <thead>
             <tr>
@@ -100,10 +109,12 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
                 </th>
               )}
               {cab("orgao", "Contrato e órgão")}
-              <th scope="col">Situação</th>
               {cab("prazoData", "Próximo prazo")}
+              <th scope="col">Situação</th>
               {cab("valorMensal", "Valor mensal", true)}
-              {cab("convencao", "Convenção")}
+              <th scope="col">
+                <span className="sr-only">Ação</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -136,35 +147,37 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
                   <div className="legenda uma-linha">
                     {[mostrarEmpresa ? l.empresa : null, l.local, `fim ${l.fimTxt}`, l.postos ? plural(l.postos, "posto", "postos") : null].filter(Boolean).join(" · ")}
                   </div>
+                  <div className="legenda uma-linha" title={l.convencao ?? undefined}>
+                    {l.convencao ? `Convenção: ${l.convencao}` : "Sem convenção informada"}
+                  </div>
+                </td>
+                <td>
+                  {l.prazoTxt}
+                  <div className="legenda">{l.prazoTitulo}</div>
                 </td>
                 <td>
                   <Selo selo={l.selo} />
                 </td>
-                <td className="sem-quebra">
-                  {l.prazoTxt}
-                  <div className="legenda">{l.prazoTitulo}</div>
-                </td>
                 <td className="num">{l.valorMensalTxt}</td>
                 <td>
-                  {l.convencao ? (
-                    <span className="uma-linha col-convencao" title={l.convencao}>
-                      {l.convencao}
-                    </span>
-                  ) : (
-                    <span className="secundario">—</span>
-                  )}
+                  <Link className="btn btn-pequeno acima" href={l.pedir ? `/app/pedidos/novo?contrato=${l.id}` : `/app/contratos/${l.id}`}>
+                    {l.pedir ? "Montar pedido" : "Abrir"}
+                  </Link>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="cartoes-celular">
+      <div className="cartoes-celular cartoes-carteira">
         {ordenadas.map((l) => (
           <Link key={l.id} href={`/app/contratos/${l.id}`} className="cartao-linha">
             <strong>{l.orgao}</strong>
             <span className="legenda">
               Contrato {l.numero} · fim da vigência {l.fimTxt}
+            </span>
+            <span className="legenda">
+              Próximo prazo: {l.prazoTxt} · {l.valorMensalTxt}
             </span>
             <div style={{ marginTop: 8 }}>
               <Selo selo={l.selo} />

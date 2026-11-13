@@ -49,3 +49,6 @@ e2e/capturas/
 
 # Capturas da verificação final (geradas por e2e/capturas.mjs; grandes demais para o repositório)
 docs/produto-pronto/depois/*.png
+
+# Capturas de evidência da v4 (PNG fora do repositório)
+docs/pronto/capturas/*.png
