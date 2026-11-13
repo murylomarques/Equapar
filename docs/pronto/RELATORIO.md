@@ -170,3 +170,32 @@ busca do PNCP com CNPJ numérico fictício (11222333000181)                     
 consulta pública /api/consulta/v1/contratos?cnpjOrgao=12ABC34501DE35                   → HTTP 204 (sem conteúdo, sem erro)
 ```
 Nenhuma das duas recusa o formato novo. Quando houver contratos publicados com CNPJ alfanumérico, a comparação com `fornecedor_ni` já usa a forma canônica.
+
+### B1. Variáveis SITE_* (feito)
+
+Antes: `src/lib/site.ts` com `"[PREENCHER] ..."` no código (razão social, CNPJ, endereço, WhatsApp, fundador).
+Depois: `dadosEmpresa()`, `contatoSite()` e `camposFaltando()` leem só `SITE_EMAIL_CONTATO`, `SITE_WHATSAPP`, `SITE_FUNDADOR_NOME`, `SITE_FUNDADOR_FOTO`, `SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, `SITE_ENDERECO`, `SITE_CIDADE` e `SITE_AGENDA_URL`, com o comportamento da tabela do prompt para cada campo vazio (e-mail padrão `contato@equapar.com`; sem WhatsApp, contato por e-mail; sem fundador, o bloco "quem faz" fala só da empresa; sem foto, espaço neutro; sem razão social, "Equapar (empresa em constituição)"; sem CNPJ, nada; sem endereço, só a cidade). `SITE_CNPJ` passa pela validação da B3; inválido não aparece e o build avisa:
+
+```
+⚠ Site: variáveis vazias (o site esconde ou usa o padrão): SITE_EMAIL_CONTATO, SITE_WHATSAPP, ...
+⚠ Site: SITE_CNPJ inválido; o CNPJ não aparece no site.
+```
+
+Prova: `src/lib/site.test.ts` (tudo vazio, só a cidade, CNPJ válido numérico e alfanumérico, CNPJ inválido), só com valores fictícios. Capturas com e sem `SITE_WHATSAPP` e `SITE_CNPJ`: na verificação final.
+
+### B2. Domínio equapar.com (feito)
+
+Antes: `equapar.com.br` fixo em `src/lib/mensagens.ts` (remetente), `src/lib/pncp.ts` (User-Agent), `.env.example` e testes.
+Depois: `remetentePadrao()` (`EMAIL_FROM` ou `Equapar Avisos <avisos@<domínio do SITE_EMAIL_CONTATO>>`) e `agentePncp()` (APP_URL e `SITE_EMAIL_CONTATO`). `.env.example`: `EMAIL_FROM="Equapar Avisos <avisos@equapar.com>"`. Testes com domínios fictícios. Prova em `src/lib/site.test.ts` ("B2").
+
+### B4. Botão de contato (feito)
+
+`src/components/contato.tsx`: com `SITE_WHATSAPP`, "Falar no WhatsApp" (`https://wa.me/<dígitos>?text=Olá! Vim pelo site da Equapar e quero saber mais.`); sem ele, "Falar por e-mail" (`mailto:` do `SITE_EMAIL_CONTATO`); com `SITE_AGENDA_URL`, "Marcar uma conversa". Usado na demonstração e no aviso de limite, em Para assessorias, no plano Piloto e no fim de Preços, e no rodapé (que mostra o telefone formatado quando há WhatsApp). Prova: `src/lib/site.test.ts` ("B4"); captura `capturas/A3-limite-1-390.png` (sem WhatsApp: "Falar por e-mail").
+
+### B5. Termos e privacidade sem CNPJ (feito)
+
+`identificacaoEmpresa()`: sem `SITE_CNPJ`, "Equapar, empresa em constituição, sob a responsabilidade de <SITE_FUNDADOR_NOME>, <SITE_CIDADE>", com `SITE_EMAIL_CONTATO` como canal do titular; com CNPJ, razão social, CNPJ e endereço, sem nova programação. Os dois textos continuam marcados MINUTA. Prova: `src/lib/site.test.ts` ("B5").
+
+### B6. Aviso de dados faltando (feito)
+
+`src/lib/avisos-operacao.ts`: em produção, `/api/saude` devolve `avisos: [{ codigo: "dados_empresa_incompletos", detalhe: ["SITE_CNPJ", ...] }]` (só nomes) e o painel interno mostra o aviso no topo. O status continua 200: o CNPJ faltando não impede a subida. O mesmo mecanismo avisa `email_nao_configurado` (G6). Prova: `src/lib/avisos-operacao.test.ts`.
