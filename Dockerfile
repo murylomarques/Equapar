@@ -1,7 +1,7 @@
 # Equapar: imagem de produção (Fase 1, 4.1.4).
 # Build:  docker build -t equapar .
 # Rodar:  docker run --env-file .env -p 3000:3000 equapar            (app; aplica as migrações ao subir)
-#         docker run --env-file .env equapar npm run worker          (processo da fila, quando existir)
+#         docker run --env-file .env equapar npm run worker:prod     (processo da fila: avisos, PNCP, exportação)
 # Debian slim (não Alpine): o motor do Prisma precisa de OpenSSL e glibc.
 
 FROM node:24-bookworm-slim AS base
@@ -28,6 +28,10 @@ COPY --from=build --chown=equapar /app/.next ./.next
 COPY --from=build --chown=equapar /app/public ./public
 COPY --from=build --chown=equapar /app/prisma ./prisma
 COPY --from=build --chown=equapar /app/next.config.ts ./next.config.ts
+# O worker roda o TypeScript direto (tsx): leva o código-fonte e os tsconfig
+COPY --from=build --chown=equapar /app/src ./src
+COPY --from=build --chown=equapar /app/scripts ./scripts
+COPY --from=build --chown=equapar /app/tsconfig.json /app/tsconfig.worker.json ./
 USER equapar
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s CMD node -e "fetch('http://127.0.0.1:3000/api/saude').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { atrasoDaFila } from "@/lib/fila";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,13 @@ export async function GET() {
     console.error(JSON.stringify({ nivel: "erro", evento: "saude_banco", erro: String((e as Error)?.message ?? e).slice(0, 200) }));
     banco = "falha";
   }
-  const ok = banco === "ok";
-  return NextResponse.json({ ok, banco, ms: Date.now() - inicio }, { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } });
+  // Fila: tarefa pendente atrasada mais de 30 minutos = worker parado
+  let fila: "ok" | "atrasada" | "desconhecida" = "desconhecida";
+  let atrasoMin: number | null = null;
+  if (banco === "ok") {
+    atrasoMin = await atrasoDaFila().catch(() => null);
+    fila = atrasoMin != null && atrasoMin > 30 ? "atrasada" : "ok";
+  }
+  const ok = banco === "ok" && fila !== "atrasada";
+  return NextResponse.json({ ok, banco, fila, atrasoMin, ms: Date.now() - inicio }, { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } });
 }

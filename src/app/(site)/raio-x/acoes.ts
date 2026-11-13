@@ -9,6 +9,7 @@ import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
 import { normalizarTelefoneBR } from "@/lib/telefone";
 import { headers } from "next/headers";
 import { consumirCotas } from "@/lib/cota";
+import { agendarRetentativaPncp } from "@/lib/tarefas";
 import { verificarCaptcha } from "@/lib/captcha";
 import { ipConfiavel } from "@/lib/limite";
 
@@ -86,7 +87,7 @@ export async function avisarDepois(_: EstadoForm, fd: FormData): Promise<EstadoF
   if (barrado) return { erro: barrado };
   await db.lead.create({ data: { cnpj, email, consentimentoAvisos: false } });
   try {
-    await consultarPncp(cnpj, { semCache: true, timeoutMs: 30_000 });
+    await consultarPncp(cnpj, { semCache: true, timeoutMs: 15_000 });
     await enviar({
       contaId: null,
       chave: `RAIOX:${cnpj}:${new Date().toISOString().slice(0, 10)}`,
@@ -98,7 +99,11 @@ export async function avisarDepois(_: EstadoForm, fd: FormData): Promise<EstadoF
     });
     return { ok: "Pronto. A consulta terminou e mandamos o link para o seu e-mail." };
   } catch (e) {
-    if (e instanceof PncpIndisponivel) return { ok: "Guardamos seu e-mail, mas o PNCP segue fora do ar. Tente de novo mais tarde." };
+    // L13: a fila tenta de novo a cada 30 minutos por 24 horas e manda o link quando der certo
+    if (e instanceof PncpIndisponivel) {
+      await agendarRetentativaPncp(cnpj, email);
+      return { ok: "O PNCP segue fora do ar. Vamos tentar de novo a cada 30 minutos pelas próximas 24 horas e mandamos o link para o seu e-mail quando der certo." };
+    }
     throw e;
   }
 }

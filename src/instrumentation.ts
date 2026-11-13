@@ -1,10 +1,9 @@
 /**
- * Roda a verificação de avisos de hora em hora enquanto o servidor estiver no ar.
- * Em produção com várias instâncias, desligue (AVISOS_AUTOMATICOS=false) e use o
- * agendador externo chamando /api/cron/avisos com CRON_SECRET.
+ * Fase 1 (4.1.1): os avisos de hora em hora vêm do worker (`npm run worker`), pela fila.
+ * Só numa instalação de um processo, sem worker, ligue AVISOS_AUTOMATICOS=true para o servidor rodá-los.
  */
 export async function register() {
-  if (process.env.NEXT_RUNTIME !== "nodejs" || process.env.AVISOS_AUTOMATICOS === "false") return;
+  if (process.env.NEXT_RUNTIME !== "nodejs" || process.env.AVISOS_AUTOMATICOS !== "true") return;
   const g = globalThis as unknown as { __avisos?: NodeJS.Timeout };
   if (g.__avisos) return;
   const { rodarAvisos } = await import("./lib/avisos");

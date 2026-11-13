@@ -1,0 +1,10 @@
+{
+  // Worker e scripts (tsx), fora do Next: "server-only" vira um módulo vazio, como nos testes.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "server-only": ["./src/lib/__vazio.ts"]
+    }
+  }
+}

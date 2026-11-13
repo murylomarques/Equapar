@@ -11,5 +11,5 @@ export default defineConfig({
       "server-only": path.resolve(__dirname, "src/lib/__vazio.ts"),
     },
   },
-  test: { include: ["src/**/*.test.ts"] },
+  test: { include: ["src/**/*.test.ts"], exclude: [...(process.env.TESTE_BANCO ? [] : ["src/**/*.db.test.ts"]), "node_modules/**"] },
 });

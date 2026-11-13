@@ -48,7 +48,7 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
         {estado.segundos >= 10 && estado.segundos < 30 && <p className="ajuda-texto mt-16 mb-0">O PNCP está demorando mais que o normal. Seguimos esperando a resposta.</p>}
         {estado.segundos >= 30 && (
           <div className="mt-16">
-            <p className="mb-8">Isso está levando mais que o normal. Se preferir, deixe seu e-mail: tentamos de novo, com mais tempo, e mandamos o link se der certo.</p>
+            <p className="mb-8">Isso está levando mais que o normal. Se preferir, deixe seu e-mail: tentamos a cada 30 minutos pelas próximas 24 horas e mandamos o link quando der certo.</p>
             <FormAvisarDepois cnpj={cnpj} />
           </div>
         )}
@@ -69,7 +69,7 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
       <div className="cartao" role="alert" style={{ maxWidth: 640 }}>
         <WifiOff size={28} strokeWidth={1.5} aria-hidden style={{ color: "var(--grafite)" }} />
         <h2 className="mt-8">O PNCP não respondeu agora</h2>
-        <p className="secundario">Tente de novo em alguns minutos, ou deixe seu e-mail: tentamos de novo, com mais tempo, e mandamos o link se der certo.</p>
+        <p className="secundario">Tente de novo em alguns minutos, ou deixe seu e-mail: tentamos a cada 30 minutos pelas próximas 24 horas e mandamos o link quando der certo.</p>
         <FormAvisarDepois cnpj={cnpj} />
         <button type="button" className="btn btn-discreto mt-16" onClick={() => window.location.reload()}>
           Tentar de novo agora

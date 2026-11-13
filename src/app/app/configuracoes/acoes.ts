@@ -13,6 +13,7 @@ import { EMAIL_DEMO } from "@/lib/site";
 import { normalizarTelefoneBR } from "@/lib/telefone";
 import { gerarCodigosRecuperacao } from "@/lib/recuperacao";
 import { tokenConvite } from "@/lib/convite";
+import { enfileirar } from "@/lib/fila";
 
 export async function salvarConta(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
@@ -255,8 +256,8 @@ export async function exportarEmFundo(): Promise<Resultado> {
     const rodando = await db.trabalhoFundo.findFirst({ where: { contaId: ctx.conta.id, tipo: "EXPORTAR", status: "RODANDO" } });
     if (rodando) return { ok: "A exportação já está em andamento. Avisamos no sino quando terminar." };
     const t = await db.trabalhoFundo.create({ data: { contaId: ctx.conta.id, usuarioId: ctx.usuario.id, tipo: "EXPORTAR", status: "RODANDO" } });
-    const { executarExportacao } = await import("@/lib/exportacao");
-    void executarExportacao(t.id, ctx.conta.id);
+    // L15: a exportação roda no worker (fila), fora da requisição
+    await enfileirar("EXPORTAR", { trabalhoId: t.id, contaId: ctx.conta.id }, { chave: `exportar:${t.id}` });
     revalidatePath("/app", "layout");
     return { ok: "Exportação iniciada. Você pode continuar usando o sistema; avisamos no sino quando terminar." };
   });

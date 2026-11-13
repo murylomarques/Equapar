@@ -17,12 +17,15 @@
     "db:up": "docker compose up -d",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx --env-file=.env prisma/seed-dev.ts",
-    "avisos": "tsx scripts/avisos.ts",
+    "avisos": "tsx --tsconfig tsconfig.worker.json --env-file=.env scripts/avisos.ts",
     "setup": "npm run db:up && prisma migrate deploy && prisma generate && npm run db:seed",
     "e2e": "node e2e/fluxo.mjs desktop && node e2e/fluxo.mjs celular && node e2e/assessoria-2fa.mjs",
     "e2e:a11y": "node e2e/acessibilidade.mjs",
     "e2e:teclado": "node e2e/teclado.mjs",
-    "db:seed:demo": "tsx --env-file=.env prisma/seed-demo.ts"
+    "db:seed:demo": "tsx --env-file=.env prisma/seed-demo.ts",
+    "test:db": "node --env-file=.env -e \"process.env.TESTE_BANCO=1;require('child_process').execSync('npx vitest run --dir src',{stdio:'inherit',env:process.env})\"",
+    "worker": "tsx --tsconfig tsconfig.worker.json --env-file=.env scripts/worker.ts",
+    "worker:prod": "tsx --tsconfig tsconfig.worker.json scripts/worker.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
@@ -44,6 +47,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
+    "tsx": "^4.23.15",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -57,7 +61,6 @@
     "eslint-config-next": "16.4.6",
     "lighthouse": "^12.8.2",
     "playwright-core": "^1.65.0",
-    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
   },

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 let bancoOk = true;
 vi.mock("@/lib/db", () => ({ db: { $queryRaw: vi.fn(async () => { if (!bancoOk) throw new Error("ECONNREFUSED"); return [{ ok: 1 }]; }) } }));
+vi.mock("@/lib/fila", () => ({ atrasoDaFila: vi.fn(async () => null) }));
 const { GET } = await import("./route");
 
 describe("4.1.4: /api/saude", () => {
