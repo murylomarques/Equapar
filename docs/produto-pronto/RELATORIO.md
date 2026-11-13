@@ -107,7 +107,7 @@ Nenhuma de produção. (Desenvolvimento, do redesenho: `axe-core`, `lighthouse`.
 
 | Item | Situação | Prova | Pendente |
 | --- | --- | --- | --- |
-| 4.3 Instalação (`npm ci`) | parcial | `package-lock.json` regenerado; `packageManager: npm@11.6.2` e `engines` no `package.json`. Commit "Fase 1 (4.3): npm ci" | Conferir `npm ci` num container limpo (aqui há dois servidores usando o `node_modules`) |
+| 4.3 Instalação (`npm ci`) | feito (fase 2: conferido no container) | `package-lock.json` regenerado; `packageManager: npm@11.6.2` e `engines` no `package.json`. Commit "Fase 1 (4.3): npm ci" | Conferir `npm ci` num container limpo (aqui há dois servidores usando o `node_modules`) |
 | 4.3 Testes de navegador com Chromium | feito | `e2e/*.mjs`: Chromium do Playwright por padrão; `NAVEGADOR=msedge` opcional | Instalar o navegador: `npx playwright install chromium` (no README) |
 | 4.3 `.env.example` versionado | feito | Todas as variáveis lidas no código, com obrigatória/opcional; exceção no `.gitignore` | Somar as próximas desta fase |
 | 4.1.2 Armazenamento (disco e S3) | feito | `src/lib/armazenamento.test.ts`: disco (grava, lê, apaga, apaga pasta da conta) e S3 com cliente falso (Put cifrado AES256 no bucket privado, Get, apagar prefixo em páginas, link assinado de 5 min). Todo arquivo passa pela interface; download com S3 redireciona para o link assinado depois de conferir a permissão. Commit "4.1.2" | Escolher o provedor e criar o bucket (item 6 da seção 8). Scripts de limpeza ainda leem só o disco |
@@ -178,6 +178,7 @@ Nada apagado, renomeado ou com tipo trocado. A biblioteca de convenções (5.4.7
 
 | Verificação | Resultado |
 | --- | --- |
+| Instalação limpa e imagem Docker | **Achado e corrigido:** `npm ci` falhava no container (npm 11.19 da imagem `node:24-bookworm-slim`): o lock gerado no Windows com npm 11.6 não tinha `@emnapi/core` e `@emnapi/runtime`. Lock regenerado com npm 11.19.1 (só acréscimos; nenhuma versão existente mudou) e `packageManager` atualizado. Depois: `docker build` completo, o container aplica as migrações ao subir ("No pending migrations"), `/api/saude` 200 e landing 200 |
 | Testes de unidade (`npm test`) | 53 arquivos, 216 testes, todos passando. Os testes do motor e o caso do exemplo (R$ 33.951,94) seguem com os mesmos valores |
 | Testes no banco (`npm run test:db`) | fila, cobrança, documentos da jornada, versão dos documentos: passando |
 | Tipos e lint | `tsc` sem erro; `eslint` sem aviso |
