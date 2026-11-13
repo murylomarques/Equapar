@@ -18,7 +18,8 @@ export default async function Prorrogacao({ params }: { params: Promise<{ id: st
   if (!c) notFound();
   const d = diasAte(c.vigenciaFim);
   const ano = c.convencao?.ano ?? hojeUTC().getUTCFullYear();
-  const ressalva = `A CONTRATADA ressalva o direito à repactuação decorrente da convenção coletiva de ${ano}, ainda não depositada nesta data.`;
+  // C2: modelo de ressalva (MINUTA até o advogado aprovar). Os colchetes são preenchidos pela empresa.
+  const ressalva = `MINUTA, revise com seu jurídico: "Fica ressalvada a análise de eventual repactuação referente a [convenção coletiva de ${ano}, categoria e período], solicitada no protocolo [número e data], cuja instrução será complementada com [documentos pendentes]."`;
   const inicial = c.tipoReajuste === "INDICE" ? "indice" : c.convencao?.situacao === "REGISTRADA" ? "registrada" : c.convencao ? "pendente" : null;
 
   return (

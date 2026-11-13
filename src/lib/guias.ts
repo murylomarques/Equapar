@@ -50,12 +50,13 @@ export const GUIAS: Guia[] = [
   {
     slug: "prorrogacao-sem-perder-a-repactuacao",
     titulo: "Prorrogação sem perder a repactuação: quando ressalvar",
-    descricao: "Para o TCU, prorrogar sem pedir a repactuação encerra o direito. Veja os três casos e o que fazer em cada um.",
+    descricao: "Vai prorrogar o contrato? Confira se há repactuação a solicitar e se cabe ressalva no termo aditivo. Veja os três casos e o que fazer em cada um.",
     secoes: [
       {
         titulo: "A regra",
         paragrafos: [
-          "Para o TCU, se a empresa aceita prorrogar o contrato sem pedir a repactuação, ocorre a preclusão lógica e as condições econômicas antigas continuam valendo.",
+          "Para o TCU, se a empresa aceita prorrogar o contrato sem pedir a repactuação, pode ocorrer a preclusão lógica, e as condições econômicas antigas continuam valendo.",
+          "A regra depende do regime do contrato (Lei 8.666/1993 ou Lei 14.133/2021, e o que o próprio contrato prevê) e da fase do pedido (convenção já registrada, pendente ou pedido já protocolado). Confirme o seu caso com o jurídico.",
         ],
       },
       {
@@ -68,9 +69,10 @@ export const GUIAS: Guia[] = [
         ],
       },
       {
-        titulo: "Modelo de ressalva",
+        titulo: "Modelo de ressalva (MINUTA, revise com seu jurídico)",
         paragrafos: [
-          "\"A CONTRATADA ressalva o direito à repactuação decorrente da convenção coletiva de {ano}, ainda não depositada nesta data.\" Revise o texto com seu jurídico antes de usar.",
+          "\"Fica ressalvada a análise de eventual repactuação referente a [instrumento, categoria e período], solicitada no protocolo [número e data], cuja instrução será complementada com [documentos pendentes].\"",
+          "O Parecer Referencial 00001/2025 da AGU exige pedido expresso para incluir a ressalva no contexto que analisou: registre a solicitação antes de pedir a ressalva no termo aditivo.",
         ],
       },
     ],
