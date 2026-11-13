@@ -9,11 +9,14 @@ import { resumoRecuperado } from "@/lib/recuperado";
 import { CabecalhoPagina } from "@/components/ui/estrutura";
 import { EstadoVazio } from "@/components/ui/apresentacao";
 import { BotaoImprimir } from "./imprimir";
+import { modoPiloto } from "@/lib/chaves";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = { title: "Recuperado com a Equapar | Equapar" };
 
 /** 5.2: total deferido e recebido, por ano e por contrato. Para o dono e para a renovação. */
 export default async function Recuperado() {
+  if (modoPiloto()) redirect("/app/hoje"); // A6
   const ctx = await contexto();
   const pedidos = await db.pedido.findMany({
     where: { ...escopoPedidos(ctx), OR: [{ deferidoEm: { not: null } }, { recebidoEm: { not: null } }] },

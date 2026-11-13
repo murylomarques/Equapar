@@ -14,6 +14,7 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { reenviarConfirmacao } from "./acoes";
 import "./app.css";
 import { Provedores } from "@/components/ui/provedores";
+import { modoPiloto } from "@/lib/chaves";
 
 export const dynamic = "force-dynamic";
 
@@ -122,7 +123,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <Link href="/app/avisos" role="menuitem">
                 <Bell size={16} strokeWidth={1.5} aria-hidden /> Avisos
               </Link>
-              {!demo && (
+              {!demo && !modoPiloto() && (
                 <Link href="/app/trocar-conta" role="menuitem">
                   <Users size={16} strokeWidth={1.5} aria-hidden /> {totalContas > 1 ? "Trocar de conta" : "Contas"}
                 </Link>

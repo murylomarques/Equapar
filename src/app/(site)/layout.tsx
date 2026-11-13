@@ -3,6 +3,10 @@ import { Logo } from "@/components/logo";
 import { SITE, dadoSite } from "@/lib/site";
 import { MenuSite } from "@/components/menu-site";
 import "./site.css";
+import { modoPiloto } from "@/lib/chaves";
+
+// A6/B1: o site lê chaves e dados da empresa do ambiente de execução (.env da imagem), não do build
+export const dynamic = "force-dynamic";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -23,7 +27,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <nav aria-label="Principal" className="site-nav">
             <Link href="/#como-funciona">Como funciona</Link>
             <Link href="/precos">Preços</Link>
-            <Link href="/assessorias">Para assessorias</Link>
+            {!modoPiloto() && <Link href="/assessorias">Para assessorias</Link>}
             <Link href="/guias">Guias</Link>
           </nav>
           <div className="fileira">
@@ -33,7 +37,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <Link href="/raio-x" className="btn btn-primario so-desktop">
               Fazer o Raio-X grátis
             </Link>
-            <MenuSite />
+            <MenuSite ocultar={modoPiloto() ? ["/assessorias"] : []} />
           </div>
         </div>
       </header>

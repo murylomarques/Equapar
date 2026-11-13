@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Bell, ChevronRight, Scale, Settings, Users } from "lucide-react";
 import { contexto, ehDemo } from "@/lib/auth";
 import { CabecalhoPagina } from "@/components/ui/estrutura";
+import { modoPiloto } from "@/lib/chaves";
 
 export const metadata: Metadata = { title: "Mais | Equapar" };
 
@@ -14,7 +15,7 @@ export default async function Mais() {
     { href: "/app/avisos", nome: "Avisos", detalhe: "Prazos, respostas e trabalhos prontos", icone: Bell },
     { href: "/app/configuracoes", nome: "Configurações", detalhe: "Conta, equipe, avisos e cobrança", icone: Settings },
     ...(ctx.conta.tipo === "ASSESSORIA" ? [{ href: "/app/clientes", nome: "Clientes", detalhe: "Empresas atendidas pela assessoria", icone: Users }] : []),
-    ...(!ehDemo(ctx) ? [{ href: "/app/trocar-conta", nome: "Trocar de conta", detalhe: "Outras contas em que você participa", icone: Users }] : []),
+    ...(!ehDemo(ctx) && !modoPiloto() ? [{ href: "/app/trocar-conta", nome: "Trocar de conta", detalhe: "Outras contas em que você participa", icone: Users }] : []),
   ];
   return (
     <>

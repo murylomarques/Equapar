@@ -4,6 +4,8 @@ import { PreviaPronto } from "@/components/previas";
 import { SITE } from "@/lib/site";
 import { entrarNaDemonstracao } from "../demonstracao/acoes";
 import { Captcha } from "@/components/captcha";
+import { modoPiloto } from "@/lib/chaves";
+import { notFound } from "next/navigation";
 
 // 5.2: conversa de 20 minutos (link de agenda opcional em SITE_AGENDA_URL; sem ele, e-mail)
 const agenda = process.env.SITE_AGENDA_URL || `mailto:${SITE.email}?subject=${encodeURIComponent("Conversa de 20 minutos sobre a Equapar para assessorias")}`;
@@ -14,6 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default function Assessorias() {
+  if (modoPiloto()) notFound(); // A6
   return (
     <div className="site-largura secao">
       <div className="grade-2" style={{ alignItems: "center" }}>

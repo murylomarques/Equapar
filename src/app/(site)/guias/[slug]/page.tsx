@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FormCnpjServidor } from "@/components/form-cnpj-servidor";
 import { GUIAS } from "@/lib/guias";
+import { guiaNoAr } from "@/lib/chaves";
 
 export function generateStaticParams() {
   return GUIAS.map((g) => ({ slug: g.slug }));
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function GuiaPagina({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const g = GUIAS.find((x) => x.slug === slug);
-  if (!g) notFound();
+  if (!g || !guiaNoAr(slug)) notFound();
   return (
     <article className="site-largura secao">
       <div className="guia">

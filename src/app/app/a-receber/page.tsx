@@ -8,6 +8,7 @@ import { data, diasAte, diasAtras, plural, reais, reaisResumo, somarReais } from
 import { SeloSimples } from "@/components/selo";
 import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
 import { EstadoVazio } from "@/components/ui/apresentacao";
+import { modoPiloto } from "@/lib/chaves";
 
 export const metadata: Metadata = { title: "A receber | Equapar" };
 
@@ -34,9 +35,11 @@ export default async function AReceber() {
         titulo="A receber"
         subtitulo={pedidos.length ? `${reaisResumo(total)} deferidos e ainda não recebidos` : undefined}
         acao={
-          <Link href="/app/recuperado" className="btn">
-            Recuperado com a Equapar
-          </Link>
+          modoPiloto() ? undefined : (
+            <Link href="/app/recuperado" className="btn">
+              Recuperado com a Equapar
+            </Link>
+          )
         }
       />
       {atrasados.length > 0 && (

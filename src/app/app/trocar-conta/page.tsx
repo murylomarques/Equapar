@@ -10,6 +10,7 @@ import { trocarConta } from "../acoes";
 export const metadata: Metadata = { title: "Contas | Equapar" };
 
 /** L14: as contas de que a pessoa participa; troca a conta da sessão. */
+// A6: escondida no modo piloto
 export default async function TrocarConta() {
   const ctx = await contexto();
   const membros = await db.membro.findMany({ where: { usuarioId: ctx.usuario.id }, include: { conta: true }, orderBy: { criadoEm: "asc" } });

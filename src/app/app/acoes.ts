@@ -14,6 +14,7 @@ import { vigenciaAoImportar } from "@/lib/pncp-vigencia";
 import { riscoPreclusao } from "@/lib/prorrogacao";
 import { limiteDoPlano } from "@/lib/planos";
 import { proximaVersao } from "@/lib/versao-documento";
+import { modoPiloto } from "@/lib/chaves";
 
 // ---------------------------------------------------------------------------
 // Sessão
@@ -38,6 +39,7 @@ export async function reenviarConfirmacao(): Promise<Resultado> {
 
 /** L14: troca a conta da sessão (só para contas de que a pessoa participa). */
 export async function trocarConta(_: Resultado, fd: FormData): Promise<Resultado> {
+  if (modoPiloto()) return { erro: "Trocar de conta não está disponível no piloto." }; // A6
   const r = await tentar(async (): Promise<Resultado | void> => {
     const ctx = await contexto();
     const contaId = texto(fd, "contaId");

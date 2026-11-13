@@ -3,10 +3,11 @@ import { TabelaPlanos } from "@/components/planos";
 import { CalculadoraPreco } from "@/components/calculadora-preco";
 import { canaisDeAviso } from "@/lib/site";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
+import { modoPiloto } from "@/lib/chaves";
 
 export const metadata: Metadata = {
   title: "Preços | Equapar",
-  description: "Raio-X grátis, piloto por pedido, carteira por posto e plano para assessorias. Preço na página.",
+  description: "Raio-X grátis, piloto por pedido e carteira por posto. Preço na página.",
 };
 
 export default function Precos() {
@@ -34,9 +35,11 @@ export default function Precos() {
           <li>
             <strong>Carteira:</strong> R$ 4 por posto de trabalho por mês, mínimo de R$ 297 (74 postos = R$ 297; 75 postos = R$ 300). {canaisDeAviso()}, pedidos montados pelo sistema e painel A receber.
           </li>
-          <li>
-            <strong>Assessoria:</strong> vários clientes numa conta, visão de todos os prazos e PDFs com a sua marca.
-          </li>
+          {!modoPiloto() && (
+            <li>
+              <strong>Assessoria:</strong> vários clientes numa conta, visão de todos os prazos e PDFs com a sua marca.
+            </li>
+          )}
           {revisaoEspecialistaAtiva() && (
             <li>
               <strong>Revisão de especialista:</strong> cobrada à parte, para casos complexos.

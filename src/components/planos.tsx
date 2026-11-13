@@ -3,6 +3,7 @@ import { canaisDeAviso } from "@/lib/site";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { PRECOS } from "@/lib/planos";
 import { Contato } from "./contato";
+import { modoPiloto } from "@/lib/chaves";
 
 export function TabelaPlanos() {
   const min = PRECOS.carteiraMinimo;
@@ -40,6 +41,7 @@ export function TabelaPlanos() {
             Criar conta
           </Link>
         </div>
+        {!modoPiloto() && (
         <div className="plano">
           <h3 className="mb-0">Assessoria</h3>
           <div className="preco">a partir de R$ 1.497</div>
@@ -49,6 +51,7 @@ export function TabelaPlanos() {
             Ver o plano
           </Link>
         </div>
+        )}
       </div>
       <p className="legenda mt-16">Preços em teste. A página mostra sempre o preço que estiver valendo.</p>
     </>

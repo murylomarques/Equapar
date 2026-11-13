@@ -1,8 +1,10 @@
 import { historicoDoOrgao } from "@/lib/historico-orgao";
 import { plural } from "@/lib/format";
+import { modoPiloto } from "@/lib/chaves";
 
 /** 5.4: o que a própria conta já viveu com este órgão. Nada de outras contas. */
 export async function HistoricoOrgao({ contaId, orgao, orgaoCnpj }: { contaId: string; orgao: string; orgaoCnpj: string | null }) {
+  if (modoPiloto()) return null; // A6: escondido no modo piloto
   const h = await historicoDoOrgao(contaId, { orgao, orgaoCnpj });
   return (
     <section className="cartao historico-orgao" aria-labelledby="hist-orgao">

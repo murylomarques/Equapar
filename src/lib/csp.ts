@@ -11,10 +11,11 @@ const TURNSTILE = "https://challenges.cloudflare.com";
  * Rotas geradas no build (estão em .next/prerender-manifest.json). O teste e2e/bloqueadoras/s3-cabecalhos.mjs
  * confere esta lista contra o build: página estática nova sem entrar aqui faz o teste falhar.
  */
-export const ROTAS_ESTATICAS = new Set(["/", "/precos", "/assessorias", "/guias", "/privacidade", "/termos", "/esqueci-senha"]);
+// A6: o site passou a ser renderizado por requisição (chaves e SITE_* do ambiente); só o "esqueci a senha" segue estático
+export const ROTAS_ESTATICAS = new Set(["/esqueci-senha"]);
 
 export function rotaEstatica(caminho: string) {
-  return ROTAS_ESTATICAS.has(caminho) || caminho.startsWith("/guias/");
+  return ROTAS_ESTATICAS.has(caminho);
 }
 
 export function montarCsp(nonce: string | null, dev = process.env.NODE_ENV === "development") {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GUIAS } from "@/lib/guias";
+import { guiaNoAr } from "@/lib/chaves";
 
 export const metadata: Metadata = {
   title: "Guias de repactuação | Equapar",
@@ -14,7 +15,7 @@ export default function Guias() {
         Guias
       </h1>
       <div className="pilha" style={{ maxWidth: 760 }}>
-        {GUIAS.map((g) => (
+        {GUIAS.filter((g) => guiaNoAr(g.slug)).map((g) => (
           <Link key={g.slug} href={`/guias/${g.slug}`} className="cartao-linha">
             <strong style={{ fontSize: 18 }}>{g.titulo}</strong>
             <span className="secundario">{g.descricao}</span>
