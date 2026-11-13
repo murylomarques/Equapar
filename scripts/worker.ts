@@ -8,6 +8,7 @@ import { agendarAvisosDaHora, executarTarefa } from "../src/lib/tarefas";
 import { registrar } from "../src/lib/registro";
 import { db } from "../src/lib/db";
 import { limparDemos, limpezaDemosLigada } from "../src/lib/limpeza-demos";
+import { limparContasCanceladas, limpezaCanceladasLigada } from "../src/lib/limpeza-canceladas";
 
 const id = `${os.hostname()}-${process.pid}`;
 let parar = false;
@@ -17,6 +18,7 @@ async function main() {
   registrar("info", "worker_iniciou", { worker: id });
   let ultimaAgenda = 0;
   let ultimaLimpeza = 0;
+  let ultimaLimpezaCanceladas = 0;
   while (!parar) {
     if (Date.now() - ultimaAgenda > 60_000) {
       await agendarAvisosDaHora().catch((e) => registrar("erro", "agenda_avisos_falhou", { erro: String(e) }));
@@ -28,6 +30,13 @@ async function main() {
       await limparDemos({ aplicar: true })
         .then((r) => registrar("info", "limpeza_demos", { contas: r.contas, contratos: r.contratos }))
         .catch((e) => registrar("erro", "limpeza_demos_falhou", { erro: String(e) }));
+    }
+    // C8: documentos de contas canceladas há mais de 30 dias, uma vez por dia, só com LIMPEZA_CONTAS_CANCELADAS=true
+    if (limpezaCanceladasLigada() && Date.now() - ultimaLimpezaCanceladas > 86_400_000) {
+      ultimaLimpezaCanceladas = Date.now();
+      await limparContasCanceladas({ aplicar: true })
+        .then((r) => registrar("info", "limpeza_canceladas", { contas: r.contas, documentos: r.documentos }))
+        .catch((e) => registrar("erro", "limpeza_canceladas_falhou", { erro: String(e) }));
     }
     const t = await pegarProxima(id).catch((e) => (registrar("erro", "fila_indisponivel", { erro: String(e) }), null));
     if (t) await executarTarefa(t);

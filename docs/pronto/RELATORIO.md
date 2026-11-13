@@ -241,3 +241,23 @@ ADD COLUMN "valoresJaPagos" DECIMAL(14,2) DEFAULT 0;
 - O valor pago entra na assinatura do cálculo só quando é maior que zero (as aprovações antigas continuam valendo) e, ao mudar, desfaz a aprovação.
 - Prova: `src/lib/retroativo-pagos.test.ts` (com os campos vazios, o caso de exemplo continua R$ 33.951,94; R$ 1.951,94 pagos dão R$ 32.000,00; os dois resultados lado a lado; assinatura igual com campo vazio).
 - **Pendência (soma por competência):** o modelo de dados guarda uma planilha atual e uma nova por pedido, sem a variação do número de postos ou do valor ao longo do período. Por isso o retroativo é a diferença mensal × meses, com o mês parcial pro rata. Não criei esse modelo (o prompt manda não criar agora). Para somar por competência quando postos ou valores mudam no período, é preciso guardar planilhas por competência.
+
+### C7. Regra de arredondamento documentada (feito)
+`docs/CALCULO.md` (seção "Arredondamento: por linha × só no total"), nota na memória de cálculo e o teste `src/lib/calculo/arredondamento.test.ts` com o caso C1: por linha 1.906,67 + 339,64 + 251,43 + 502,86 + 26,19 = **R$ 3.026,79**; só no total **R$ 3.026,78**. O motor não mudou; a decisão é do contador e do dono.
+
+### C8. Proteção de dados (feito)
+- **Papéis e subprocessadores:** a política de privacidade (MINUTA) explica a Equapar como operadora dos documentos enviados e controladora dos dados de cadastro, segurança e cobrança. Lista só os subprocessadores ligados (`src/lib/subprocessadores.ts`, lidos do ambiente: hospedagem por `HOSPEDAGEM_PROVEDOR`, armazenamento S3, e-mail pelo host do SMTP, Turnstile, Google, Asaas, WhatsApp e, só com uma chave de IA ligada, a Anthropic com a menção à transferência internacional do art. 33 da LGPD). Traz o canal do titular. Teste: `src/lib/subprocessadores.test.ts`.
+- **Folha com nomes:** toda área de envio de arquivo (componente único `AreaArquivo`) mostra "Não envie folha com nomes ou CPFs de empregados. A planilha de custos basta.". A proteção técnica antes da IA está na fase E (E2).
+- **Guarda depois do cancelamento:** "conta cancelada" = cobrança encerrada (somente leitura depois da carência). Por 30 dias a pessoa exporta tudo (a exportação continua liberada em somente leitura). Depois disso, a rotina `limparContasCanceladas` apaga só os documentos enviados; roda uma vez por dia no worker só com `LIMPEZA_CONTAS_CANCELADAS=true` (padrão desligado). Ficam fora: faturas e notas (cobrança), histórico de ações, sessões (registros de acesso), avisos enviados, a conta e os usuários.
+
+Simulação (trava 2, nada apagado):
+```
+$ npx tsx --tsconfig tsconfig.worker.json --env-file=.env scripts/limpar-contas-canceladas.ts
+SIMULAÇÃO: nada foi apagado.
+{ "modo": "simulacao", "contas": 0, "documentos": 0,
+  "mantidosPorLei": ["Fatura (cobrança e nota fiscal)", "Historico (registro de ações)", "Sessao (registros de acesso)", "Aviso (comunicações enviadas)", "Conta, Membro e Usuario"],
+  "faturasMantidas": 0, "contasAtivasNaLista": 0 }
+```
+O banco de teste não tem conta cancelada. `src/lib/limpeza-canceladas.db.test.ts` cria três contas fictícias (cancelada há 40 dias, cancelada há 10 dias, ativa) e confere: só a de 40 dias entra; a fatura dela fica fora; a conta ativa nunca entra; a simulação não apaga nada.
+
+**Ponto para o dono e o advogado:** "Excluir conta" (Configurações > Dados, pedido do próprio titular) apaga tudo na hora, inclusive as faturas, porque a fatura está ligada à conta com exclusão em cascata. Guardar a cobrança depois da exclusão exige mudar esse vínculo, e mudar `onDelete` é proibido nesta rodada (trava 1). Fica como decisão.
