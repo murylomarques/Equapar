@@ -376,3 +376,11 @@
 /* 5.1: faixa no topo do site */
 .site-faixa { background: var(--tinta); color: var(--papel); font-size: 14px; padding: 8px 0; text-align: center; }
 .site-faixa a { color: var(--papel); text-decoration: underline; font-weight: 500; }
+
+/* 5.4: frase de apoio quando a promessa é o título */
+.titulo-apoio {
+  font-family: var(--fonte-serif);
+  font-size: 24px;
+  line-height: 1.3;
+  margin: 8px 0 16px;
+}

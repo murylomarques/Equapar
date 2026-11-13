@@ -16,9 +16,19 @@ export default function Landing() {
         <section className="abertura" aria-labelledby="titulo-abertura">
           <div>
             <p className="sobretitulo">Para empresas de limpeza e conservação com contratos públicos</p>
-            <h1 id="titulo-abertura" className="titulo-landing">
-              A convenção subiu. O seu contrato com o governo também pode subir.
-            </h1>
+            {/* 5.4: a promessa vira título com SITE_TITULO_PROMESSA=true, depois que o dono aprovar o texto (trava 6) */}
+            {process.env.SITE_TITULO_PROMESSA === "true" ? (
+              <>
+                <h1 id="titulo-abertura" className="titulo-landing">
+                  Cada repactuação no prazo, com prova.
+                </h1>
+                <p className="titulo-apoio">A convenção subiu. O seu contrato com o governo também pode subir.</p>
+              </>
+            ) : (
+              <h1 id="titulo-abertura" className="titulo-landing">
+                A convenção subiu. O seu contrato com o governo também pode subir.
+              </h1>
+            )}
             <p className="leitura" style={{ fontSize: 18, color: "var(--grafite)" }}>
               A Equapar acompanha os contratos públicos da sua empresa, avisa antes da prorrogação e monta o pedido de repactuação com memória de cálculo e documentos. Depois, segue a diferença até ela entrar no caixa.
             </p>
