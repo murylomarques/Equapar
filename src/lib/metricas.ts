@@ -67,3 +67,73 @@ export function podeVerPainel(email: string): boolean {
     .filter(Boolean);
   return lista.includes(email.toLowerCase());
 }
+
+// ---------------------------------------------------------------------------
+// 5.4: custo de aquisição e margem (números que o dono informa por mês)
+// ---------------------------------------------------------------------------
+
+/** Contas cujo primeiro pagamento caiu no mês: as novas pagantes. */
+export function novasPagantes(faturas: { contaId: string; pagaEm: Date | null }[], m: string): number {
+  const primeiro = new Map<string, string>();
+  for (const f of faturas) {
+    if (!f.pagaEm) continue;
+    const x = mes(f.pagaEm);
+    const atual = primeiro.get(f.contaId);
+    if (!atual || x < atual) primeiro.set(f.contaId, x);
+  }
+  return [...primeiro.values()].filter((x) => x === m).length;
+}
+
+/** Custo de aquisição por conta nova pagante. Sem o custo informado ou sem conta nova, não há número. */
+export function custoPorAquisicao(custo: Decimal.Value | null, novas: number): string | null {
+  if (custo == null || novas === 0) return null;
+  return new Decimal(custo).div(novas).toFixed(2);
+}
+
+/** Margem bruta em reais do mês: receita paga × margem informada. */
+export function margemEmReais(receita: Decimal.Value, margemPct: Decimal.Value | null): string | null {
+  if (margemPct == null) return null;
+  return new Decimal(receita).times(margemPct).div(100).toFixed(2);
+}
+
+// ---------------------------------------------------------------------------
+// 5.5: minutos de trabalho humano por cliente e a pesquisa de Sean Ellis
+// ---------------------------------------------------------------------------
+
+export const TIPOS_TEMPO = { COLETA: "Coleta", CALCULO: "Cálculo", REVISAO: "Revisão", RETRABALHO: "Retrabalho", SUPORTE: "Suporte" } as const;
+
+/** Por plano: clientes com registro, minutos no mês, minutos por cliente e por tipo. Meta do dossiê: até 49 min/mês no plano de R$ 497. */
+export function tempoPorPlano(registros: { contaId: string; tipo: string; minutos: number; data: Date }[], planoDe: Map<string, string>, m: string) {
+  const out = new Map<string, { plano: string; contas: Set<string>; minutos: number; porTipo: Record<string, number> }>();
+  for (const r of registros) {
+    if (mes(r.data) !== m) continue;
+    const plano = planoDe.get(r.contaId) ?? "?";
+    const g = out.get(plano) ?? { plano, contas: new Set<string>(), minutos: 0, porTipo: {} };
+    g.contas.add(r.contaId);
+    g.minutos += r.minutos;
+    g.porTipo[r.tipo] = (g.porTipo[r.tipo] ?? 0) + r.minutos;
+    out.set(plano, g);
+  }
+  return [...out.values()]
+    .map((g) => ({ plano: g.plano, clientes: g.contas.size, minutos: g.minutos, porCliente: Math.round(g.minutos / g.contas.size), porTipo: g.porTipo }))
+    .sort((a, b) => a.plano.localeCompare(b.plano));
+}
+
+export const RESPOSTAS_PESQUISA = {
+  MUITO_DECEPCIONADO: "Muito decepcionado",
+  POUCO_DECEPCIONADO: "Um pouco decepcionado",
+  NAO_DECEPCIONADO: "Não ficaria decepcionado",
+  NAO_USO_MAIS: "Não uso mais a Equapar",
+} as const;
+
+/** Sean Ellis: % de "muito decepcionados" entre quem ainda usa. Meta do dossiê: 40% ou mais. */
+export function resultadoSeanEllis(respostas: { resposta: string }[]) {
+  const usam = respostas.filter((r) => r.resposta !== "NAO_USO_MAIS");
+  const muito = usam.filter((r) => r.resposta === "MUITO_DECEPCIONADO").length;
+  return { respostas: respostas.length, consideradas: usam.length, muito, pct: usam.length ? Math.round((muito / usam.length) * 1000) / 10 : null };
+}
+
+/** A pesquisa aparece uma vez para cada conta ativa há mais de 30 dias (nem demonstração, nem já respondida/dispensada). */
+export function mostrarPesquisa(conta: { criadoEm: Date; demo: boolean; pesquisaDispensadaEm: Date | null }, agora = new Date()) {
+  return !conta.demo && !conta.pesquisaDispensadaEm && agora.getTime() - conta.criadoEm.getTime() > 30 * 86_400_000;
+}

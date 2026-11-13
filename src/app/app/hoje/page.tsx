@@ -11,6 +11,9 @@ import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { CartaoNumero, EstadoVazio } from "@/components/ui/apresentacao";
 import { concluirTarefa } from "../acoes";
+import { mostrarPesquisa } from "@/lib/metricas";
+import { ehDemo } from "@/lib/auth";
+import { PesquisaEncaixe } from "./pesquisa";
 
 export const metadata: Metadata = { title: "Hoje | Equapar" };
 
@@ -86,6 +89,8 @@ export default async function Hoje() {
           {saudacao()}, {ctx.usuario.nome.split(" ")[0]}. Próximos 30 dias: {plural(prazos30, "contrato com prazo", "contratos com prazo")}.
         </p>
       </div>
+
+      {!ehDemo(ctx) && mostrarPesquisa(ctx.conta) && <PesquisaEncaixe />}
 
       <div className="cartoes-numero faixa-numeros">
         <CartaoNumero

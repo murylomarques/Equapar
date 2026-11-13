@@ -444,3 +444,28 @@ export async function dispensarDica(_: Resultado, fd: FormData): Promise<Resulta
     revalidatePath("/app/pedidos");
   });
 }
+
+// ---------------------------------------------------------------------------
+// 5.5: pesquisa de Sean Ellis (uma vez por conta; responder ou dispensar encerra)
+// ---------------------------------------------------------------------------
+
+export async function responderPesquisa(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await contexto();
+    if (ehDemo(ctx)) return;
+    const conta = await db.conta.findUniqueOrThrow({ where: { id: ctx.conta.id }, select: { pesquisaDispensadaEm: true } });
+    if (conta.pesquisaDispensadaEm) return;
+    if (texto(fd, "dispensar")) {
+      await db.conta.update({ where: { id: ctx.conta.id }, data: { pesquisaDispensadaEm: new Date() } });
+    } else {
+      const resposta = texto(fd, "resposta");
+      if (!["MUITO_DECEPCIONADO", "POUCO_DECEPCIONADO", "NAO_DECEPCIONADO", "NAO_USO_MAIS"].includes(resposta)) return { erro: "Escolha uma resposta.", campos: { resposta: "Escolha uma resposta." } };
+      await db.$transaction([
+        db.respostaPesquisa.create({ data: { contaId: ctx.conta.id, resposta, comentario: texto(fd, "comentario").slice(0, 1000) || null } }),
+        db.conta.update({ where: { id: ctx.conta.id }, data: { pesquisaDispensadaEm: new Date() } }),
+      ]);
+    }
+    revalidatePath("/app/hoje");
+    return { ok: "Obrigado pela resposta." };
+  });
+}
