@@ -3,6 +3,8 @@
 import { BASE, SENHA_DONO, db, navegador, novaPagina, conferir, fim } from "./util.mjs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
+// v4 A3: as demonstrações têm cota de 3 por IP por hora; o teste zera a cota local antes (só as chaves "demo:")
+await db.tentativaAcesso.deleteMany({ where: { chave: { startsWith: "demo:" } } });
 const b = await navegador();
 
 /** Abre a demonstração como um visitante: GET mostra a página; o botão (POST) entra. */
@@ -33,7 +35,7 @@ try {
   const nomeConv = `CCT do visitante 1 ${Date.now()}`;
   await v1.p.goto(`${BASE}/app/convencoes`);
   const form = v1.p.locator("form", { has: v1.p.getByRole("button", { name: "Cadastrar convenção" }) });
-  await form.getByLabel("Nome").fill(nomeConv);
+  await form.getByLabel("Nome", { exact: true }).fill(nomeConv);
   await form.getByLabel("UF").selectOption("ES");
   await form.getByLabel("Mês da data-base").selectOption("1");
   await form.getByRole("button", { name: "Cadastrar convenção" }).click();

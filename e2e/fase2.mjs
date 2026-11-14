@@ -1,6 +1,8 @@
 // Fase 2 no navegador: navegação do celular, recurso e novo pedido depois do indeferimento, Recuperado,
 // histórico do órgão, demonstração de assessoria e isolamento entre contas. Só dados fictícios; apaga o que cria.
 import { BASE, db, navegador, entrarComoDono, conferir, fim } from "./bloqueadoras/util.mjs";
+// v4 A6: rode com MODO_PILOTO igual ao do servidor (padrão: ligado)
+const PILOTO = (process.env.MODO_PILOTO ?? "true") !== "false";
 
 const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: { exemplo: true, conta: { demo: false, tipo: "EMPRESA" } } } });
 const modelo = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresaId: c45.empresaId } } });
@@ -53,13 +55,21 @@ try {
   if (novo) criados.push(novo.id);
   conferir(!!novo && novo.estado === "EM_ANALISE" && JSON.stringify(novo.planilhaAgora) === JSON.stringify(modelo.planilhaAgora), "novo pedido reaproveita as planilhas e começa em análise");
 
-  // 3) Recuperado e histórico do órgão
-  await p.goto(`${BASE}/app/recuperado`);
-  await p.getByRole("heading", { name: "Por contrato" }).waitFor();
-  conferir((await p.getByText("Total recebido").count()) === 1, "Recuperado mostra totais, por ano e por contrato");
-  await p.goto(`${BASE}/app/contratos/${c45.id}?aba=resumo`);
-  await p.getByRole("heading", { name: "Sua história com este órgão" }).waitFor();
-  conferir((await p.getByText(/Só pedidos desta conta/).count()) === 1, "contrato mostra o histórico do órgão só da conta");
+  // 3) Recuperado e histórico do órgão (v4 A6: escondidos no modo piloto, que é o padrão)
+  if (PILOTO) {
+    await p.goto(`${BASE}/app/recuperado`);
+    conferir(/\/app\/hoje/.test(p.url()), "modo piloto: Recuperado leva a Hoje");
+    await p.goto(`${BASE}/app/contratos/${c45.id}?aba=resumo`);
+    await p.locator("main h1").first().waitFor();
+    conferir((await p.getByRole("heading", { name: "Sua história com este órgão" }).count()) === 0, "modo piloto: histórico do órgão escondido");
+  } else {
+    await p.goto(`${BASE}/app/recuperado`);
+    await p.getByRole("heading", { name: "Por contrato" }).waitFor();
+    conferir((await p.getByText("Total recebido").count()) === 1, "Recuperado mostra totais, por ano e por contrato");
+    await p.goto(`${BASE}/app/contratos/${c45.id}?aba=resumo`);
+    await p.getByRole("heading", { name: "Sua história com este órgão" }).waitFor();
+    conferir((await p.getByText(/Só pedidos desta conta/).count()) === 1, "contrato mostra o histórico do órgão só da conta");
+  }
 
   // 4) isolamento: pedido e documento de outra conta não abrem
   const r1 = await p.request.get(`${BASE}/app/pedidos/${outraConta.id}/pronto`);
@@ -74,7 +84,8 @@ try {
   const r3 = await p.request.get(`${BASE}/api/documentos/${doc.id}?ver=1`);
   conferir([200, 410].includes(r3.status()), "documento da própria conta: acesso liberado");
 
-  // 5) demonstração de assessoria com 3 clientes, a partir da página Para assessorias
+  // 5) demonstração de assessoria com 3 clientes, a partir da página Para assessorias (fora do modo piloto)
+  if (!PILOTO) {
   const v = await b.newContext();
   const vp = await v.newPage();
   await vp.goto(`${BASE}/assessorias`);
@@ -83,6 +94,7 @@ try {
   const opcoes = await vp.locator(".app-topo select option").allInnerTexts();
   conferir(opcoes.filter((o) => /fictícia/.test(o)).length === 3, `demonstração de assessoria com 3 clientes fictícios (${opcoes.length} opções)`);
   conferir((await vp.getByRole("link", { name: /Marcar uma conversa/ }).count()) === 0, "visitante entra no produto");
+  }
 } finally {
   await db.documento.deleteMany({ where: { pedidoId: { in: criados } } });
   await db.historico.deleteMany({ where: { pedidoId: { in: criados } } });
