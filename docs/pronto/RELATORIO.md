@@ -7,7 +7,9 @@ Como reproduzir as evidências: build de produção (`npm run build`) servido po
 
 ## Onde parei
 
-Fase A em andamento.
+**Todas as fases (A, B, C, F, G, D, E) feitas e a verificação final (seção 9) rodada** em 13/11/2026, no build de produção e na imagem Docker. Duas metas não foram atingidas por completo e estão explicadas abaixo: o LCP do celular (mediana 2,67 s, meta 2,5 s) e a soma do retroativo por competência (C6, depende de um modelo de dados que o prompt mandou não criar agora).
+
+**O que foi enviado e para onde: nada.** Todo o trabalho está só na branch local `pronto-para-subir`, criada a partir de `main` (`9daef88`). Nenhum push foi feito.
 
 ## Fase A: telas, demonstração e site
 
@@ -365,3 +367,81 @@ AVISO: Gabarito não conferido por pessoa: o resultado não autoriza ligar a IA.
 RESULTADO: NÃO ligar a IA (gabarito não conferido por pessoa).
 ```
 Prova: `src/lib/avaliacao-ia.test.ts`.
+
+## Verificação final (seção 9)
+
+Build de produção servido por `next start` na porta 3100, e a imagem Docker com `docker-compose.producao.yml`. Dados de teste fictícios.
+
+| Verificação | Resultado |
+| --- | --- |
+| `npm run typecheck` | sem erro |
+| `npm run lint` | sem erro e sem aviso |
+| `npm test` | 66 arquivos, 270 testes passando, 1 pendente (`it.todo`, D7) |
+| `npm run test:db` | 72 arquivos, 282 testes passando (com os de banco). O script estava quebrado (o vitest novo não acha os testes com `--dir src`); corrigido |
+| `npm run build` | compila; avisa as variáveis `SITE_*` vazias |
+| `npm run e2e` | fluxo completo 23/23 no computador e 23/23 no celular; assessoria com duas etapas 9/9; `sem-rolagem-lateral` 39/39 |
+| `npm run e2e:a11y` | 105 verificações, 0 violações graves |
+| `npm run e2e:teclado` | 14 páginas, todas com anel de foco |
+| Outros de navegador | jornada 12/12; fase 2 (no modo piloto) 10/10; C1 a C4, C6, C7, L7, S3 (25/25), S4, S11, S12: todos "Tudo certo"; `modo-piloto.mjs` nos dois estados |
+| A.1 (demonstração) | `10 visitas em 221.4 s: contas demo 40 -> 43; contratos de demonstração 200 -> 215`, saída 0 (no máximo 3 por IP) |
+| Lighthouse celular (mediana de 3) | **LCP 2,67 s** (meta 2,5 s **não** atingida), FCP 0,93 s, TBT 515 ms, **CLS 0**. Ver A5 |
+| Chaves ligadas e desligadas | capturas `capturas/V-desligado-*` (tudo desligado), `capturas/V-ligado-*` (jornada, IA e dados do site ligados), `capturas/V-ia-em-teste-*` (chave da API sem as chaves do recurso: selo "em teste"), `capturas/A6-ligado-*` e `capturas/A6-desligado-*` (modo piloto) |
+| Site com e sem `SITE_WHATSAPP` e `SITE_CNPJ` (fictícios) | sem: "Falar por e-mail", "Equapar (empresa em constituição)", rodapé sem CNPJ; com: "Falar no WhatsApp" (`wa.me/5511900000000`), "Empresa Exemplo Ltda., CNPJ 12.ABC.345/01DE-35", fundador, rodapé com telefone. Capturas de landing, preços, termos e privacidade nos dois estados (`V-desligado-1..4`, `V-ligado-1..4`) |
+| CNPJ alfanumérico | exemplo oficial da Receita em `src/lib/cnpj-alfanumerico.test.ts` |
+| `verificar:producao` | as duas saídas abaixo |
+| Imagem Docker | construída; app e worker sobem com `docker compose -f docker-compose.producao.yml up -d`; `/api/saude` 200; o worker processou a tarefa de avisos (`AVISOS | FEITA`); `npm run e2e:producao` contra `http://localhost`: "Tudo certo" (com os avisos `dados_empresa_incompletos` e `email_nao_configurado` no `/api/saude`, como esperado sem esses dados) |
+| G4 (seed da demonstração) | na imagem, duas rodadas seguidas: `2 contas | 10 contratos | 4 pedidos | 2 usuários` depois de cada uma (não duplica) |
+| Simulações das limpezas | A3 e C8, nas seções dos itens |
+| Avaliação E3 | rodada com a convenção fictícia (seção E3) |
+| Folha única | `capturas/folha-unica.png`: landing, Raio-X, preços, demonstração, Hoje, Carteira, Pedidos, passo 3, memória, A receber, Convenções e painel interno, em 390 e 1.440 px |
+
+`npm run verificar:producao:imagem` dentro da imagem, com um ambiente fictício **completo** (S3 local com S3Mock, SMTP local com Mailpit; a imagem do MinIO não está disponível sem login):
+```
+OK    Base           APP_URL começa com https:// · APP_SECRET com 32 caracteres ou mais
+OK    Banco          conectou · todas as 9 migrações aplicadas
+OK    Armazenamento  S3: gravou, leu e apagou o objeto de teste em _verificacao/
+OK    E-mail         SMTP: conectou e autenticou · e-mail de teste enviado para 1 endereço(s) de PAINEL_EMAILS
+OK    Turnstile      as duas chaves preenchidas
+OK    Asaas          ambiente sandbox coerente com o prefixo da chave · token do webhook presente
+OK    Rede           TRUSTED_PROXY_HEADER = x-forwarded-for
+OK    Site           vai aparecer: e-mail contato@equapar.com; WhatsApp; nome do fundador; razão social e CNPJ; endereço
+OK    Chaves         MODO_PILOTO ligada · JORNADA_REGRA_CONFIRMADA desligada · IA desligadas · limpezas desligadas · DEMO_MAX_ATIVAS 300
+0 falha(s), 0 aviso(s).   saída: 0
+```
+E com um ambiente **incompleto**:
+```
+FALHA Base           APP_URL não começa com https:// (obrigatório em produção)
+FALHA Base           APP_SECRET com MENOS de 32 caracteres
+AVISO Armazenamento  sem ARMAZENAMENTO=s3: arquivos no disco do servidor (perdidos se o contêiner for recriado)
+AVISO E-mail         sem SMTP_URL: ninguém confirma conta nem recebe aviso
+FALHA Turnstile      TURNSTILE_SECRET_KEY e NEXT_PUBLIC_TURNSTILE_SITE_KEY precisam estar juntas (só uma está preenchida)
+FALHA Asaas          ASAAS_AMBIENTE não combina com o prefixo da ASAAS_API_KEY
+FALHA Asaas          ASAAS_WEBHOOK_TOKEN FALTANDO com o Asaas ligado
+AVISO Rede           sem TRUSTED_PROXY_HEADER: os limites por IP ficam desligados
+AVISO Site           vazias: SITE_EMAIL_CONTATO, SITE_WHATSAPP, ...
+5 falha(s), 4 aviso(s).   saída: 1
+```
+
+### Achados da verificação final (corrigidos)
+- `npm run test:db` não achava os testes (`--dir src`); corrigido.
+- O aviso de CPF da C8 entrou no rótulo da área de arquivo: dois testes buscavam o rótulo "Nome" por trecho e passaram a achar dois campos. Os testes agora buscam o rótulo exato; o aviso ganhou linha própria (estava colado em "até 15 MB").
+- `fase2.mjs` testava telas que o modo piloto esconde; passou a seguir a chave. O C6 abre várias demonstrações do mesmo IP e agora bate na cota do A3; o teste zera a cota local de demonstração antes.
+- No compose, o worker herdava o healthcheck do app (porta 3000); desligado só no worker.
+
+### Pendências que não dependem só do dono
+1. **LCP no celular** (A5): mediana 2,67 s na máquina de teste (`benchmarkIndex` 687). O que sobra é o React e o roteador do Next executados antes da primeira pintura. Medir de novo contra a produção, com rede real: `node scripts/lighthouse.mjs https://equapar.com/ 3`.
+2. **Retroativo por competência** (C6): exige guardar planilhas por competência (novo modelo de dados), que o prompt mandou não criar agora.
+3. **Preço completo do posto no caso C1** (D7): `it.todo` até chegar a planilha completa assinada pelo contador.
+
+## O que só o dono faz
+
+1. Preencher o `.env` (no painel de segredos da hospedagem): as obrigatórias (`DATABASE_URL`, `APP_SECRET`, `APP_URL` em https, `TRUSTED_PROXY_HEADER`, `ARMAZENAMENTO=s3` e o bucket) mais `SITE_WHATSAPP`, `SITE_EMAIL_CONTATO`, `SITE_FUNDADOR_NOME` e `SITE_CIDADE`.
+2. Confirmar o registro do domínio equapar.com, apontar o DNS e ativar o HTTPS.
+3. Contratar hospedagem, banco (PostgreSQL 17 com backup de 30 dias), bucket S3 com versionamento e provedor de e-mail, e configurar SPF, DKIM e DMARC (`docs/SUBIR.md` e `docs/operacao/email.md`).
+4. Criar as chaves do Turnstile e, se quiser, as do login com Google.
+5. Rodar `npm run verificar:producao:imagem` e `npm run e2e:producao` e decidir sobre as limpezas (`LIMPEZA_DEMOS_AUTOMATICA`, `LIMPEZA_CONTAS_CANCELADAS`) depois de ler as simulações (A3 e C8).
+6. Quando o primeiro cliente fechar: abrir o CNPJ, preencher `SITE_RAZAO_SOCIAL`, `SITE_CNPJ` e `SITE_ENDERECO`, abrir a conta PJ no Asaas (testar no sandbox) e definir a nota fiscal com o contador.
+7. Trazer o "de acordo" do advogado (Parte 3) e do contador (Parte 4, com a planilha C1 completa e a regra de arredondamento, C7). Depois disso, ligar `JORNADA_REGRA_CONFIRMADA`.
+8. Fazer uma pessoa conferir nos PDFs os valores do gabarito das 3 convenções (`fixtures/gabarito-convencoes.json`), mudar `conferido` para `true`, pôr os PDFs em `convencoes-reais/`, rodar `scripts/avaliar-ia-convencao.ts` com a chave da Anthropic e só então ligar `IA_LEITURA_CONVENCAO` (e `IA_LEITURA_PLANILHA`). Decidir se a leitura deve devolver unidade e condição (muda `INSTRUCOES_CONVENCAO`).
+9. Levar ao advogado as minutas: termos, privacidade, contrato do piloto, autorização de caso (`docs/modelos/`), modelo de ressalva (C2), frase de prorrogação (C1), ofício e minuta do aditivo da jornada. Decidir também sobre "Excluir conta" apagar as faturas (C8).
+10. Decidir quando enviar a branch `pronto-para-subir` ao GitHub (nada foi enviado).
