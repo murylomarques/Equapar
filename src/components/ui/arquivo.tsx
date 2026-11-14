@@ -95,7 +95,7 @@ export function AreaArquivo({
           </span>
           <span className="tipos">{descricaoTipos}</span>
           {/* C8: em toda tela que recebe arquivo */}
-          <span className="tipos aviso-cpf">Não envie folha com nomes ou CPFs de empregados. A planilha de custos basta.</span>
+          <span className="tipos aviso-cpf" style={{ display: "block", marginTop: 4 }}>Não envie folha com nomes ou CPFs de empregados. A planilha de custos basta.</span>
         </span>
         <input
           ref={input}
