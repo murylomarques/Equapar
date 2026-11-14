@@ -34,6 +34,9 @@ services:
     restart: unless-stopped
     env_file: .env.producao
     command: ["npm", "run", "worker:prod"]
+    # o healthcheck da imagem olha o app (porta 3000); o worker não serve HTTP
+    healthcheck:
+      disable: true
     depends_on:
       app:
         condition: service_started
