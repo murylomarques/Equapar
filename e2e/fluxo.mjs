@@ -155,7 +155,7 @@ try {
   // Convenção
   await page.goto(`${BASE}/app/convencoes`);
   const formConv = page.locator("form", { has: page.getByRole("button", { name: "Cadastrar convenção" }) });
-  await formConv.getByLabel("Nome").fill(`CCT Teste ES ${ano}`);
+  await formConv.getByLabel("Nome", { exact: true }).fill(`CCT Teste ES ${ano}`);
   await formConv.getByLabel("Cidade").fill("Cidade Teste");
   await formConv.getByLabel("UF").selectOption("ES");
   await formConv.getByLabel("Mês da data-base").selectOption("1");
