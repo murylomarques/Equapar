@@ -107,5 +107,8 @@ export function remetentePadrao() {
 /** Identificação enviada ao PNCP (o firewall derruba conexões sem User-Agent): site e contato público. */
 export function agentePncp() {
   const site = process.env.APP_URL?.trim() || `https://${dominioPublico()}`;
-  return `Mozilla/5.0 (compatible; EquaparBot/1.0; +${site}; ${contatoSite().email})`;
+  // O firewall do PNCP encerra a conexão de agentes que não tenham uma
+  // assinatura completa de navegador. Mantemos a identificação da Equapar
+  // dentro dela para que a consulta continue transparente e rastreável.
+  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64; compatible; EquaparBot/1.0; +${site}; ${contatoSite().email}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`;
 }

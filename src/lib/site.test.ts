@@ -54,7 +54,10 @@ describe("B1: dados da empresa pelo ambiente", () => {
     vi.stubEnv("EMAIL_FROM", "");
     vi.stubEnv("APP_URL", "https://equapar.com");
     expect(remetentePadrao()).toBe("Equapar Avisos <avisos@equapar.com>");
-    expect(agentePncp()).toContain("+https://equapar.com; contato@equapar.com");
+    const agente = agentePncp();
+    expect(agente).toMatch(/^Mozilla\/5\.0 .*AppleWebKit\/537\.36 .*Chrome\/\d+/);
+    expect(agente).toContain("EquaparBot/1.0");
+    expect(agente).toContain("+https://equapar.com; contato@equapar.com");
     vi.stubEnv("EMAIL_FROM", "Equapar Avisos <avisos@exemplo.local>");
     expect(remetentePadrao()).toBe("Equapar Avisos <avisos@exemplo.local>");
   });
