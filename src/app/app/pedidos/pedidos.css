@@ -1,1 +1,320 @@
 /* Fluxo do pedido, memória e financeiro do pedido (acabamento da auditoria final). */
+
+/* ---------- 28: lista de pedidos, cartões do celular */
+.pedido-cartao-situacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+.pedido-cartao-valores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--linha);
+}
+.pedido-cartao-valores dt {
+  font: var(--t-legenda);
+  color: var(--grafite);
+}
+.pedido-cartao-valores dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* ---------- 29: novo pedido */
+.novo-pedido {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: 24px;
+  align-items: start;
+  max-width: 1120px;
+}
+@media (max-width: 900px) {
+  .novo-pedido {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.novo-pedido-passos {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  gap: 12px;
+}
+.novo-pedido-passos li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.novo-pedido-passos li > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+.novo-pedido-n {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--verde-suave);
+  color: var(--verde-escuro);
+  font: 600 13px/1 var(--fonte);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 30: passo 1, a ajuda da descrição fica junto do rótulo */
+.form-passo1 .campo:has(textarea) > * {
+  order: 3;
+}
+.form-passo1 .campo:has(textarea) > label {
+  order: 1;
+}
+.form-passo1 .campo:has(textarea) > .ajuda {
+  order: 2;
+  margin-top: -4px;
+}
+
+/* ---------- 31/32: editor da planilha */
+.modulos-acoes {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.modulo-grupo {
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  font: 600 14px/20px var(--fonte);
+  color: var(--tinta);
+  border-bottom: 1px solid var(--linha);
+}
+.modulo-planilha.modulo-sub6 {
+  margin-left: 0;
+}
+@media (min-width: 721px) {
+  .modulo-planilha.modulo-sub6 {
+    margin-left: 16px;
+  }
+  .modulo-planilha.modulo-sub6:has(> .modulo-grupo) {
+    margin-left: 0;
+    border-color: transparent;
+    background: transparent;
+  }
+  .modulo-planilha.modulo-sub6:has(> .modulo-grupo) > .modulo-cab,
+  .modulo-planilha.modulo-sub6:has(> .modulo-grupo) > .linhas-planilha {
+    margin-left: 16px;
+    border: 1px solid var(--linha);
+    background: var(--superficie);
+  }
+  .modulo-planilha.modulo-sub6:has(> .modulo-grupo) > .modulo-cab {
+    margin-top: 8px;
+    background: var(--superficie-2);
+  }
+  .modulo-planilha.modulo-sub6:has(> .modulo-grupo) > .linhas-planilha {
+    border-top: 0;
+    border-radius: 0 0 var(--raio) var(--raio);
+  }
+}
+.modulo-expandir {
+  margin-left: 4px;
+  font: 500 12px/16px var(--fonte);
+  color: var(--verde);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.modulo-cab > .num {
+  font-variant-numeric: tabular-nums;
+}
+.sb-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--t-legenda);
+  color: var(--grafite);
+  cursor: pointer;
+}
+.linha-planilha .sb-radio input {
+  min-height: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+}
+/* Base: coluna fixa e larga o bastante para "Módulo 1 + Submódulo 2.1" sem cortar */
+@media (min-width: 721px) {
+  .linha-planilha {
+    grid-template-columns: minmax(0, 1fr) 68px 112px 228px 36px;
+  }
+  .linha-planilha select[data-col="b"] {
+    font-size: 14px;
+  }
+}
+/* celular: a mesma ordem do computador (tipo antes do valor), sem traço solto */
+@media (max-width: 720px) {
+  .linha-planilha {
+    grid-template-columns: 84px minmax(0, 1fr) 44px;
+    grid-template-areas: "item item item" "tipo valor acoes" "base base base";
+  }
+  .linha-planilha > [role="cell"]:nth-child(4):empty {
+    display: none;
+  }
+}
+
+/* ---------- 32: a memória ao lado rola dentro do painel, com um degradê indicando que há mais */
+@media (min-width: 1101px) {
+  .assistente-memoria {
+    overscroll-behavior: contain;
+  }
+  .assistente-memoria > :last-child {
+    margin-bottom: 24px;
+  }
+  .assistente-memoria::after {
+    content: "";
+    display: block;
+    position: sticky;
+    bottom: 0;
+    height: 40px;
+    margin: -40px -24px 0;
+    background: linear-gradient(to bottom, transparent, var(--superficie) 85%);
+    pointer-events: none;
+  }
+}
+@media (max-width: 1100px) {
+  .assistente-memoria {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* ---------- 33: passo 4, documentos */
+.passo4 .aviso-cpf {
+  display: none;
+}
+.doc-acoes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  align-items: center;
+}
+.doc-acoes .zona-arquivo.compacta {
+  padding: 10px 16px;
+}
+@media (max-width: 720px) {
+  .doc-acoes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .doc-acoes .btn {
+    justify-self: start;
+  }
+}
+.doc-comprovante {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.doc-nome {
+  color: var(--tinta);
+}
+
+/* ---------- 35: memória de cálculo */
+.memoria-tabela .c-comentar {
+  width: 56px;
+  text-align: right;
+}
+@media (hover: hover) {
+  .memoria-tabela .btn-comentar:not(.tem):not([aria-expanded="true"]) {
+    opacity: 0;
+    transition: opacity 120ms ease-out;
+  }
+  .memoria-tabela tr:hover .btn-comentar,
+  .memoria-tabela tr:focus-within .btn-comentar,
+  .memoria-tabela .btn-comentar:focus-visible {
+    opacity: 1;
+  }
+}
+.memoria-total-geral {
+  display: grid;
+  gap: 12px;
+}
+.memoria-total-dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 24px;
+  margin: 0;
+}
+.memoria-total-dl dt {
+  font: var(--t-ajuda);
+  color: var(--grafite);
+}
+.memoria-total-dl dd {
+  margin: 0;
+  font: 600 18px/26px var(--fonte);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  .memoria-total-dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.metodologia summary {
+  cursor: pointer;
+  font: var(--t-ajuda);
+  color: var(--grafite);
+  width: fit-content;
+}
+.metodologia p {
+  margin-top: 4px;
+}
+
+/* ---------- 36/37: pedido protocolado e deferido */
+.passos-pendentes {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+}
+.valores-compactos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 24px;
+  margin-bottom: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--linha);
+}
+.valores-compactos > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.valores-compactos dt {
+  font: var(--t-ajuda);
+  color: var(--grafite);
+}
+.valores-compactos dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 520px) {
+  .valores-compactos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- 51: pedido de exemplo */
+.exemplo-cta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}

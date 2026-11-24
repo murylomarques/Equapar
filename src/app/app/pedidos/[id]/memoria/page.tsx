@@ -37,7 +37,7 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
           { rotulo: "Memória de cálculo" },
         ]}
         titulo="Memória de cálculo"
-        subtitulo={`Contrato ${p.contrato.numero} · ${p.contrato.orgao} · estrutura da IN SEGES/MP 05/2017, Anexo VII-D · regra ${calc.versaoRegra} · cada linha arredondada a 2 casas · tributos por dentro`}
+        subtitulo={`Contrato ${p.contrato.numero} · ${p.contrato.orgao}`}
         acao={
           aprovacaoValida(p) ? (
             <span className="selo selo-verde">
@@ -61,6 +61,12 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
         }
       />
 
+      <details className="metodologia mb-16">
+        <summary>Metodologia</summary>
+        <p className="legenda mb-0">
+          Estrutura da IN SEGES/MP 05/2017, Anexo VII-D · cada linha arredondada a 2 casas · tributos por dentro · regra {calc.versaoRegra}
+        </p>
+      </details>
       {p.gatilho === "JORNADA_EC141" && jornadaEmSimulacao() && <Alerta tipo="erro" className="mb-16" titulo={MARCA_SIMULACAO_JORNADA} />}
       {!comp || comp.erros.length ? (
         <Alerta tipo="erro" titulo="A memória ainda não pode ser montada">

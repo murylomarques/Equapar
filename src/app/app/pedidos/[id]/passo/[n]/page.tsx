@@ -425,7 +425,7 @@ function Passo3({ p, leitura, iaConvencao }: { p: P; leitura: boolean; iaConvenc
   return (
     <div className="pilha" style={{ gap: 16 }}>
       <p className="secundario mb-0 leitura">
-        Atualize pisos, benefícios e encargos com os números da convenção nova. Em cada linha alterada, informe a fonte (a cláusula). A memória ao lado mostra cada conta.
+        Atualize pisos, benefícios e encargos com os números da convenção nova. Em cada linha alterada, informe a fonte (a cláusula). A memória de cálculo mostra cada conta e atualiza enquanto você digita.
       </p>
       {!leitura && (iaConvencao || p.sugestoesConvencao) && <ConvencaoIa pedidoId={p.id} emTeste={iaEmTeste("CONVENCAO")} sugestoes={(p.sugestoesConvencao as unknown as SugestoesConvencao | null) ?? null} />}
       <EditorPlanilha
@@ -532,14 +532,37 @@ async function Passo4({ p, leitura }: { p: P; leitura: boolean }) {
   const docs = await db.documento.findMany({ where: { pedidoId: p.id }, orderBy: { criadoEm: "desc" } });
   const itens = situacaoChecklist(p, docs);
   const faltam = itens.filter((i) => i.situacao === "FALTA").length;
+  const podeEnviar = !leitura && itens.some((i) => !("automatico" in i && i.automatico) && i.situacao !== "ANEXADO");
+  // o arquivo que comprova cada item anexado (só quando o tipo identifica o item sem ambiguidade)
+  const docDoItem = (id: string) => {
+    const tipo = id === "planilha_atual" ? "PLANILHA" : id === "convencao_nova" ? "CONVENCAO" : id === "contrato" ? "CONTRATO" : null;
+    return tipo ? docs.find((d) => d.tipo === tipo) : undefined;
+  };
+  const comprovante = (id: string) => {
+    if (id === "planilha_nova") return <a href={`/api/pedidos/${p.id}/arquivos/planilha.xlsx`}>Ver a planilha nova (Excel)</a>;
+    if (id === "memoria") return <Link href={`/app/pedidos/${p.id}/memoria`}>Ver a memória de cálculo</Link>;
+    const d = docDoItem(id);
+    if (d)
+      return (
+        <>
+          <span className="doc-nome">{d.nome}</span> · <a href={`/api/documentos/${d.id}`}>Ver arquivo</a>
+        </>
+      );
+    return <span>Marcado como entregue fora do sistema ou na lista de anexos abaixo.</span>;
+  };
   return (
-    <div className="pilha" style={{ maxWidth: 900, gap: 16 }}>
+    <div className="pilha passo4" style={{ maxWidth: 900, gap: 16 }}>
       <div className="cartao">
         <div className="cartao-cab">
           <h2>Documentos que o órgão vai pedir</h2>
           {faltam ? <SeloSimples texto={`Faltam ${faltam}`} tom="carimbo" icone="alerta" /> : <SeloSimples texto="Tudo pronto" tom="verde" icone="check" />}
         </div>
         <FonteRegra regra={FONTES.analitica} />
+        {podeEnviar && (
+          <Alerta tipo="info" className="mt-16">
+            Não envie folha com nomes ou CPFs de empregados. A planilha de custos basta.
+          </Alerta>
+        )}
         <ul className="lista-limpa mt-16">
           {itens.map((i) => (
             <li key={i.id} className="item-doc">
@@ -549,6 +572,7 @@ async function Passo4({ p, leitura }: { p: P; leitura: boolean }) {
                   <span className="ajuda-texto" style={{ display: "block" }}>
                     {MOTIVO_DOC[i.id]}
                   </span>
+                  {i.situacao === "ANEXADO" && <span className="doc-comprovante legenda">{comprovante(i.id)}</span>}
                 </div>
                 <SeloSimples
                   texto={i.situacao === "ANEXADO" ? "Anexado" : i.situacao === "FALTA" ? "Falta" : "Opcional"}
@@ -557,7 +581,7 @@ async function Passo4({ p, leitura }: { p: P; leitura: boolean }) {
                 />
               </div>
               {!leitura && !("automatico" in i && i.automatico) && i.situacao !== "ANEXADO" && (
-                <div className="grade-2 mt-8" style={{ alignItems: "center" }}>
+                <div className="doc-acoes mt-8">
                   <FormAcao action={anexarDocumentoPedido}>
                     <input type="hidden" name="pedidoId" value={p.id} />
                     <input type="hidden" name="item" value={i.id} />
@@ -654,7 +678,7 @@ function Passo5({ p, leitura, podeAprovar }: { p: P; leitura: boolean; podeAprov
               {p.convencao ? ` · ${p.convencao.nome}` : ""}
             </dd>
             <dt>
-              <Termo>data-base</Termo>
+              <Termo>Data-base</Termo>
             </dt>
             <dd>{data(p.dataBase)}</dd>
             <dt>Depósito da convenção</dt>

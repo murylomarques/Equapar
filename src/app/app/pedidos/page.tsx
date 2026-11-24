@@ -23,6 +23,17 @@ const TOM: Record<string, Tom> = {
   INDEFERIDO: "carimbo",
 };
 
+/** Um ícone por situação, igual na tabela e nos cartões do celular. */
+const ICONE: Record<string, "relogio" | "check" | "ampulheta" | "carimbo" | "cifrao" | "alerta"> = {
+  EM_ANALISE: "relogio",
+  CALCULO_VALIDADO: "check",
+  PROTOCOLADO: "ampulheta",
+  DEFERIDO: "carimbo",
+  FATURADO: "cifrao",
+  RECEBIDO: "check",
+  INDEFERIDO: "alerta",
+};
+
 export default async function Pedidos({ searchParams }: { searchParams: Promise<{ estado?: string }> }) {
   const ctx = await contexto();
   const { estado } = await searchParams;
@@ -113,7 +124,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
                     </td>
                     <td>{p.contrato.orgao}</td>
                     <td>
-                      <SeloSimples texto={NOME_ESTADO[p.estado]} tom={TOM[p.estado]} icone={p.estado === "PROTOCOLADO" ? "ampulheta" : p.estado === "DEFERIDO" ? "carimbo" : "check"} />
+                      <SeloSimples texto={NOME_ESTADO[p.estado]} tom={TOM[p.estado]} icone={ICONE[p.estado]} />
                       {p.estado === "EM_ANALISE" && <div className="legenda mt-8">passo {p.passoAtual} de 5</div>}
                     </td>
                     <td className="num">{p.diferencaMensal ? reais(p.diferencaMensal) : "—"}</td>
@@ -130,9 +141,21 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
                 <strong>
                   Contrato {p.contrato.numero} · {p.contrato.orgao}
                 </strong>
-                <div className="mt-8">
-                  <SeloSimples texto={NOME_ESTADO[p.estado]} tom={TOM[p.estado]} />
+                {ctx.conta.tipo === "ASSESSORIA" && <span className="legenda">{p.contrato.empresa.razaoSocial}</span>}
+                <div className="pedido-cartao-situacao">
+                  <SeloSimples texto={NOME_ESTADO[p.estado]} tom={TOM[p.estado]} icone={ICONE[p.estado]} />
+                  {p.estado === "EM_ANALISE" && <span className="legenda">passo {p.passoAtual} de 5</span>}
                 </div>
+                <dl className="pedido-cartao-valores">
+                  <div>
+                    <dt>Diferença/mês</dt>
+                    <dd className="num">{p.diferencaMensal ? reais(p.diferencaMensal) : "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Desde a data-base</dt>
+                    <dd className="num">{p.diferencaRetroativa ? reais(p.diferencaRetroativa) : "—"}</dd>
+                  </div>
+                </dl>
               </Link>
             ))}
           </div>

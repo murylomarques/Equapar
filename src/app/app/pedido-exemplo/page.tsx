@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { contexto } from "@/lib/auth";
 import { pedidoExemplo } from "@/lib/demo";
@@ -21,7 +22,13 @@ export default async function PedidoExemplo() {
   return (
     <>
       <CabecalhoPagina
+        trilha={[{ rotulo: "Pedidos", href: "/app/pedidos" }, { rotulo: "Pedido pronto de exemplo" }]}
         titulo="Pedido pronto de exemplo"
+        acao={
+          <Link href="/app/carteira" className="btn btn-primario">
+            Criar meu pedido
+          </Link>
+        }
         selo={<span className="selo selo-ambar">Exemplo · dados fictícios</span>}
         subtitulo={`Contrato ${p.contrato.numero} · ${p.contrato.orgao} · ${NOME_GATILHO[p.gatilho]}${p.convencao ? ` · ${p.convencao.nome}` : ""} · data-base ${data(p.dataBase)}`}
       />
@@ -49,6 +56,22 @@ export default async function PedidoExemplo() {
         </div>
       </div>
       <MemoriaView pedidoId={p.id} comp={comp} retro={calc.retroativo} comentarios={[]} podeComentar={false} linkConvencao={null} />
+      <section className="cartao mt-24 exemplo-cta" aria-labelledby="exemplo-cta">
+        <div>
+          <h2 id="exemplo-cta" className="mb-0">
+            Pronto para montar o seu?
+          </h2>
+          <p className="secundario mb-0">Escolha o contrato na carteira. O assistente guia os cinco passos e salva enquanto você preenche.</p>
+        </div>
+        <div className="fileira">
+          <Link href="/app/pedidos" className="btn btn-discreto">
+            Voltar aos pedidos
+          </Link>
+          <Link href="/app/carteira" className="btn btn-primario">
+            Criar meu pedido
+          </Link>
+        </div>
+      </section>
     </>
   );
 }

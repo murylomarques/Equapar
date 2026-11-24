@@ -1,5 +1,6 @@
 "use client";
 import { useState, useSyncExternalStore } from "react";
+import Decimal from "decimal.js";
 import { ChevronDown, MessageSquare, Printer } from "lucide-react";
 import { brl, pct } from "@/lib/calculo/motor";
 import type { Comparacao, Retroativo } from "@/lib/calculo/motor";
@@ -11,6 +12,21 @@ import { comentarLinha } from "../../acoes";
 import { paginaDaFonte } from "@/lib/sugestoes-convencao";
 
 const CELULAR = "(max-width: 720px)";
+/** Variação exibida (só apresentação: os totais já vêm do motor; aqui é antes → agora). */
+function variacao(antes: string, agora: string) {
+  return new Decimal(agora).minus(new Decimal(antes)).toFixed(2);
+}
+function Delta({ v }: { v: string }) {
+  const d = Number(v);
+  if (d === 0) return <span className="secundario">sem mudança</span>;
+  return (
+    <span style={{ fontWeight: 600, color: d < 0 ? "var(--erro)" : "var(--verde)" }}>
+      {d > 0 ? "+" : ""}
+      {brl(v)}
+    </span>
+  );
+}
+
 function assinarCelular(aviso: () => void) {
   const m = window.matchMedia(CELULAR);
   m.addEventListener("change", aviso);
@@ -132,16 +148,22 @@ export function MemoriaView({
                       );
                     })}
                 </ul>
-                <div className="entre memoria-cartao" style={{ fontWeight: 600 }}>
-                  <span>Total mensal</span>
-                  <span className="tnum">
-                    {brl(posto.mensalAntes)} → {brl(posto.mensalAgora)}
-                  </span>
+                <div className="memoria-cartao" style={{ fontWeight: 600 }}>
+                  <div className="entre">
+                    <span>Total mensal</span>
+                    <span className="tnum">
+                      {brl(posto.mensalAntes)} → {brl(posto.mensalAgora)}
+                    </span>
+                  </div>
+                  <div className="entre tnum">
+                    <span className="legenda">Variação</span>
+                    <Delta v={variacao(posto.mensalAntes, posto.mensalAgora)} />
+                  </div>
                 </div>
               </div>
             )}
             <div className="tabela-rolagem so-desktop-memoria" style={{ border: 0, borderTop: "1px solid var(--linha)", borderRadius: 0, boxShadow: "none" }}>
-              <table className="tabela">
+              <table className="tabela memoria-tabela">
                 <thead>
                   <tr>
                     <th scope="col">Item e conta</th>
@@ -213,16 +235,18 @@ export function MemoriaView({
                                   </span>
                                 )}
                               </td>
-                              <td className="nao-imprimir" style={{ width: 120 }}>
+                              <td className="nao-imprimir c-comentar">
                                 {(podeComentar || cs.length > 0) && (
                                   <button
                                     type="button"
-                                    className="btn btn-discreto btn-pequeno"
+                                    className={`btn btn-discreto btn-pequeno btn-comentar${cs.length ? " tem" : ""}`}
                                     aria-expanded={comentando === l.id}
+                                    aria-label={cs.length ? `${plural(cs.length, "comentário", "comentários")} sobre ${l.descricao}` : `Comentar ${l.descricao}`}
+                                    title={cs.length ? "Ver comentários" : "Comentar esta linha"}
                                     onClick={() => setComentando(comentando === l.id ? null : l.id)}
                                   >
                                     <MessageSquare size={14} strokeWidth={1.5} aria-hidden />
-                                    {cs.length ? cs.length : "Comentar"}
+                                    {cs.length > 0 && <span aria-hidden>{cs.length}</span>}
                                   </button>
                                 )}
                               </td>
@@ -266,7 +290,9 @@ export function MemoriaView({
                     <td>Total mensal ({plural(posto.quantidadeAgora, "posto", "postos")})</td>
                     <td className="num">{brl(posto.mensalAntes)}</td>
                     <td className="num">{brl(posto.mensalAgora)}</td>
-                    <td className="num" />
+                    <td className="num">
+                      <Delta v={variacao(posto.mensalAntes, posto.mensalAgora)} />
+                    </td>
                     <td className="nao-imprimir" />
                   </tr>
                 </tbody>
@@ -275,6 +301,29 @@ export function MemoriaView({
           </section>
         );
       })}
+
+      {comp.postos.length > 1 && (
+        <section className="cartao memoria-total-geral" aria-label="Total do contrato">
+          <h2 className="mb-0">Total do contrato · {plural(comp.postos.length, "tipo de posto", "tipos de posto")}</h2>
+          <dl className="memoria-total-dl">
+            <div>
+              <dt>Mensal antes</dt>
+              <dd className="num">{brl(comp.mensalAntes)}</dd>
+            </div>
+            <div>
+              <dt>Mensal agora</dt>
+              <dd className="num">{brl(comp.mensalAgora)}</dd>
+            </div>
+            <div>
+              <dt>Diferença por mês</dt>
+              <dd className="num">
+                <Delta v={comp.diferencaMensal} />
+                {comp.variacaoPct && <span className="legenda"> ({pct(comp.variacaoPct)})</span>}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      )}
 
       {retro && retro.meses.length > 0 && (
         <section className="cartao">

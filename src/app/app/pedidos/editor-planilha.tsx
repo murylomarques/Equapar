@@ -165,7 +165,8 @@ export function EditorPlanilha({
   const [alterada, setAlterada] = useState<string | null>(null);
   const [aba, setAba] = useState(inicial.tipos[0]?.id ?? "");
   const [dataRef, setDataRef] = useState<string | null>(dataReferenciaInicial ?? null);
-  const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
+  // aberto/fechado escolhido pela pessoa; sem escolha, só o primeiro módulo vem aberto (todos, no filtro de linhas alteradas)
+  const [alternados, setAlternados] = useState<Map<string, boolean>>(new Map());
   const [moduloCelular, setModuloCelular] = useState<ModuloId>("M1");
   const confirmar = useConfirmar();
   // Último conteúdo gravado: só salva quando o conteúdo realmente muda.
@@ -330,6 +331,17 @@ export function EditorPlanilha({
   const posto = planilha.tipos.find((t) => t.id === aba) ?? planilha.tipos[0];
   const calcPosto = resultado?.postos.find((p) => p.id === posto?.id);
   const visivel = (l: LinhaPlanilha) => !soMudou || !antes || mudou.has(`${posto.id}:${l.id}`);
+  const filtrando = soMudou && !!antes;
+  const modulosVisiveis = posto ? MODULOS.filter((m) => !filtrando || posto.linhas.some((l) => l.modulo === m.id && visivel(l))) : [];
+  const abertoPadrao = (mid: ModuloId) => filtrando || mid === (modulosVisiveis[0]?.id ?? "M1");
+  const aberto = (mid: ModuloId) => alternados.get(`${posto?.id}:${mid}`) ?? abertoPadrao(mid);
+  const definirAberto = (mids: ModuloId[], valor: boolean) =>
+    setAlternados((a) => {
+      const n = new Map(a);
+      for (const mid of mids) n.set(`${posto?.id}:${mid}`, valor);
+      return n;
+    });
+  const todosAbertos = modulosVisiveis.every((m) => aberto(m.id));
 
   return (
     <div className="assistente">
@@ -433,7 +445,15 @@ export function EditorPlanilha({
 
             <div className="so-celular mt-16 campo">
               <label htmlFor={`mod-${posto.id}`}>Módulo</label>
-              <select id={`mod-${posto.id}`} value={moduloCelular} onChange={(e) => setModuloCelular(e.target.value as ModuloId)}>
+              <select
+                id={`mod-${posto.id}`}
+                value={moduloCelular}
+                onChange={(e) => {
+                  const mid = e.target.value as ModuloId;
+                  setModuloCelular(mid);
+                  definirAberto([mid], true);
+                }}
+              >
                 {MODULOS.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.nome}
@@ -442,34 +462,47 @@ export function EditorPlanilha({
               </select>
             </div>
 
-            <div className="mt-16 pilha" style={{ gap: 8 }}>
-              {MODULOS.map((m) => {
+            {modulosVisiveis.length > 1 && (
+              <div className="modulos-acoes so-desktop">
+                <button type="button" className="btn btn-discreto btn-pequeno" onClick={() => definirAberto(modulosVisiveis.map((m) => m.id), !todosAbertos)}>
+                  {todosAbertos ? "Recolher todos os módulos" : "Expandir todos os módulos"}
+                </button>
+              </div>
+            )}
+            <div className="mt-8 pilha" style={{ gap: 8 }}>
+              {modulosVisiveis.map((m) => {
                 const linhas = posto.linhas.filter((l) => l.modulo === m.id);
                 const vis = linhas.filter(visivel);
-                if (soMudou && antes && vis.length === 0) return null;
-                const chave = `${posto.id}:${m.id}`;
-                const fechado = recolhidos.has(chave);
+                const fechado = !aberto(m.id);
                 const subtotal = calcPosto?.totaisModulo[m.id];
+                const grupo6 = m.id.startsWith("M6_");
+                const primeiroDo6 = grupo6 && modulosVisiveis.find((x) => x.id.startsWith("M6_"))?.id === m.id;
                 return (
-                  <section key={m.id} className={`modulo-planilha${m.id !== moduloCelular ? " fora-celular" : ""}`} aria-label={m.nome}>
+                  <section key={m.id} className={`modulo-planilha${grupo6 ? " modulo-sub6" : ""}${m.id !== moduloCelular ? " fora-celular" : ""}`} aria-label={m.nome}>
+                    {primeiroDo6 && (
+                      <p className="modulo-grupo so-desktop" aria-hidden>
+                        Módulo 6 · Custos indiretos, lucro e tributos
+                      </p>
+                    )}
                     <div className="modulo-cab">
-                      <button
-                        type="button"
-                        className="modulo-toggle"
-                        aria-expanded={!fechado}
-                        onClick={() =>
-                          setRecolhidos((r) => {
-                            const n = new Set(r);
-                            if (n.has(chave)) n.delete(chave);
-                            else n.add(chave);
-                            return n;
-                          })
-                        }
-                      >
+                      <button type="button" className="modulo-toggle" aria-expanded={!fechado} onClick={() => definirAberto([m.id], fechado)}>
                         <ChevronDown size={16} strokeWidth={1.5} aria-hidden style={{ transform: fechado ? "rotate(-90deg)" : undefined, transition: "transform 120ms" }} />
                         <span>
-                          {m.nome} <span className="legenda">({linhas.length})</span>
+                          {grupo6 ? (
+                            <>
+                              <span className="so-celular">Módulo 6 · </span>
+                              {m.nome.replace(/^Módulo 6 · /, "")}
+                            </>
+                          ) : (
+                            m.nome
+                          )}{" "}
+                          <span className="legenda">({plural(linhas.length, "linha", "linhas")})</span>
                         </span>
+                        {fechado && (
+                          <span className="modulo-expandir" aria-hidden>
+                            Expandir
+                          </span>
+                        )}
                       </button>
                       <span className="num" style={{ fontWeight: 600 }}>
                         {subtotal ? brl(subtotal) : "—"}
@@ -681,13 +714,14 @@ function LinhaEditor({
           onKeyDown={aoTeclar}
           onChange={(e) => mudarLinha(postoId, l.id, { fonte: e.target.value || undefined })}
         />
-        {(m === "M1" && l.tipo === "VALOR") || semFonte ? (
+        {(m === "M1" && l.tipo === "VALOR" && (!somenteLeitura || l.salarioBase)) || semFonte ? (
           <span className="fileira" style={{ gap: 8 }}>
-            {m === "M1" && l.tipo === "VALOR" && (
-              <label className="check legenda">
-                <input type="radio" name={`sb-${postoId}`} checked={!!l.salarioBase} disabled={somenteLeitura} onChange={() => mudarLinha(postoId, l.id, { salarioBase: true })} /> É o salário base
+            {m === "M1" && l.tipo === "VALOR" && !somenteLeitura && (
+              <label className="sb-radio">
+                <input type="radio" name={`sb-${postoId}`} checked={!!l.salarioBase} onChange={() => mudarLinha(postoId, l.id, { salarioBase: true })} /> É o salário base
               </label>
             )}
+            {m === "M1" && l.salarioBase && somenteLeitura && <span className="legenda">Salário base</span>}
             {semFonte && (
               <span className="selo selo-ambar" style={{ fontSize: 12, padding: "0 6px" }}>
                 falta fonte
@@ -751,7 +785,7 @@ function LinhaEditor({
             <label className="sr-only" htmlFor={`b-${l.id}`}>
               Base do percentual de {l.descricao}
             </label>
-            <select id={`b-${l.id}`} data-col="b" value={l.base ?? ""} disabled={somenteLeitura} onKeyDown={aoTeclar} onChange={(e) => mudarLinha(postoId, l.id, { base: e.target.value as BaseId })}>
+            <select id={`b-${l.id}`} data-col="b" value={l.base ?? ""} title={l.base ? NOME_BASE[l.base] : undefined} disabled={somenteLeitura} onKeyDown={aoTeclar} onChange={(e) => mudarLinha(postoId, l.id, { base: e.target.value as BaseId })}>
               {BASES_PERMITIDAS[m].map((b) => (
                 <option key={b} value={b}>
                   {NOME_BASE[b]}
@@ -761,9 +795,7 @@ function LinhaEditor({
           </>
         ) : m === "M6_TRIBUTOS" ? (
           <span className="legenda">por dentro</span>
-        ) : (
-          <span className="legenda">—</span>
-        )}
+        ) : null}
       </span>
       <span role="cell">
         {!somenteLeitura && !l.salarioBase && (

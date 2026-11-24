@@ -463,7 +463,8 @@ export function CampoData({
     <Campo
       {...ids}
       rotulo={rotulo}
-      ajuda={ajuda ?? "dd/mm/aaaa"}
+      // o formato só ajuda enquanto o campo está vazio (preenchido, a dica repetia o óbvio)
+      ajuda={ajuda ?? (texto ? undefined : "dd/mm/aaaa")}
       opcional={opcional}
       erro={erro}
       largura="data"

@@ -45,6 +45,8 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
   const c = calc.comparacao && !calc.comparacao.erros.length ? calc.comparacao : null;
   const financeiro = resumoFinanceiro(p.retroativoAprovado ?? p.valorDeferido ?? 0, notas, baixas);
   const versaoFinal = aprovacaoValida(p) && !!p.memoriaVersaoAprovadaId;
+  // com a versão atual pendente, aprovar é a ação principal; as demais ficam secundárias
+  const aprovarPrimeiro = !versaoFinal && pode(ctx.papel, "aprovar_memoria");
 
   if (p.estado === "EM_ANALISE")
     return (
@@ -163,7 +165,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 <input type="hidden" name="pedidoId" value={p.id} />
                 <div className="linha-form">
                   <CampoTexto nome="protocoloNumero" id="protocoloNumero" rotulo="Número do protocolo" largura="medio" />
-                  <CampoData nome="protocoloData" id="protocoloData" rotulo="Data do protocolo" valorInicial={hoje} mostrarRelativo={false} />
+                  <CampoData nome="protocoloData" id="protocoloData" rotulo="Data do protocolo" valorInicial={hoje} mostrarRelativo={false} ajuda="" />
                   <CampoData nome="documentacaoCompletaEm" rotulo="Documentação completa entregue em" opcional valorInicial={hoje} mostrarRelativo={false} ajuda="É desta data confirmada que começa o prazo de resposta." />
                 </div>
                 <BotaoEnvio>Registrar protocolo</BotaoEnvio>
@@ -188,25 +190,37 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
               Protocolo {p.protocoloNumero}
             </h2>
             <p>Protocolado em {data(p.protocoloData)}.</p>
-            {prazoResposta(p) ? (
+            {prazoResposta(p) && (
               <p>
                 Documentação completa em {data(p.documentacaoCompletaEm)}. Resposta preferencial até <strong>{data(prazoResposta(p))}</strong> ({emDias(diasAte(prazoResposta(p)!))}).
               </p>
-            ) : (
-              <Alerta tipo="atencao">O prazo de resposta ainda não começou: falta confirmar a data em que a documentação ficou completa.</Alerta>
             )}
-            <FonteRegra regra={FONTES.resposta} />
-            {!versaoFinal && (
-              <Alerta tipo="atencao" className="mt-16" titulo="A data registrada alterou a memória">
-                Os arquivos finais estão bloqueados até a versão atual ser revisada e aprovada novamente.
-                {pode(ctx.papel, "aprovar_memoria") && (
-                  <FormAcao action={aprovarMemoria} className="mt-8">
-                    <input type="hidden" name="pedidoId" value={p.id} />
-                    <BotaoEnvio className="btn btn-pequeno">Aprovar a versão atual</BotaoEnvio>
-                  </FormAcao>
-                )}
+            {versaoFinal ? (
+              !prazoResposta(p) && <Alerta tipo="atencao">O prazo de resposta ainda não começou: falta confirmar a data em que a documentação ficou completa.</Alerta>
+            ) : (
+              <Alerta tipo="atencao" titulo="Antes de seguir">
+                <ol className="passos-pendentes">
+                  <li>
+                    <strong>Aprovar a versão atual da memória.</strong> A data registrada alterou a memória; os arquivos finais ficam bloqueados até a aprovação.
+                    {pode(ctx.papel, "aprovar_memoria") ? (
+                      <FormAcao action={aprovarMemoria} className="mt-8">
+                        <input type="hidden" name="pedidoId" value={p.id} />
+                        <BotaoEnvio>Aprovar a versão atual</BotaoEnvio>
+                      </FormAcao>
+                    ) : (
+                      <span className="legenda" style={{ display: "block" }}>
+                        Contador ou Dono aprova.
+                      </span>
+                    )}
+                  </li>
+                  <li>
+                    <strong>Registrar a resposta do órgão</strong> quando ela chegar{fin ? ", no formulário abaixo." : "."}
+                  </li>
+                </ol>
+                {!prazoResposta(p) && <p className="mb-0 mt-8">O prazo de resposta ainda não começou: falta confirmar a data em que a documentação ficou completa.</p>}
               </Alerta>
             )}
+            <FonteRegra regra={FONTES.resposta} />
             {fin && (
               <FormAcao action={registrarResposta} className="mt-24">
                 <input type="hidden" name="pedidoId" value={p.id} />
@@ -222,13 +236,13 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                   ]}
                 />
                 <div className="linha-form">
-                  <CampoData nome="respostaData" id="respostaData" rotulo="Data da resposta" valorInicial={hoje} mostrarRelativo={false} />
+                  <CampoData nome="respostaData" id="respostaData" rotulo="Data da resposta" valorInicial={hoje} mostrarRelativo={false} ajuda="" />
                   <CampoDinheiro nome="mensalAprovado" rotulo="Valor mensal aprovado" valorInicial={c?.mensalAgora} ajuda="No deferimento parcial, informe o novo valor mensal reconhecido pelo órgão." />
                   <CampoDinheiro nome="retroativoAprovado" rotulo="Retroativo aprovado" valorInicial={calc.retroativo?.total} ajuda="A diferença retroativa reconhecida pelo órgão." />
                 </div>
                 <TextoLongo nome="respostaResumo" rotulo="Resumo da resposta" opcional limite={1000} />
                 <TextoLongo nome="decisaoEvidencia" rotulo="Fundamento ou documento da decisão" opcional ajuda="Obrigatório para deferimento parcial." limite={1000} />
-                <BotaoEnvio>Registrar resposta</BotaoEnvio>
+                <BotaoEnvio className={aprovarPrimeiro ? "btn" : undefined}>Registrar resposta</BotaoEnvio>
               </FormAcao>
             )}
           </section>
@@ -242,6 +256,12 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
           <section className="cartao pico" aria-labelledby="deferido">
             <Carimbo texto="DEFERIDO" grande />
             <dl className="pico-valores mt-16">
+              <div>
+                <dt>Total ainda pendente</dt>
+                <dd>{brl(financeiro.totalPendente)}</dd>
+              </div>
+            </dl>
+            <dl className="valores-compactos mt-16">
               <div>
                 <dt>Mensal solicitado</dt>
                 <dd>{p.mensalSolicitado != null ? reais(p.mensalSolicitado) : <span className="secundario">não registrado</span>}</dd>
@@ -270,10 +290,6 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 <dt>Faturado a receber</dt>
                 <dd>{brl(financeiro.faturadoAReceber)}</dd>
               </div>
-              <div>
-                <dt>Total ainda pendente</dt>
-                <dd>{brl(financeiro.totalPendente)}</dd>
-              </div>
             </dl>
             {p.diferencaMensal && p.dataBase && (
               // L11: só informação, à parte; não muda o pedido protocolado nem o valor deferido
@@ -288,7 +304,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 {pode(ctx.papel, "aprovar_memoria") && (
                   <FormAcao action={aprovarMemoria} className="mt-8">
                     <input type="hidden" name="pedidoId" value={p.id} />
-                    <BotaoEnvio className="btn btn-pequeno">Aprovar a versão atual</BotaoEnvio>
+                    <BotaoEnvio>Aprovar a versão atual</BotaoEnvio>
                   </FormAcao>
                 )}
               </Alerta>
@@ -309,8 +325,8 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 {fin && (
                   <FormAcao action={registrarApostilamento}>
                     <input type="hidden" name="pedidoId" value={p.id} />
-                    <CampoData nome="apostiladoEm" rotulo="Data do apostilamento" valorInicial={hoje} mostrarRelativo={false} />
-                    <BotaoEnvio>Registrar apostilamento</BotaoEnvio>
+                    <CampoData nome="apostiladoEm" rotulo="Data do apostilamento" valorInicial={hoje} mostrarRelativo={false} ajuda="" />
+                    <BotaoEnvio className={aprovarPrimeiro ? "btn" : undefined}>Registrar apostilamento</BotaoEnvio>
                   </FormAcao>
                 )}
               </>
@@ -321,11 +337,11 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 <p className="secundario">Apostilado em {data(p.apostiladoEm)}. Falta faturar {brl(financeiro.faltaFaturar)}; cada nota fica registrada separadamente.</p>
                 <div className="linha-form">
                   <CampoTexto nome="notaFiscal" rotulo="Número da nota fiscal" largura="medio" />
-                  <CampoData nome="faturadoEm" rotulo="Data da nota" valorInicial={hoje} mostrarRelativo={false} />
+                  <CampoData nome="faturadoEm" rotulo="Data da nota" valorInicial={hoje} mostrarRelativo={false} ajuda="" />
                   <CampoDinheiro nome="valorNota" rotulo="Valor desta nota" valorInicial={financeiro.faltaFaturar} />
                   <CampoTexto nome="referenciaOperacao" rotulo="Referência da operação" opcional ajuda="Use a mesma referência ao repetir o envio; assim não duplica." />
                 </div>
-                <BotaoEnvio>Registrar nota fiscal</BotaoEnvio>
+                <BotaoEnvio className={aprovarPrimeiro ? "btn" : undefined}>Registrar nota fiscal</BotaoEnvio>
               </FormAcao>
             )}
             {p.estado === "FATURADO" && fin && (
@@ -334,11 +350,11 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 <p className="secundario">Faturado a receber: {brl(financeiro.faturadoAReceber)}. Registre cada pagamento na nota correspondente.</p>
                 <div className="linha-form">
                   <CampoSelect nome="notaFiscalId" rotulo="Nota fiscal" opcoes={notas.map((nota) => ({ valor: nota.id, rotulo: `${nota.identificacao} · ${brl(nota.valor.toString())}` }))} />
-                  <CampoData nome="recebidoEm" rotulo="Data do recebimento" valorInicial={hoje} mostrarRelativo={false} />
+                  <CampoData nome="recebidoEm" rotulo="Data do recebimento" valorInicial={hoje} mostrarRelativo={false} ajuda="" />
                   <CampoDinheiro nome="valorRecebido" rotulo="Valor recebido" valorInicial={financeiro.faturadoAReceber} />
                   <CampoTexto nome="referenciaOperacao" rotulo="Referência da baixa" opcional ajuda="Identificador bancário ou contábil; evita baixa duplicada." />
                 </div>
-                <BotaoEnvio>Registrar recebimento</BotaoEnvio>
+                <BotaoEnvio className={aprovarPrimeiro ? "btn" : undefined}>Registrar recebimento</BotaoEnvio>
               </FormAcao>
             )}
             {lancamentos}

@@ -131,7 +131,7 @@ export default async function AReceber() {
                   Contrato {p.contrato.numero} · deferido em {data(p.deferidoEm)}
                 </span>
                 <div className="entre mt-8">
-                  <SeloSimples texto={p.estado === "FATURADO" ? "Faturado" : p.apostiladoEm ? "Apostilado" : "Falta apostilar"} tom={p.apostiladoEm ? "verde" : "ambar"} />
+                  <SeloSimples texto={p.estado === "FATURADO" ? "Faturado" : p.apostiladoEm ? "Apostilado" : "Falta apostilar"} tom={p.apostiladoEm ? "verde" : "ambar"} icone={p.estado === "FATURADO" ? "cifrao" : p.apostiladoEm ? "check" : "alerta"} />
                   <span className="num">{reais(p.financeiro.totalPendente)}</span>
                 </div>
                 <span className="legenda" style={{ display: "block", marginTop: 6 }}>
@@ -139,6 +139,12 @@ export default async function AReceber() {
                 </span>
               </Link>
             ))}
+            {pedidos.length > 1 && (
+              <div className="cartao-linha entre" style={{ fontWeight: 600 }}>
+                <span>Total a receber</span>
+                <span className="num">{reais(total)}</span>
+              </div>
+            )}
           </div>
         </>
       )}
