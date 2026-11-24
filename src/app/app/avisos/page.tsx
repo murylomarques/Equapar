@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bell, Download, Mail, MessageCircle } from "lucide-react";
+import { ArrowRight, Bell, Download, Mail, MessageCircle } from "lucide-react";
 import { contexto, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { dataHora, diasAte, emDias, plural } from "@/lib/format";
+import { data, dataHora, diasAte, emDias, plural } from "@/lib/format";
 import { emailAtivo, whatsappAtivo } from "@/lib/mensagens";
+import { agrupar, classificar, ordenar, type Classificado } from "@/lib/central-avisos";
+import { situacaoEfetiva } from "@/lib/planos";
 import { SeloSimples } from "@/components/selo";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
@@ -20,15 +22,53 @@ function quando(d: Date) {
   return emDias(dias);
 }
 
-export default async function Avisos() {
+const VISOES = [
+  ["acao", "Precisa de você"],
+  ["prazos", "Prazos"],
+  ["historico", "Histórico de envios"],
+] as const;
+type Visao = (typeof VISOES)[number][0];
+
+const PRIORIDADE: Record<Classificado["prioridade"], { texto: string; tom: "carimbo" | "ambar" | "neutro"; icone: "alerta" | "relogio" | "check" }> = {
+  ALTA: { texto: "Urgente", tom: "carimbo", icone: "alerta" },
+  MEDIA: { texto: "Em breve", tom: "ambar", icone: "relogio" },
+  BAIXA: { texto: "Sem urgência", tom: "neutro", icone: "check" },
+};
+const STATUS_ENVIO: Record<string, string> = { SIMULADO: "simulado", ENVIADO: "enviado", ERRO: "falhou" };
+
+export default async function Avisos({ searchParams }: { searchParams: Promise<{ ver?: string }> }) {
   const ctx = await contexto();
-  const [avisos, trabalhos] = await Promise.all([
-    db.aviso.findMany({ where: { contaId: ctx.conta.id }, include: { contrato: true }, orderBy: { enviadoEm: "desc" }, take: 100 }),
+  const { ver } = await searchParams;
+  const visao: Visao = VISOES.some(([k]) => k === ver) ? (ver as Visao) : "acao";
+  const [linhas, trabalhos] = await Promise.all([
+    db.aviso.findMany({ where: { contaId: ctx.conta.id }, orderBy: { enviadoEm: "desc" }, take: 300 }),
     db.trabalhoFundo.findMany({ where: { usuarioId: ctx.usuario.id }, orderBy: { criadoEm: "desc" }, take: 5 }),
   ]);
   // Ao abrir, as tarefas prontas contam como vistas (o ponto do sino some)
   await db.trabalhoFundo.updateMany({ where: { usuarioId: ctx.usuario.id, status: { in: ["PRONTO", "ERRO"] }, vistoEm: null }, data: { vistoEm: new Date() } });
+
+  const eventos = agrupar(linhas);
+  // destinos só a partir de entidades desta conta (contrato e pedido conferidos no banco)
+  const contratoIds = [...new Set(eventos.map((e) => e.contratoId).filter((x): x is string => !!x))];
+  const pedidoIds = [...new Set(eventos.map((e) => e.pedidoId).filter((x): x is string => !!x))];
+  const [contratos, pedidos] = await Promise.all([
+    db.contrato.findMany({ where: { id: { in: contratoIds }, empresa: { contaId: ctx.conta.id } }, select: { id: true, numero: true, orgao: true, vigenciaFim: true, arquivado: true } }),
+    db.pedido.findMany({ where: { id: { in: pedidoIds }, contrato: { empresa: { contaId: ctx.conta.id } } }, select: { id: true, estado: true, apostiladoEm: true, contratoId: true } }),
+  ]);
+  const contratoDe = new Map(contratos.map((c) => [c.id, c]));
+  const pedidoDe = new Map(pedidos.map((p) => [p.id, p]));
+  const contaEmDia = situacaoEfetiva(ctx.conta.situacaoCobranca, ctx.conta.carenciaAte) === "EM_DIA";
+  const itens = ordenar(
+    eventos.map((ev) => ({
+      ev,
+      c: classificar(ev, { contrato: ev.contratoId ? (contratoDe.get(ev.contratoId) ?? null) : null, pedido: ev.pedidoId ? (pedidoDe.get(ev.pedidoId) ?? null) : null, contaEmDia }),
+    })),
+  );
+  const pendentes = itens.filter((x) => x.c.situacao === "PENDENTE" && x.c.categoria !== "INFO");
+  const prazos = itens.filter((x) => x.c.categoria === "PRAZO");
+  const lista = visao === "acao" ? pendentes : visao === "prazos" ? prazos : itens;
   const semCanal = [!emailAtivo() && "e-mail", !whatsappAtivo() && "WhatsApp"].filter(Boolean) as string[];
+  const contagem: Record<Visao, number> = { acao: pendentes.length, prazos: prazos.filter((x) => x.c.situacao === "PENDENTE").length, historico: eventos.length };
 
   return (
     <>
@@ -36,7 +76,7 @@ export default async function Avisos() {
         titulo="Avisos"
         subtitulo={
           <>
-            Prazos aos 60, 30 e 7 dias, protocolo, deferimento e o resumo semanal. <Link href="/app/configuracoes?aba=avisos">Escolher canais e horário</Link>
+            O que mudou na sua carteira e o que fazer em seguida. <Link href="/app/configuracoes?aba=avisos">Escolher canais e horário</Link>
           </>
         }
         acao={
@@ -71,59 +111,97 @@ export default async function Avisos() {
                 Concluída {t.concluidoEm ? quando(t.concluidoEm) : ""}. O arquivo fica disponível por 7 dias.
               </Alerta>
             ) : (
-              <Alerta key={t.id} tipo="erro" titulo="A exportação não terminou">
-                {t.erro ?? "Tente de novo em Configurações › Dados."}
+              <Alerta
+                key={t.id}
+                tipo="erro"
+                titulo="A exportação não terminou"
+                acao={
+                  <Link href="/app/configuracoes?aba=dados" className="btn btn-pequeno">
+                    Tentar de novo
+                  </Link>
+                }
+              >
+                {t.erro ?? "Algo falhou ao montar o arquivo."}
               </Alerta>
             ),
           )}
         </section>
       )}
 
-      {semCanal.length > 0 && (
-        <Alerta tipo="info" titulo="Modo simulação" className="mb-16">
-          {semCanal.join(" e ")} {semCanal.length > 1 ? "ainda não estão configurados" : "ainda não está configurado"}. As mensagens abaixo foram montadas e registradas, mas não saíram do sistema.
-        </Alerta>
+      <nav className="abas" aria-label="Filtrar avisos">
+        {VISOES.map(([k, n]) => (
+          <Link key={k} href={`/app/avisos${k === "acao" ? "" : `?ver=${k}`}`} aria-current={visao === k ? "page" : undefined} scroll={false}>
+            {n}
+            {contagem[k] > 0 && k !== "historico" ? <span className="contador">{contagem[k]}</span> : null}
+          </Link>
+        ))}
+      </nav>
+
+      {lista.length === 0 ? (
+        <EstadoVazio
+          icone={Bell}
+          titulo={visao === "acao" ? "Nada pendente agora" : visao === "prazos" ? "Nenhum aviso de prazo" : "Nenhum aviso ainda"}
+          porque={
+            visao === "acao"
+              ? "Quando um prazo se aproximar ou um pedido precisar do próximo passo, ele aparece aqui com o atalho para resolver."
+              : "Os avisos aparecem quando um prazo se aproxima ou um pedido muda de situação."
+          }
+        />
+      ) : (
+        <ul className="lista-limpa pilha-8" aria-label={VISOES.find(([k]) => k === visao)?.[1]}>
+          {lista.map(({ ev, c }) => (
+            <li key={ev.chave} className={`cartao aviso-item${c.situacao === "RESOLVIDO" ? " aviso-resolvido" : ""}`}>
+              <div className="aviso-corpo">
+                <div className="fileira" style={{ flexWrap: "wrap", gap: 8 }}>
+                  {c.situacao === "PENDENTE" ? (
+                    <SeloSimples texto={PRIORIDADE[c.prioridade].texto} tom={PRIORIDADE[c.prioridade].tom} icone={PRIORIDADE[c.prioridade].icone} />
+                  ) : (
+                    <SeloSimples texto={c.situacao === "RESOLVIDO" ? "Resolvido" : "Informativo"} tom="neutro" icone="check" />
+                  )}
+                  {c.objeto && <span className="legenda">{c.objeto}</span>}
+                </div>
+                <h2 className="aviso-titulo">{c.titulo}</h2>
+                <p className="secundario mb-0">{c.resumo}</p>
+                {visao === "historico" && ev.envios[0]?.assunto && <p className="legenda mt-8 mb-0">Mensagem: {ev.envios[0].assunto}</p>}
+                <p className="legenda mt-8 mb-0">
+                  Avisado{" "}
+                  <time dateTime={ev.ultimoEnvio.toISOString()} title={dataHora(ev.ultimoEnvio)}>
+                    {quando(ev.ultimoEnvio)}
+                  </time>
+                  {c.prazo ? ` · prazo ${data(c.prazo)}` : ""} · {plural(ev.envios.length, "envio", "envios")}
+                </p>
+                {visao === "historico" && (
+                  <details className="mt-8">
+                    <summary className="legenda">Ver as mensagens enviadas</summary>
+                    <ul className="lista-limpa pilha-8 mt-8">
+                      {ev.envios.map((e) => (
+                        <li key={e.id} className="aviso-envio">
+                          <p className="legenda mb-0 fileira" style={{ gap: 6 }}>
+                            {e.canal === "EMAIL" ? <Mail size={14} strokeWidth={1.5} aria-hidden /> : <MessageCircle size={14} strokeWidth={1.5} aria-hidden />}
+                            {e.canal === "EMAIL" ? "E-mail" : "WhatsApp"} para {e.destino} · {STATUS_ENVIO[e.status] ?? e.status} · {dataHora(e.enviadoEm)}
+                          </p>
+                          <pre className="aviso-texto">{e.corpo}</pre>
+                          {e.erro && <p className="erro-texto mb-0">{e.erro}</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
+              {c.acao && (
+                <Link href={c.acao.href} className={c.situacao === "PENDENTE" ? "btn btn-primario aviso-acao" : "btn aviso-acao"}>
+                  {c.acao.rotulo} <ArrowRight size={16} strokeWidth={1.5} aria-hidden />
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
 
-      {avisos.length === 0 ? (
-        <EstadoVazio icone={Bell} titulo="Nenhum aviso ainda" porque="Os avisos aparecem aqui quando um prazo se aproxima ou um pedido muda de situação." />
-      ) : (
-        <>
-          <p className="legenda">{plural(avisos.length, "aviso", "avisos")} (os 100 mais recentes)</p>
-          <ul className="lista-limpa pilha-8">
-            {avisos.map((a) => (
-              <li key={a.id} className="cartao" style={{ padding: 16 }}>
-                <div className="entre" style={{ alignItems: "flex-start" }}>
-                  <div className="fileira" style={{ minWidth: 0 }}>
-                    {a.canal === "EMAIL" ? (
-                      <Mail size={18} strokeWidth={1.5} aria-label="E-mail" />
-                    ) : (
-                      <MessageCircle size={18} strokeWidth={1.5} aria-label="WhatsApp" />
-                    )}
-                    <strong>{a.assunto ?? (a.canal === "WHATSAPP" ? "Mensagem de WhatsApp" : a.tipo)}</strong>
-                  </div>
-                  <div className="fileira">
-                    <SeloSimples texto={a.canal === "EMAIL" ? "E-mail" : "WhatsApp"} tom="neutro" icone="check" />
-                    <SeloSimples
-                      texto={a.status === "SIMULADO" ? "Simulado" : a.status === "ENVIADO" ? "Enviado" : "Falhou"}
-                      tom={a.status === "ENVIADO" ? "verde" : a.status === "ERRO" ? "carimbo" : "azul"}
-                      icone={a.status === "ERRO" ? "alerta" : "check"}
-                    />
-                  </div>
-                </div>
-                <p className="legenda mt-8 mb-0">
-                  <time dateTime={a.enviadoEm.toISOString()} title={dataHora(a.enviadoEm)}>
-                    {quando(a.enviadoEm)}
-                  </time>{" "}
-                  · para {a.destino}
-                  {a.contrato ? ` · contrato ${a.contrato.numero}` : ""}
-                </p>
-                <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: 14, margin: "10px 0 0" }}>{a.corpo}</pre>
-                {a.erro && <p className="erro-texto">{a.erro}</p>}
-              </li>
-            ))}
-          </ul>
-        </>
+      {semCanal.length > 0 && (
+        <p className="legenda mt-24">
+          Modo simulação: {semCanal.join(" e ")} {semCanal.length > 1 ? "ainda não estão configurados" : "ainda não está configurado"}; as mensagens foram registradas, mas não saíram do sistema.
+        </p>
       )}
     </>
   );

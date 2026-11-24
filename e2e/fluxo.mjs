@@ -307,7 +307,7 @@ try {
   await page.screenshot({ path: `${SHOTS}/07-recebido.png`, fullPage: true });
   ok("recebido (carimbo RECEBIDO)");
 
-  await page.goto(`${BASE}/app/avisos`);
+  await page.goto(`${BASE}/app/avisos?ver=historico`);
   await page.getByText(/Protocolado: contrato 99\/2025/).filter({ visible: true }).first().waitFor();
   await page.getByText(/Deferido: contrato 99\/2025/).filter({ visible: true }).first().waitFor();
   ok("avisos de protocolo e deferimento registrados (simulação)");

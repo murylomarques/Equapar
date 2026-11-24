@@ -2004,3 +2004,81 @@ mark {
 .painel-interno > .cartao {
   overflow-x: auto;
 }
+
+/* ---------- Central de avisos: evento, situação e ação em uma linha de leitura ---------- */
+.aviso-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+}
+.aviso-corpo {
+  min-width: 0;
+  flex: 1;
+}
+.aviso-titulo {
+  font: 600 16px/22px var(--fonte);
+  margin: 8px 0 4px;
+}
+.aviso-acao {
+  flex-shrink: 0;
+  align-self: center;
+  white-space: nowrap;
+}
+.aviso-resolvido .aviso-titulo {
+  color: var(--grafite);
+  font-weight: 500;
+}
+.aviso-envio {
+  border-left: 2px solid var(--linha);
+  padding-left: 12px;
+}
+.aviso-texto {
+  white-space: pre-wrap;
+  font: var(--t-ajuda);
+  margin: 6px 0 0;
+  color: var(--grafite);
+}
+.abas .contador {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--selo-carimbo-bg);
+  color: var(--selo-carimbo-tx);
+  font: 600 12px/20px var(--fonte);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .aviso-item {
+    flex-direction: column;
+    padding: 16px;
+  }
+  .aviso-acao {
+    align-self: stretch;
+    justify-content: center;
+  }
+}
+
+/* Filtros rápidos no celular: uma faixa só, rolando de lado dentro dela (a página não rola de lado).
+   Antes, 7 filtros ocupavam quase uma tela de 375×667 antes do primeiro contrato. */
+@media (max-width: 640px) {
+  .filtros {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -16px;
+    padding: 2px 16px 4px;
+    scroll-padding-inline: 16px;
+  }
+  .filtros::-webkit-scrollbar {
+    display: none;
+  }
+  .filtros .filtro {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
