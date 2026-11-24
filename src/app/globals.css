@@ -1721,8 +1721,9 @@ hr.regua {
 mark {
   background: #fbefd5;
   color: inherit;
-  padding: 0 2px;
+  padding: 0;
   border-radius: 2px;
+  box-shadow: 0 0 0 1px #fbefd5; /* o destaque não afasta a palavra dos parênteses e da pontuação */
 }
 
 @media print {
@@ -2040,7 +2041,7 @@ mark {
   margin: 6px 0 0;
   color: var(--grafite);
 }
-.abas .contador {
+.abas .contador-alerta {
   display: inline-block;
   min-width: 20px;
   margin-left: 6px;
@@ -2063,10 +2064,21 @@ mark {
   }
 }
 
+/* Abas no celular: rolam de lado com uma sombra na borda indicando que há mais */
+@media (max-width: 640px) {
+  .abas {
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+  }
+  .abas::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Filtros rápidos no celular: uma faixa só, rolando de lado dentro dela (a página não rola de lado).
    Antes, 7 filtros ocupavam quase uma tela de 375×667 antes do primeiro contrato. */
 @media (max-width: 640px) {
-  .filtros {
+  nav.filtros {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
@@ -2074,11 +2086,64 @@ mark {
     padding: 2px 16px 4px;
     scroll-padding-inline: 16px;
   }
-  .filtros::-webkit-scrollbar {
+  nav.filtros::-webkit-scrollbar {
     display: none;
   }
-  .filtros .filtro {
+  nav.filtros .filtro {
     flex-shrink: 0;
     white-space: nowrap;
   }
+}
+
+/* Alerta com ação no celular: a ação vai para a linha de baixo. Antes, um botão largo espremia o texto
+   em uma palavra por linha (ex.: faixa da jornada na Carteira, 390 px). */
+@media (max-width: 640px) {
+  .alerta {
+    flex-wrap: wrap;
+  }
+  .alerta > .alerta-corpo {
+    flex: 1 1 calc(100% - 40px);
+  }
+  .alerta > :not(svg):not(.alerta-corpo) {
+    flex-basis: 100%;
+    padding-left: 32px;
+  }
+  .alerta > :not(svg):not(.alerta-corpo) .btn {
+    white-space: normal;
+    text-align: left;
+  }
+}
+
+/* Primeiros passos e criar conta no celular: só os círculos e o nome da etapa atual
+   (antes os quatro nomes quebravam no meio da palavra e a última etapa saía cortada) */
+@media (max-width: 640px) {
+  ol.progresso li:not(.atual) .passo-rotulo {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  ol.progresso li.atual {
+    flex: 1 1 auto;
+  }
+  ol.progresso li.atual .passo-rotulo {
+    white-space: nowrap;
+  }
+}
+
+/* Tabelas: cabeçalho ordenável de coluna numérica alinhado à direita, como os valores */
+.tabela th.num button.ordenar {
+  justify-content: flex-end;
+  width: 100%;
+  margin-left: auto;
+}
+/* texto auxiliar longo em célula de tabela: no máximo duas linhas (o texto inteiro fica no title) */
+.duas-linhas {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 260px;
 }

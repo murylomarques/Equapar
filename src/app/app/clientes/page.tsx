@@ -31,7 +31,8 @@ export default async function Clientes() {
       {empresas.length === 0 ? (
         <EstadoVazio icone={Users} titulo="Nenhum cliente ainda" porque="Adicione o primeiro cliente pelo CNPJ. A Equapar pode buscar os contratos dele no PNCP." />
       ) : (
-        <div className="tabela-rolagem">
+        <>
+        <div className="tabela-rolagem so-desktop">
           <table className="tabela">
             <thead>
               <tr>
@@ -67,7 +68,9 @@ export default async function Clientes() {
                   <tr key={e.id}>
                     <td>
                       <strong style={{ fontWeight: 600 }}>{e.razaoSocial}</strong>
-                      <div className="legenda tnum">{formatarCnpj(e.cnpj)}</div>
+                      <div className="legenda tnum" style={{ whiteSpace: "nowrap" }}>
+                        {formatarCnpj(e.cnpj)}
+                      </div>
                     </td>
                     <td className="num">{e.contratos.length}</td>
                     <td className="num">{prazos}</td>
@@ -82,6 +85,34 @@ export default async function Clientes() {
             </tbody>
           </table>
         </div>
+        {/* celular: um cartão por cliente com os mesmos números (a tabela cortava 3 colunas) */}
+        <div className="cartoes-celular">
+          {empresas.map((e) => {
+            const prazos = e.contratos.flatMap((c) => acoesDoContrato(c)).filter((a) => a.limite && diasAte(a.limite) <= 60).length;
+            const abertos = e.contratos.flatMap((c) => c.pedidos).filter((p) => ["EM_ANALISE", "CALCULO_VALIDADO", "PROTOCOLADO"].includes(p.estado)).length;
+            const receber = somarReais(
+              e.contratos
+                .flatMap((c) => c.pedidos)
+                .filter((p) => ["DEFERIDO", "FATURADO"].includes(p.estado))
+                .map((p) => p.valorDeferido),
+            );
+            return (
+              <div key={e.id} className="cartao-linha">
+                <strong>{e.razaoSocial}</strong>
+                <span className="legenda tnum" style={{ display: "block", whiteSpace: "nowrap" }}>
+                  {formatarCnpj(e.cnpj)}
+                </span>
+                <span className="legenda" style={{ display: "block" }}>
+                  {plural(e.contratos.length, "contrato", "contratos")} · {plural(prazos, "prazo", "prazos")} em 60 dias · {plural(abertos, "pedido aberto", "pedidos abertos")} · a receber {reais(receber)}
+                </span>
+                <div className="mt-8">
+                  <BotaoCliente id={e.id} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        </>
       )}
       {podeEditar && (
         <div className="cartao mt-24" style={{ maxWidth: 640 }}>

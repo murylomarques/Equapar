@@ -27,7 +27,7 @@ function Progresso({ atual }: { atual: number }) {
             <span className="passo-marca" aria-hidden>
               {i < atual ? <Check size={14} strokeWidth={2.5} /> : i + 1}
             </span>
-            {e}
+            <span className="passo-rotulo">{e}</span>
             {i < atual && <span className="sr-only"> (concluído)</span>}
           </span>
         </li>

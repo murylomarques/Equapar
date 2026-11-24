@@ -192,7 +192,7 @@ async function Pessoas({ dono }: { dono: boolean }) {
                   {m.usuarioId !== ctx.usuario.id && (
                     <FormAcao action={removerPessoa} confirmar={{ titulo: `Remover ${m.usuario.nome} da conta?`, texto: "A pessoa perde o acesso imediatamente.", confirmar: "Remover", perigo: true }}>
                       <input type="hidden" name="membroId" value={m.id} />
-                      <BotaoEnvio className="btn btn-discreto btn-pequeno">Remover</BotaoEnvio>
+                      <BotaoEnvio className="btn btn-pequeno btn-perigo">Remover</BotaoEnvio>
                     </FormAcao>
                   )}
                 </div>
@@ -298,6 +298,8 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
   const destino = (["GRATIS", "PILOTO", "CARTEIRA", "ASSESSORIA"] as const).find((p) => p === planoPrevisto) as PlanoId | undefined;
   const cicloNovo = cicloPrevisto === "ANUAL" ? "ANUAL" : cicloPrevisto === "MENSAL" ? "MENSAL" : ciclo;
   const previsao = destino ? preverMudanca(conta, destino, agora, cicloNovo) : null;
+  // a mesma compra já aberta: o servidor devolve a mesma cobrança (não cria outra)
+  const mesmaPendente = !!a.pendenteCompra && a.pendenteCompra.plano === destino && a.pendenteCompra.ciclo === cicloNovo;
   const valorPrevisto = destino && (destino === "CARTEIRA" || destino === "ASSESSORIA") ? valorDoPlano(destino, { postos, ciclo: cicloNovo }).toFixed(2) : null;
   const base = (plano: string) =>
     plano === "CARTEIRA"
@@ -318,6 +320,19 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
         <dl className="dl-resumo">
           <dt>Plano atual</dt>
           <dd>{PLANOS.find((p) => p.valor === conta.plano)?.titulo}</dd>
+          <dt>Postos contados</dt>
+          <dd>{plural(postos, "posto", "postos")} nos contratos ativos com mão de obra dedicada</dd>
+          {(conta.plano === "CARTEIRA" || conta.plano === "ASSESSORIA") && (
+            <>
+              <dt>Valor {ciclo === "ANUAL" ? "anual" : "mensal"}</dt>
+              <dd className="tnum">
+                {reais(valorDoPlano(conta.plano, { postos, ciclo }).toFixed(2))}
+                <span className="legenda" style={{ display: "block" }}>
+                  {base(conta.plano)}
+                </span>
+              </dd>
+            </>
+          )}
           {ativo && (
             <>
               <dt>Período pago até</dt>
@@ -354,7 +369,16 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
           {a.pendenteCompra && (
             <>
               <dt>Aguardando pagamento</dt>
-              <dd>{NOME_PLANO_CURTO[a.pendenteCompra.plano ?? ""] ?? a.pendenteCompra.descricao}: passa a valer quando o pagamento for confirmado.</dd>
+              <dd>
+                {NOME_PLANO_CURTO[a.pendenteCompra.plano ?? ""] ?? a.pendenteCompra.descricao}, {reais(a.pendenteCompra.valor)}: passa a valer quando o pagamento for confirmado.{" "}
+                {a.pendenteCompra.linkPagamento && !a.pendenteCompra.linkPagamento.startsWith("/") ? (
+                  <a href={a.pendenteCompra.linkPagamento} target="_blank" rel="noopener noreferrer">
+                    Pagar agora
+                  </a>
+                ) : (
+                  <a href="#faturas">Ver a fatura</a>
+                )}
+              </dd>
             </>
           )}
         </dl>
@@ -407,11 +431,16 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                     <strong>{reais(valorPrevisto)}</strong> por {cicloNovo === "ANUAL" ? "ano" : "mês"} · {base(destino)}
                   </p>
                 )}
-                <ul className="mb-0">
-                  {previsao.linhas.map((l) => (
-                    <li key={l}>{l}</li>
-                  ))}
-                </ul>
+                {previsao.linhas.length === 1 && !mesmaPendente ? (
+                  <p className="mb-0">{previsao.linhas[0]}</p>
+                ) : (
+                  <ul className="mb-0">
+                    {mesmaPendente && <li>Já existe uma cobrança aberta deste plano. Continuar mostra a mesma cobrança; nenhuma outra é criada.</li>}
+                    {previsao.linhas.map((l) => (
+                      <li key={l}>{l}</li>
+                    ))}
+                  </ul>
+                )}
               </Alerta>
               {previsao.possivel && (
                 <FormAcao action={mudarPlano} className="mt-16">
@@ -447,7 +476,9 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                   )}
                   <BotaoEnvio className={destino === "GRATIS" ? "btn btn-perigo" : "btn btn-primario"}>
                     {previsao.efeito === "IMEDIATO_APOS_PAGAMENTO"
-                      ? "Abrir a cobrança"
+                      ? mesmaPendente
+                        ? "Ver a cobrança aberta"
+                        : "Abrir a cobrança"
                       : previsao.efeito === "REATIVAR"
                         ? "Manter a assinatura"
                         : destino === "GRATIS"
@@ -558,7 +589,8 @@ async function Seguranca({ demo }: { demo: boolean }) {
           )}
         </div>
         <ul className="lista-limpa pilha-8">
-          {sessoes.map((s) => (
+          {/* a sessão atual primeiro e as 4 mais recentes; o resto fica recolhido (antes: 25 linhas iguais) */}
+          {[...sessoes].sort((a, b) => Number(b.id === ctx.sessaoId) - Number(a.id === ctx.sessaoId)).slice(0, 5).map((s) => (
             <li key={s.id} className="entre" style={{ fontSize: 14 }}>
               <span className="fileira" style={{ flexWrap: "nowrap" }}>
                 <Monitor size={18} strokeWidth={1.5} aria-hidden style={{ color: "var(--grafite)" }} />
@@ -580,6 +612,11 @@ async function Seguranca({ demo }: { demo: boolean }) {
             </li>
           ))}
         </ul>
+        {sessoes.length > 5 && (
+          <p className="legenda mt-8 mb-0">
+            E mais {plural(sessoes.length - 5, "sessão antiga", "sessões antigas")}. Use “Encerrar as outras sessões” para sair de todas de uma vez.
+          </p>
+        )}
       </div>
     </div>
   );

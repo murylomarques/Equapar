@@ -92,7 +92,7 @@ export function classificar(
     case "D60":
     case "D30":
     case "D7": {
-      if (!c) return semDestino("Prazo de contrato", "O contrato deste aviso não está mais na sua conta.");
+      if (!c) return semDestino("Prazo de contrato", "O contrato deste aviso foi excluído da conta.");
       const dataAviso = ev.chave.split(":")[2];
       const prazos = { rotulo: "Ver prazos do contrato", href: `/app/contratos/${c.id}?aba=prazos` };
       if (c.arquivado) return { categoria: "PRAZO", situacao: "RESOLVIDO", prioridade: "BAIXA", titulo: `${nomeContrato(c)}: contrato arquivado`, resumo: "O aviso de prazo não se aplica mais.", objeto, acao: prazos, prazo: null };
@@ -112,7 +112,7 @@ export function classificar(
       };
     }
     case "RESPOSTA": {
-      if (!p) return semDestino(c ? `${nomeContrato(c)}: pedido protocolado` : "Pedido protocolado", "O pedido deste aviso não está mais na sua conta.");
+      if (!p) return semDestino(c ? `${nomeContrato(c)}: pedido protocolado` : "Pedido protocolado", "O pedido deste aviso foi excluído da conta.");
       const href = `/app/pedidos/${p.id}/pronto`;
       if (p.estado === "PROTOCOLADO")
         return { categoria: "INFO", situacao: "INFORMATIVO", prioridade: "BAIXA", titulo: `${c ? nomeContrato(c) : "Pedido"}: aguardando a resposta do órgão`, resumo: "Pedido protocolado. Registre a resposta quando o órgão decidir.", objeto, acao: { rotulo: "Ver o pedido", href }, prazo: null };
@@ -121,7 +121,7 @@ export function classificar(
     }
     case "DEFERIDO":
     case "APOSTILAMENTO":
-      if (!p) return semDestino(c ? `${nomeContrato(c)}: pedido deferido` : "Pedido deferido", "O pedido deste aviso não está mais na sua conta.");
+      if (!p) return semDestino(c ? `${nomeContrato(c)}: pedido deferido` : "Pedido deferido", "O pedido deste aviso foi excluído da conta.");
       return passoFinanceiro(p, c, ev.tipo === "APOSTILAMENTO" ? "Deferido há mais de 30 dias e ainda sem apostilamento." : "O pedido foi deferido.");
     case "COBRANCA":
       return dados.contaEmDia

@@ -83,30 +83,58 @@ async function cancelarNaoIniciadas(contaId: string, motivo: string, agora: Date
  */
 export async function abrirCobrancaDoPlano(contaId: string, plano: Plano, ciclo: Ciclo, metodo: Metodo | "ESCOLHER", email: string, agora = new Date()) {
   const conta = await db.conta.findUniqueOrThrow({ where: { id: contaId }, include: { empresas: { take: 1, orderBy: { criadoEm: "asc" } } } });
-  await cancelarNaoIniciadas(contaId, "Substituída por outra escolha de plano", agora, (f) => !f.renovacao);
-  const postos = await postosCobrados(db, contaId);
-  const valor = valorDoPlano(plano, { postos, ciclo });
-  const vencimento = new Date(agora.getTime() + 3 * 86_400_000);
-  const fatura = await db.fatura.create({
-    data: {
-      contaId,
-      referencia: agora.toISOString().slice(0, 7),
-      descricao: `Plano ${plano.toLowerCase()} (${ciclo === "ANUAL" ? "anual" : "mensal"})`,
-      valor: valor.toFixed(2),
-      postos,
-      vencimento,
-      metodo: metodo === "ESCOLHER" ? null : metodo,
-      plano,
-      ciclo,
-    },
+  // Uma decisão por conta de cada vez (dois cliques, duas abas): sem isso, duas cobranças iguais podiam ser abertas e pagas.
+  const d = await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`compra:${contaId}`}))`;
+    const abertas = await tx.fatura.findMany({ where: { contaId, status: { in: ["ABERTA", "FALHOU"] } } });
+    // a mesma compra ainda pagável: devolve a mesma cobrança (idempotente)
+    const igual = abertas.find((f) => !f.renovacao && f.status === "ABERTA" && f.plano === plano && f.ciclo === ciclo && faturaCancelavel(regra(f), agora) && (!f.vencimento || f.vencimento >= agora));
+    if (igual) return { fatura: igual, cancelar: [] as { id: string; gatewayId: string | null }[] };
+    // tudo que ainda não começou (compra anterior ou renovação futura) é substituído pela compra nova
+    const cancelar = abertas.filter((f) => faturaCancelavel(regra(f), agora));
+    if (cancelar.length)
+      await tx.fatura.updateMany({ where: { id: { in: cancelar.map((f) => f.id) } }, data: { status: "CANCELADA", canceladaEm: agora, motivoCancelamento: "Substituída por outra escolha de plano" } });
+    const postos = await postosCobrados(tx, contaId);
+    const valor = valorDoPlano(plano, { postos, ciclo });
+    const fatura = await tx.fatura.create({
+      data: {
+        contaId,
+        referencia: agora.toISOString().slice(0, 7),
+        descricao: `Plano ${plano.toLowerCase()} (${ciclo === "ANUAL" ? "anual" : "mensal"})`,
+        valor: valor.toFixed(2),
+        postos,
+        vencimento: new Date(agora.getTime() + 3 * 86_400_000),
+        metodo: metodo === "ESCOLHER" ? null : metodo,
+        plano,
+        ciclo,
+      },
+    });
+    // a compra substitui qualquer downgrade agendado; planoPendente fica só para leitura das telas antigas
+    await tx.conta.update({ where: { id: contaId }, data: { planoPendente: plano, ciclo, mudancaAgendada: null, mudancaAgendadaEm: null, renovacaoCancelada: false } });
+    return { fatura, cancelar: cancelar.map((f) => ({ id: f.id, gatewayId: f.gatewayId })) };
   });
   const g = cobranca();
+  await cancelarNoGateway(d.cancelar);
+  if (d.fatura.gatewayId && d.fatura.linkPagamento) return { faturaId: d.fatura.id, link: d.fatura.linkPagamento, valor: d.fatura.valor.toFixed(2), modo: g.modo };
+  // fatura nova (ou uma igual que ficou sem cobrança no gateway por falha anterior): cria a cobrança agora
   const clienteId = await g.garantirCliente({ contaId, nome: conta.empresas[0]?.razaoSocial ?? conta.nome, cpfCnpj: conta.empresas[0]?.cnpj ?? "", email, clienteIdAtual: conta.gatewayClienteId });
-  const c = await g.criarCobranca({ clienteId, valor: valor.toFixed(2), vencimento: vencimento.toISOString().slice(0, 10), descricao: fatura.descricao, referenciaExterna: fatura.id, metodo });
-  await db.fatura.update({ where: { id: fatura.id }, data: { gatewayId: c.id, linkPagamento: c.link } });
-  // a compra substitui qualquer downgrade agendado; planoPendente fica só para leitura das telas antigas
-  await db.conta.update({ where: { id: contaId }, data: { planoPendente: plano, ciclo, gatewayClienteId: clienteId, mudancaAgendada: null, mudancaAgendadaEm: null, renovacaoCancelada: false } });
-  return { faturaId: fatura.id, link: c.link, valor: valor.toFixed(2), modo: g.modo };
+  const c = await g.criarCobranca({ clienteId, valor: d.fatura.valor.toFixed(2), vencimento: (d.fatura.vencimento ?? agora).toISOString().slice(0, 10), descricao: d.fatura.descricao, referenciaExterna: d.fatura.id, metodo });
+  await db.fatura.update({ where: { id: d.fatura.id }, data: { gatewayId: c.id, linkPagamento: c.link } });
+  await db.conta.update({ where: { id: contaId }, data: { gatewayClienteId: clienteId } });
+  return { faturaId: d.fatura.id, link: c.link, valor: d.fatura.valor.toFixed(2), modo: g.modo };
+}
+
+/** Remove no gateway as cobranças já canceladas aqui. Falha no gateway não reabre nada (reconcilia pelo webhook ou à mão). */
+async function cancelarNoGateway(faturas: { id: string; gatewayId: string | null }[]) {
+  const g = cobranca();
+  for (const f of faturas) {
+    if (!f.gatewayId) continue;
+    try {
+      await g.cancelarCobranca(f.gatewayId);
+    } catch (e) {
+      registrar("erro", "cancelar_cobranca_gateway", { faturaId: f.id, erro: e instanceof Error ? e.message : String(e) });
+    }
+  }
 }
 
 /** Cancela a renovação: o acesso pago segue até o fim do período; cobranças futuras deixam de existir. */
@@ -236,9 +264,12 @@ export async function renovarAssinaturas(agora = new Date()) {
     const inicio = atual.planoVigenteAte;
     const criada = await db.$transaction(async (tx) => {
       // uma renovação por início de período (trava por conta para duas rotinas simultâneas)
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`renovacao:${conta.id}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`compra:${conta.id}`}))`;
       const existe = await tx.fatura.findFirst({ where: { contaId: conta.id, renovacao: true, periodoInicio: inicio, status: { not: "CANCELADA" } } });
       if (existe) return null;
+      // compra (upgrade) aguardando pagamento: ela define o próximo período; renovar junto cobraria duas vezes
+      const compra = await tx.fatura.findFirst({ where: { contaId: conta.id, renovacao: false, status: "ABERTA", vencimento: { gte: agora } } });
+      if (compra) return null;
       const postos = await postosCobrados(tx, conta.id);
       const valor = valorDoPlano(plano, { postos, ciclo });
       return tx.fatura.create({

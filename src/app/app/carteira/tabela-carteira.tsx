@@ -153,7 +153,9 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
                 </td>
                 <td>
                   {l.prazoTxt}
-                  <div className="legenda">{l.prazoTitulo}</div>
+                  <div className="legenda duas-linhas" title={l.prazoTitulo}>
+                    {l.prazoTitulo}
+                  </div>
                 </td>
                 <td>
                   <Selo selo={l.selo} />

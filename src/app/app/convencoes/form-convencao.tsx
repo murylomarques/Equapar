@@ -43,7 +43,7 @@ function Campos({ c }: { c?: ConvencaoForm }) {
       <fieldset className="grupo-form">
         <legend>Registro no Ministério do Trabalho</legend>
         <div className="linha-form">
-          <CampoData nome="dataDeposito" rotulo="Data do depósito (Mediador)" opcional valorInicial={c?.dataDeposito} mostrarRelativo={false} ajuda="Em branco = convenção ainda pendente." />
+          <CampoData nome="dataDeposito" rotulo="Data do depósito" opcional valorInicial={c?.dataDeposito} mostrarRelativo={false} ajuda="Registro no Mediador. Em branco = convenção ainda pendente." />
           <CampoTexto nome="registroMte" rotulo="Número do registro" opcional valorInicial={c?.registroMte} />
         </div>
         <span className="rotulo">

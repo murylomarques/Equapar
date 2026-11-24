@@ -60,7 +60,8 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
     );
 
   const datas: Record<string, string | null> = {
-    EM_ANALISE: dataLocal(p.criadoEm),
+    // pedido importado ou anterior ao sistema: a data de criação do registro é posterior às etapas; não mostra
+    EM_ANALISE: [p.geradoEm, p.protocoloData, p.deferidoEm].some((d) => d && d < p.criadoEm) ? null : dataLocal(p.criadoEm),
     CALCULO_VALIDADO: p.geradoEm ? dataLocal(p.geradoEm) : null,
     PROTOCOLADO: p.protocoloData ? data(p.protocoloData) : null,
     DEFERIDO: p.deferidoEm ? data(p.deferidoEm) : null,
@@ -243,11 +244,11 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
             <dl className="pico-valores mt-16">
               <div>
                 <dt>Mensal solicitado</dt>
-                <dd>{reais(p.mensalSolicitado)}</dd>
+                <dd>{p.mensalSolicitado != null ? reais(p.mensalSolicitado) : <span className="secundario">não registrado</span>}</dd>
               </div>
               <div>
                 <dt>Mensal aprovado</dt>
-                <dd>{reais(p.mensalAprovado)}</dd>
+                <dd>{p.mensalAprovado != null ? reais(p.mensalAprovado) : <span className="secundario">{p.conciliacaoPendente ? "a conciliar (pedido anterior)" : "não registrado"}</span>}</dd>
               </div>
               <div>
                 <dt>Mensal vigente antes</dt>

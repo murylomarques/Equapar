@@ -9,6 +9,14 @@ import { FONTES } from "@/lib/prazos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { modoPiloto } from "@/lib/chaves";
 
+/** Comparação da landing: critério, planilha e memória, consultoria por pedido, Equapar. */
+const COMPARACAO = [
+  ["Avisa antes da prorrogação", "Se alguém lembrar", "Se contratada para isso", "Sempre, por contrato"],
+  ["Mostra de onde saiu cada número", "Depende de quem fez", "Sim", "Sim, linha a linha"],
+  ["Acompanha até receber", "Depende da equipe", "Depende do escopo", "Sim"],
+  ["Como se paga", "Horas da equipe", "Por pedido", "Por mês, por posto"],
+] as const;
+
 export default function Landing() {
   return (
     <>
@@ -185,7 +193,7 @@ export default function Landing() {
       <Revelar className="secao">
         <div className="site-largura">
           <h2 className="titulo-secao">Três jeitos de cuidar da repactuação</h2>
-          <div className="tabela-rolagem" tabIndex={0} role="region" aria-label="Comparação: planilha, consultoria e Equapar">
+          <div className="tabela-rolagem so-desktop" tabIndex={0} role="region" aria-label="Comparação: planilha, consultoria e Equapar">
             <table className="tabela tabela-comparacao">
               <thead>
                 <tr>
@@ -198,32 +206,28 @@ export default function Landing() {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <th scope="row">Avisa antes da prorrogação</th>
-                  <td>Se alguém lembrar</td>
-                  <td>Se contratada para isso</td>
-                  <td>Sempre, por contrato</td>
-                </tr>
-                <tr>
-                  <th scope="row">Mostra de onde saiu cada número</th>
-                  <td>Depende de quem fez</td>
-                  <td>Sim</td>
-                  <td>Sim, linha a linha</td>
-                </tr>
-                <tr>
-                  <th scope="row">Acompanha até receber</th>
-                  <td>Depende da equipe</td>
-                  <td>Depende do escopo</td>
-                  <td>Sim</td>
-                </tr>
-                <tr>
-                  <th scope="row">Como se paga</th>
-                  <td>Horas da equipe</td>
-                  <td>Por pedido</td>
-                  <td>Por mês, por posto</td>
-                </tr>
+                {COMPARACAO.map(([criterio, planilha, consultoria, equapar]) => (
+                  <tr key={criterio}>
+                    <th scope="row">{criterio}</th>
+                    <td>{planilha}</td>
+                    <td>{consultoria}</td>
+                    <td>{equapar}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+          </div>
+          {/* celular: um cartão por critério, com a Equapar primeiro (a tabela escondia justamente essa coluna) */}
+          <div className="cartoes-celular">
+            {COMPARACAO.map(([criterio, planilha, consultoria, equapar]) => (
+              <div key={criterio} className="cartao-linha">
+                <strong>{criterio}</strong>
+                <span style={{ display: "block", color: "var(--verde)", fontWeight: 500 }}>Equapar: {equapar}</span>
+                <span className="legenda" style={{ display: "block" }}>
+                  Planilha: {planilha} · Consultoria: {consultoria}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </Revelar>

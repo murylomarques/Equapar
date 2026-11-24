@@ -19,7 +19,9 @@ function Etapas({ atual }: { atual: number }) {
             <span className="passo-marca" aria-hidden>
               {i + 1}
             </span>
-            <span style={{ fontSize: 12 }}>{i === 0 ? "Criar conta" : e}</span>
+            <span className="passo-rotulo" style={{ fontSize: 12 }}>
+              {i === 0 ? "Criar conta" : e}
+            </span>
           </span>
         </li>
       ))}

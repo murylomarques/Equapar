@@ -68,7 +68,7 @@
 }
 @media (max-width: 720px) {
   .secao {
-    padding: 48px 0;
+    padding-block: 48px;
   }
 }
 .secao-escura {
@@ -406,4 +406,14 @@
   background: transparent;
   color: var(--papel);
   border-color: rgba(244, 241, 234, 0.4);
+}
+/* Cartões de plano: a ação de cada um na mesma altura e na mesma largura */
+.plano > :last-child {
+  margin-top: auto;
+  padding-top: 16px;
+}
+.plano > :last-child.btn,
+.plano > :last-child .btn {
+  width: 100%;
+  justify-content: center;
 }

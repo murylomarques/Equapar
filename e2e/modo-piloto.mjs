@@ -1,11 +1,11 @@
 // A6: liga e desliga MODO_PILOTO. Rode duas vezes, com o servidor subido com MODO_PILOTO=true e depois =false:
 //   ESPERADO=ligado node e2e/modo-piloto.mjs   |   ESPERADO=desligado node e2e/modo-piloto.mjs
-// Confere as rotas (404 no site, Hoje no app) e que os dados são os mesmos nos dois estados (a chave só esconde).
-import fs from "node:fs";
+// Confere as rotas (404 no site, Hoje no app) e que percorrer o modo não cria nem apaga dados (a chave só esconde).
+// Autossuficiente: compara a contagem antes e depois da própria execução (antes dependia de um arquivo da execução anterior).
 import { BASE, db, navegador, entrarComoDono, conferir, fim } from "./bloqueadoras/util.mjs";
 const ligado = process.env.ESPERADO !== "desligado";
-const contagem = { contas: await db.conta.count(), pedidos: await db.pedido.count(), contratos: await db.contrato.count(), documentos: await db.documento.count() };
-const arq = "e2e/.modo-piloto-dados.json";
+const contar = async () => ({ contas: await db.conta.count({ where: { demo: false } }), pedidos: await db.pedido.count(), contratos: await db.contrato.count({ where: { empresa: { conta: { demo: false } } } }), documentos: await db.documento.count() });
+const contagem = await contar();
 const b = await navegador();
 try {
   const anon = await (await b.newContext()).newPage();
@@ -23,12 +23,9 @@ try {
   await p.goto(`${BASE}/app/a-receber`);
   await p.locator("main h1").first().waitFor();
   conferir(((await p.getByRole("link", { name: "Recuperado com a Equapar" }).count()) === 0) === ligado, `link Recuperado em A receber ${ligado ? "escondido" : "visível"}`);
-  // trava 10: os dados são os mesmos nos dois estados
-  if (fs.existsSync(arq)) {
-    const antes = JSON.parse(fs.readFileSync(arq, "utf8"));
-    conferir(JSON.stringify(antes) === JSON.stringify(contagem), `mesmos dados nos dois estados: ${JSON.stringify(contagem)}`);
-    fs.unlinkSync(arq);
-  } else fs.writeFileSync(arq, JSON.stringify(contagem));
+  // trava 10: as rotas do modo só escondem; nenhum dado é criado ou apagado ao percorrê-las
+  const depois = await contar();
+  conferir(JSON.stringify(depois) === JSON.stringify(contagem), `mesmos dados antes e depois (${ligado ? "ligado" : "desligado"}): ${JSON.stringify(depois)}`);
 } finally {
   await fim(b);
 }

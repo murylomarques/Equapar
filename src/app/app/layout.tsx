@@ -1,4 +1,6 @@
 import { Bell, CalendarClock, DollarSign, FileText, LayoutList, Menu, Scale, Search, Settings, Users, LogOut } from "lucide-react";
+import { Suspense } from "react";
+import { RolarAbaAtiva } from "@/components/rolar-aba-ativa";
 import Link from "next/link";
 import { contexto, ehDemo, escopoContratos } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -137,6 +139,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </MenuSuspenso>
           </div>
         </header>
+        <Suspense fallback={null}>
+          <RolarAbaAtiva />
+        </Suspense>
         <main id="conteudo" className="app-conteudo">
           {children}
         </main>

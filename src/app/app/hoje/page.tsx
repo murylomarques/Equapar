@@ -255,6 +255,8 @@ export default async function Hoje() {
               </ul>
             )}
           </section>
+          {/* a pesquisa fica no fim da coluna principal: no celular, a primeira tela é o trabalho do dia */}
+          {!ehDemo(ctx) && mostrarPesquisa(ctx.conta, primeiroDossie) && <PesquisaEncaixe />}
         </div>
 
         <aside className="linha-tempo-col cartao" aria-labelledby="proximos90">
@@ -298,8 +300,6 @@ export default async function Hoje() {
           )}
         </aside>
       </div>
-      {/* a pesquisa fica depois do que pede ação: no celular, a primeira tela é o trabalho do dia */}
-      {!ehDemo(ctx) && mostrarPesquisa(ctx.conta, primeiroDossie) && <PesquisaEncaixe />}
     </>
   );
 }

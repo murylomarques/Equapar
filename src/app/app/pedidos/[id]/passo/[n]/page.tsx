@@ -660,7 +660,8 @@ function Passo5({ p, leitura, podeAprovar }: { p: P; leitura: boolean; podeAprov
             <dt>Depósito da convenção</dt>
             <dd>{data(p.dataDeposito)}</dd>
           </dl>
-          <Link href={`/app/pedidos/${p.id}/memoria`} className="btn mt-16">
+          {/* sem aprovação, revisar a memória é o próximo passo: ele é a ação principal */}
+          <Link href={`/app/pedidos/${p.id}/memoria`} className={podeAprovar && !aprovada ? "btn btn-primario mt-16" : "btn mt-16"}>
             <FileSpreadsheet size={16} strokeWidth={1.5} aria-hidden />
             {podeAprovar && !aprovada ? "Revisar e aprovar a memória" : "Ver a memória de cálculo"}
           </Link>
@@ -687,7 +688,7 @@ function Passo5({ p, leitura, podeAprovar }: { p: P; leitura: boolean; podeAprov
                 Voltar
               </Link>
               {!leitura && (
-                <BotaoEnvio pendente="Gerando o ofício, a planilha e a memória…">
+                <BotaoEnvio className={aprovada ? undefined : "btn"} pendente="Gerando o ofício, a planilha e a memória…">
                   <FileText size={16} strokeWidth={1.5} aria-hidden /> Gerar pedido
                 </BotaoEnvio>
               )}

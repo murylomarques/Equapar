@@ -139,7 +139,7 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<{
         {VISOES.map(([k, n]) => (
           <Link key={k} href={`/app/avisos${k === "acao" ? "" : `?ver=${k}`}`} aria-current={visao === k ? "page" : undefined} scroll={false}>
             {n}
-            {contagem[k] > 0 && k !== "historico" ? <span className="contador">{contagem[k]}</span> : null}
+            {contagem[k] > 0 && k !== "historico" ? <span className="contador-alerta">{contagem[k]}</span> : null}
           </Link>
         ))}
       </nav>
@@ -163,7 +163,7 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<{
                   {c.situacao === "PENDENTE" ? (
                     <SeloSimples texto={PRIORIDADE[c.prioridade].texto} tom={PRIORIDADE[c.prioridade].tom} icone={PRIORIDADE[c.prioridade].icone} />
                   ) : (
-                    <SeloSimples texto={c.situacao === "RESOLVIDO" ? "Resolvido" : "Informativo"} tom="neutro" icone="check" />
+                    c.situacao === "RESOLVIDO" ? <SeloSimples texto="Resolvido" tom="verde" icone="check" /> : <SeloSimples texto="Informativo" tom="azul" icone="ampulheta" />
                   )}
                   {c.objeto && <span className="legenda">{c.objeto}</span>}
                 </div>

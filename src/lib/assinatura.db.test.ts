@@ -166,3 +166,28 @@ describe("P0: renovação, atraso e estornos", () => {
     expect((await conta()).plano).toBe("CARTEIRA");
   });
 });
+
+describe("P0: sem cobrança duplicada", () => {
+  it("dois cliques simultâneos na mesma compra abrem uma cobrança só", async () => {
+    const r = await Promise.all([1, 2, 3].map(() => abrirCobrancaDoPlano(contaId, "CARTEIRA", "MENSAL", "PIX", email)));
+    expect(new Set(r.map((x) => x.faturaId)).size).toBe(1);
+    expect(await db.fatura.count({ where: { contaId, status: "ABERTA" } })).toBe(1);
+  });
+  it("upgrade com renovação futura em aberto: a renovação é substituída", async () => {
+    await comprar();
+    const vigente = (await conta()).planoVigenteAte!;
+    await renovarAssinaturas(new Date(vigente.getTime() - 2 * dia));
+    const renov = await db.fatura.findFirstOrThrow({ where: { contaId, renovacao: true } });
+    await abrirCobrancaDoPlano(contaId, "ASSESSORIA", "MENSAL", "PIX", email);
+    expect(await db.fatura.findUnique({ where: { id: renov.id } })).toMatchObject({ status: "CANCELADA" });
+    expect(await db.fatura.count({ where: { contaId, status: "ABERTA" } })).toBe(1);
+  });
+  it("com uma compra aguardando pagamento, a rotina não gera a renovação do plano antigo", async () => {
+    await comprar();
+    const vigente = (await conta()).planoVigenteAte!;
+    const quando = new Date(vigente.getTime() - 2 * dia);
+    await abrirCobrancaDoPlano(contaId, "ASSESSORIA", "MENSAL", "PIX", email, quando);
+    await renovarAssinaturas(quando);
+    expect(await db.fatura.count({ where: { contaId, renovacao: true } })).toBe(0);
+  });
+});

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { TabelaPlanos } from "@/components/planos";
 import { CalculadoraPreco } from "@/components/calculadora-preco";
 import { Contato } from "@/components/contato";
-import { canaisDeAviso } from "@/lib/site";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { modoPiloto } from "@/lib/chaves";
 
@@ -24,16 +23,14 @@ export default function Precos() {
       <div className="precos-detalhe mt-32">
         <CalculadoraPreco />
         <div className="cartao">
-        <h2>O que cada plano inclui</h2>
+        <h2>Bom saber antes de escolher</h2>
         <ul className="pilha-8" style={{ paddingLeft: 20 }}>
           <li>
-            <strong>Raio-X:</strong> contratos vigentes do PNCP pelo CNPJ, prazos e relatório em PDF.
+            <strong>Quais postos contam:</strong> os dos contratos ativos com mão de obra dedicada. O valor é recalculado a cada renovação.
           </li>
           <li>
-            <strong>Piloto:</strong> software e apoio operacional para um pedido real. Organização de documentos e prazos, consolidação de dados e geração de memória de cálculo e arquivos editáveis para conferência e protocolo pelo cliente. Análise jurídica individual, estratégia de recurso e consultoria jurídica são atividades de advogado habilitado e não fazem parte do serviço.
-          </li>
-          <li>
-            <strong>Carteira:</strong> R$ 4 por posto de trabalho por mês, mínimo de R$ 297 (74 postos = R$ 297; 75 postos = R$ 300). {canaisDeAviso()}, pedidos montados pelo sistema e painel A receber.
+            <strong>O que o Piloto não inclui:</strong> análise jurídica individual, estratégia de recurso e consultoria jurídica são atividades de advogado habilitado. A Equapar organiza, calcula e gera os
+            arquivos; você confere e protocola.
           </li>
           {!modoPiloto() && (
             <li>
@@ -45,8 +42,10 @@ export default function Precos() {
               <strong>Revisão de especialista:</strong> cobrada à parte, para casos complexos.
             </li>
           )}
+          <li>
+            <strong>Cancelamento:</strong> na tela de cobrança, quando quiser. O acesso pago vale até o fim do período e os dados ficam disponíveis para exportar.
+          </li>
         </ul>
-        <p className="legenda">Cancele quando quiser, na tela de cobrança. Seus dados ficam disponíveis para exportar.</p>
         <p className="mb-8">Dúvidas sobre o piloto ou sobre o seu caso?</p>
         <Contato />
         </div>

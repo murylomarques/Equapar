@@ -151,7 +151,7 @@ export default async function ContratoPagina({ params, searchParams }: { params:
         {abas.map(([k, n, qtd]) => (
           <Link key={k} href={`/app/contratos/${c.id}?aba=${k}`} aria-current={aba === k ? "page" : undefined} scroll={false}>
             {n}
-            {qtd !== null && <span className="contador"> ({qtd})</span>}
+            {qtd ? <span className="contador"> ({qtd})</span> : null}
           </Link>
         ))}
       </nav>
@@ -268,7 +268,7 @@ export default async function ContratoPagina({ params, searchParams }: { params:
         <div className="cartao">
           <div className="cartao-cab">
             <h2>Prazos</h2>
-            <Link href={`/app/contratos/${c.id}/prorrogacao`} className={diasFim >= 0 && diasFim <= 60 ? "btn btn-primario" : "btn"}>
+            <Link href={`/app/contratos/${c.id}/prorrogacao`} className="btn">
               Decidir antes da prorrogação
             </Link>
           </div>
