@@ -41,10 +41,13 @@ try {
   await p.waitForURL(/passo\/4/);
   const salvo = await db.pedido.findUnique({ where: { id: alvo.id } });
   conferir(salvo.cenarioJornada === "MANTER_HORAS" && Number(salvo.diferencaMensal) > 0, "cenário gravado e diferença positiva");
-  const r = await p.request.get(`${BASE}/api/pedidos/${alvo.id}/arquivos/aditivo.pdf`);
-  conferir(r.status() === 200 && (await r.body()).subarray(0, 4).toString() === "%PDF", "minuta do aditivo sai em PDF");
-  const o = await p.request.get(`${BASE}/api/pedidos/${alvo.id}/arquivos/oficio.docx`);
-  conferir(o.status() === 200, "ofício da jornada sai");
+  // correção 6: sem a versão aprovada, a URL final recusa; a prévia sai marcada como RASCUNHO
+  const final = await p.request.get(`${BASE}/api/pedidos/${alvo.id}/arquivos/aditivo.pdf`);
+  conferir(final.status() === 409, `aditivo final sem aprovação: recusado (veio ${final.status()})`);
+  const r = await p.request.get(`${BASE}/api/pedidos/${alvo.id}/arquivos/aditivo.pdf?rascunho=1`);
+  conferir(r.status() === 200 && (await r.body()).subarray(0, 4).toString() === "%PDF", "prévia da minuta do aditivo sai em PDF");
+  const o = await p.request.get(`${BASE}/api/pedidos/${alvo.id}/arquivos/oficio.docx?rascunho=1`);
+  conferir(o.status() === 200, "prévia do ofício da jornada sai");
 } finally {
   const criados = await db.pedido.findMany({ where: { contrato: { empresa: { contaId } }, id: { notIn: [...antes] } }, select: { id: true } });
   const ids = criados.map((c) => c.id);

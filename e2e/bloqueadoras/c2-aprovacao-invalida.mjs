@@ -7,11 +7,19 @@ const c45 = await db.contrato.findFirst({ where: { numero: "45/2025", empresa: {
 // modelo da mesma empresa (a demonstração de assessoria também tem pedidos protocolados de exemplo)
 const modelo = await db.pedido.findFirst({ where: { estado: "PROTOCOLADO", contrato: { empresaId: c45.empresaId } } });
 await db.pedido.deleteMany({ where: { contratoId: c45.id, estado: { in: ["EM_ANALISE", "CALCULO_VALIDADO"] } } }); // só dado fictício
+// correção 2: linhas alteradas ligadas à fonte completa (instrumento, categoria, data-base, cláusula, parcela)
+const dataBaseIso = modelo.dataBase.toISOString().slice(0, 10);
+const comEvidencia = (pl) => ({
+  tipos: pl.tipos.map((t) => ({
+    ...t,
+    linhas: t.linhas.map((l) => ({ ...l, fonte: l.fonte || "CCT fictícia, cláusula 4ª", evidencia: { instrumento: "CCT fictícia", categoria: t.nome, dataBase: dataBaseIso, clausula: "Cláusula 4ª", parcela: l.descricao, anualidade: "VALIDA" } })),
+  })),
+});
 const aprovado = () => ({ estado: "CALCULO_VALIDADO", memoriaAprovadaEm: new Date(), memoriaAprovadaPor: "Marcos (exemplo)", geradoEm: new Date() });
 const ped = await db.pedido.create({
   data: {
     contratoId: c45.id, convencaoId: modelo.convencaoId, gatilho: modelo.gatilho, dataBase: modelo.dataBase, dataDeposito: modelo.dataDeposito,
-    dataReferencia: new Date(Date.UTC(2026, 10, 12)), planilhaAntes: modelo.planilhaAntes, planilhaAgora: modelo.planilhaAgora,
+    dataReferencia: new Date(Date.UTC(2026, 10, 12)), planilhaAntes: modelo.planilhaAntes, planilhaAgora: comEvidencia(modelo.planilhaAgora),
     checklist: { convencao_nova: "ANEXADO", planilha_atual: "ANEXADO" }, passoAtual: 5, ...aprovado(),
   },
 });

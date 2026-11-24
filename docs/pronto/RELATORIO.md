@@ -444,4 +444,24 @@ AVISO Site           vazias: SITE_EMAIL_CONTATO, SITE_WHATSAPP, ...
 7. Trazer o "de acordo" do advogado (Parte 3) e do contador (Parte 4, com a planilha C1 completa e a regra de arredondamento, C7). Depois disso, ligar `JORNADA_REGRA_CONFIRMADA`.
 8. Fazer uma pessoa conferir nos PDFs os valores do gabarito das 3 convenções (`fixtures/gabarito-convencoes.json`), mudar `conferido` para `true`, pôr os PDFs em `convencoes-reais/`, rodar `scripts/avaliar-ia-convencao.ts` com a chave da Anthropic e só então ligar `IA_LEITURA_CONVENCAO` (e `IA_LEITURA_PLANILHA`). Decidir se a leitura deve devolver unidade e condição (muda `INSTRUCOES_CONVENCAO`).
 9. Levar ao advogado as minutas: termos, privacidade, contrato do piloto, autorização de caso (`docs/modelos/`), modelo de ressalva (C2), frase de prorrogação (C1), ofício e minuta do aditivo da jornada. Decidir também sobre "Excluir conta" apagar as faturas (C8).
-10. Decidir quando enviar a branch `pronto-para-subir` ao GitHub (nada foi enviado).
+10. ~~Enviar ao GitHub~~: feito, está na `main` (v4 e as nove correções).
+
+## Nove correções do fluxo de repactuação (branch `correcoes-fluxo-repactuacao`)
+
+Auditoria no commit b16be9d. Prova feita só com dados fictícios; falta a conferência com um contrato histórico real (valores, datas e notas de um pedido já recebido).
+
+| Item | Resultado |
+|---|---|
+| 1. Importação do Excel | Origem de cada valor (aba, célula, conteúdo, tipo). `1800.00`, `1800,00` e `1.800,00` viram R$ 1.800,00 (o erro 1800.00 → 180000 tem teste). Fórmula sem resultado, erro e linha relevante não lida vão para pendências persistidas; o passo 2 e a aprovação recusam no servidor enquanto houver pendência impeditiva. |
+| 2. Fonte e parcela | Cada linha alterada exige instrumento, categoria, data-base, cláusula e parcela. Anualidade por parcela: fora do intervalo vira "Revisão necessária", que só fecha com motivo registrado. Tela, memória e servidor usam a mesma regra (`pedido-regras.ts`). |
+| 3. Datas e prazos | Fim da vigência, previsão e assinatura da prorrogação, protocolo e entrega da documentação completa, cada um com a origem. O prazo de resposta conta da entrega completa (art. 92, § 6º); sem ela, a tela diz o que falta. Dados legados ficam com origem `LEGADO_DESCONHECIDO`. |
+| 4. Retroativo por competência | Decimal, regra de arredondamento gravada no pedido. Exemplo do pedido: 100 + 200 + 15/30 × 300 = R$ 450,00 bruto; com abatimento de R$ 50, R$ 400,00 líquido. Caso sem dados vai para cálculo manual com justificativa. |
+| 5. Versão da memória | Cada aprovação aponta para uma `MemoriaVersao` (snapshot e hash determinístico). Protocolo ou apostilamento que mudam o corte criam versão nova sem aprovação; a versão anterior guarda o total original. |
+| 6. Documentos finais | A URL final de PDF, DOCX, XLSX e ZIP exige a versão aprovada e os anexos presentes no armazenamento (409 caso contrário); a prévia sai marcada RASCUNHO; outra conta recebe 404. |
+| 7. Deferimento parcial | Mensal solicitado, mensal aprovado, mensal vigente anterior e retroativo aprovado separados. Teste no navegador: R$ 62.070,27 solicitados, R$ 59.000,00 aprovados, apostilamento grava R$ 59.000,00 como vigente, com histórico (`ValorMensalContrato`). Indeferimento não mexe no mensal vigente. |
+| 8. Notas fiscais | "Registrar nota fiscal": R$ 31.540,20 aprovados e nota de R$ 20.000,00 deixam R$ 11.540,20 a faturar; reenvio com a mesma referência não duplica; valor acima do saldo é recusado. Transação serializável. |
+| 9. Baixas parciais | Baixa de R$ 1.000,00 deixa R$ 30.540,20 a receber e o pedido aberto; reenvio mantém o saldo; zero e valor acima do saldo recusados; duas baixas concorrentes: só uma entra. Quitado só com tudo faturado e recebido; o histórico das baixas continua visível. |
+
+**Migração** `20261114223000_nove_correcoes_repactuacao`: só acrescenta colunas e tabelas. Ensaio em banco novo (10 migrações, as 4 tabelas novas) e em banco existente. Campos sem valor histórico conhecido: o retroativo aprovado herda o `valorDeferido` antigo (que já tinha esse significado); mensal aprovado e evidência ficam vazios, e os pedidos decididos ficam com `decisaoTipo = LEGADO_A_CONCILIAR` e `conciliacaoPendente = true` (45 pedidos no banco local).
+
+**Comandos:** `npm run lint` ok · `npm run typecheck` ok · `npm test` 279 ok · `npm run build` ok · `prisma migrate deploy` ok · `npm run test:db` 289 ok + 2 com tempo esgotado sob carga (2FA e cobrança, passam sozinhos) · `npm run e2e` 94 ok · `npm run e2e:financeiro` 23 ok · `e2e/fase2.mjs`, `e2e/jornada.mjs` e `e2e/bloqueadoras/*` ok. Para os testes de navegador, o servidor precisa de `APP_URL` igual ao `BASE_URL` (os links dos e-mails simulados usam `APP_URL`).

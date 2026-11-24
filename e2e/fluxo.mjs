@@ -240,6 +240,12 @@ try {
   await page.getByText(/fonte/i).filter({ visible: true }).first().waitFor();
   if (!page.url().endsWith("/passo/3")) throw new Error("passo 3 aceitou linha alterada sem fonte");
   await page.getByLabel("Fonte de Salário base").first().fill(`CCT Teste ES ${ano}, cláusula 4ª`);
+  // correção 2: cada valor alterado fica ligado ao instrumento, categoria, data-base, cláusula e parcela
+  await page.getByLabel("Instrumento de Salário base").first().fill(`CCT Teste ES ${ano}`);
+  await page.getByLabel("Categoria de Salário base").first().fill("Servente");
+  await page.getByLabel("Data-base de Salário base").first().fill(`${ano}-01-01`);
+  await page.getByLabel("Cláusula de Salário base").first().fill("Cláusula 4ª");
+  await page.getByLabel("Parcela de Salário base").first().fill("Mão de obra: salário base");
   await page.waitForTimeout(400);
   await page.getByText(/^Salvo/).filter({ visible: true }).first().waitFor({ timeout: 15000 });
   await page.waitForTimeout(1500);
@@ -293,9 +299,9 @@ try {
   ok("deferido (carimbo DEFERIDO)");
   await clicarConfirmando("Registrar apostilamento");
   await page.getByLabel("Número da nota fiscal").fill("NF 555");
-  await clicarConfirmando("Gerar cobrança da diferença");
+  await clicarConfirmando("Registrar nota fiscal");
   await page.getByLabel("Valor recebido").waitFor();
-  await clicarConfirmando("Marcar como recebido");
+  await clicarConfirmando("Registrar recebimento");
   await page.getByText("RECEBIDO", { exact: true }).filter({ visible: true }).first().waitFor();
   await semRolagemLateral("recebido");
   await page.screenshot({ path: `${SHOTS}/07-recebido.png`, fullPage: true });

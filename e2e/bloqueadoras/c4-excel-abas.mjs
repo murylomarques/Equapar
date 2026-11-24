@@ -20,7 +20,7 @@ const ped = await db.pedido.create({
 const b = await navegador();
 try {
   const p = await entrarComoDono(await b.newContext());
-  const r = await p.request.get(`${BASE}/api/pedidos/${ped.id}/arquivos/planilha.xlsx`, { timeout: 180000 });
+  const r = await p.request.get(`${BASE}/api/pedidos/${ped.id}/arquivos/planilha.xlsx?rascunho=1`, { timeout: 180000 });
   conferir(r.status() === 200, `Excel do pedido com postos parecidos baixa (status ${r.status()})`);
   if (r.status() === 200) {
     const wb = new ExcelJS.Workbook();

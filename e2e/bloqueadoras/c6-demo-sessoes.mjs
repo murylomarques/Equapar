@@ -9,6 +9,8 @@ const b = await navegador();
 
 /** Abre a demonstração como um visitante: GET mostra a página; o botão (POST) entra. */
 async function abreDemo(ua) {
+  // este teste abre 4 visitantes do mesmo IP; a cota de 3 por IP tem teste próprio (demo-limite.mjs)
+  await db.tentativaAcesso.deleteMany({ where: { chave: { startsWith: "demo:" } } });
   const c = await b.newContext({ userAgent: ua });
   const p = await novaPagina(c);
   await p.goto(`${BASE}/demonstracao`);
