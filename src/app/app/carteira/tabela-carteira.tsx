@@ -173,10 +173,10 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
         {ordenadas.map((l) => (
           <Link key={l.id} href={`/app/contratos/${l.id}`} className="cartao-linha">
             <strong>{l.orgao}</strong>
-            <span className="legenda">
+            <span className="legenda" style={{ display: "block" }}>
               Contrato {l.numero} · fim da vigência {l.fimTxt}
             </span>
-            <span className="legenda">
+            <span className="legenda" style={{ display: "block" }}>
               Próximo prazo: {l.prazoTxt} · {l.valorMensalTxt}
             </span>
             <div style={{ marginTop: 8 }}>

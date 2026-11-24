@@ -98,11 +98,14 @@ const ROTAS_APP = [
   ["38", "A receber", "/app/a-receber"],
   ["39", "Convencoes", "/app/convencoes"],
   ["40", "Avisos", "/app/avisos"],
+  ["40b", "Avisos prazos", "/app/avisos?ver=prazos"],
+  ["40c", "Avisos historico", "/app/avisos?ver=historico"],
   ["41", "Busca", "/app/busca?q=Exemplo"],
   ["43", "Config empresa", "/app/configuracoes?aba=empresa"],
   ["44", "Config pessoas", "/app/configuracoes?aba=pessoas"],
   ["45", "Config avisos", "/app/configuracoes?aba=avisos"],
   ["46", "Config cobranca", "/app/configuracoes?aba=cobranca"],
+  ["46b", "Config cobranca previsao", "/app/configuracoes?aba=cobranca&plano=CARTEIRA&ciclo=MENSAL"],
   ["47", "Config seguranca", "/app/configuracoes?aba=seguranca"],
   ["48", "Config dados", "/app/configuracoes?aba=dados"],
   ["49", "Mais (celular)", "/app/mais"],
@@ -112,16 +115,26 @@ const ROTAS_APP = [
 ];
 
 const browser = await chromium.launch({ headless: true, ...(process.env.NAVEGADOR ? { channel: process.env.NAVEGADOR } : {}) });
-const TAMANHOS = [
+// Auditoria total: CAPTURA_TAMANHOS=todos fotografa as 5 resoluções; padrão: desktop e celular.
+const TODOS = [
   { nome: "desktop", viewport: { width: 1440, height: 900 } },
+  { nome: "amplo", viewport: { width: 1920, height: 1080 } },
+  { nome: "tablet", viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true },
   { nome: "celular", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+  { nome: "compacto", viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
 ];
+const pedidos = (process.env.CAPTURA_TAMANHOS ?? "desktop,celular").split(",");
+const TAMANHOS = TODOS.filter((t) => pedidos.includes("todos") || pedidos.includes(t.nome));
 const lista = [];
 
 async function foto(page, num, titulo, url, tam, acao) {
-  if (url) await page.goto(BASE + url, { waitUntil: "networkidle" });
+  // páginas que consultam em segundo plano (ex.: Raio-X) nunca ficam "ociosas": espera limitada
+  if (url) {
+    await page.goto(BASE + url, { waitUntil: "load" });
+    await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
+  }
   if (acao) await acao(page);
-  if (tam.nome === "celular") await page.addStyleTag({ content: ".app-inferior{position:static!important}" });
+  if (tam.isMobile && tam.viewport.width < 768) await page.addStyleTag({ content: ".app-inferior{position:static!important}" });
   // Captura de página inteira não pinta seções com content-visibility fora da tela; para a foto, desliga.
   await page.addStyleTag({ content: ".revelar.secao{content-visibility:visible!important}" });
   await page.waitForTimeout(600);
@@ -180,6 +193,8 @@ try {
       await ass.waitForTimeout(1800);
     }
     await foto(ass, "50", "Assessoria clientes", "/app/clientes", tam);
+    // a cota de 3 demonstrações por IP por hora (A3) vale também aqui: zera só as chaves "demo:" locais
+    await db.tentativaAcesso.deleteMany({ where: { chave: { startsWith: "demo:" } } });
     const demo = await (await browser.newContext(ctxOpts)).newPage();
     await demo.goto(BASE + "/demonstracao");
     await demo.getByRole("button", { name: "Entrar na demonstração" }).click();

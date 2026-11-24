@@ -36,6 +36,77 @@ function comEvidencia(linha: LinhaPlanilha, alteracao: Partial<NonNullable<Linha
   };
 }
 
+/**
+ * Fonte da alteração (correção 2) numa sub-linha de largura total, com rótulos visíveis.
+ * Completa: fica recolhida num resumo de uma linha. Incompleta: abre sozinha e diz o que falta.
+ */
+function EvidenciaLinha({ l, postoId, somenteLeitura, mudarLinha }: { l: LinhaPlanilha; postoId: string; somenteLeitura?: boolean; mudarLinha: (pid: string, lid: string, patch: Partial<LinhaPlanilha>) => void }) {
+  const e = l.evidencia;
+  const faltam = [
+    !e?.instrumento?.trim() && "instrumento",
+    !e?.categoria?.trim() && "categoria",
+    !/^\d{4}-\d{2}-\d{2}$/.test(e?.dataBase ?? "") && "data-base",
+    !e?.clausula?.trim() && "cláusula",
+    !e?.parcela?.trim() && "parcela",
+  ].filter(Boolean) as string[];
+  const revisao = e?.anualidade === "REVISAO_NECESSARIA" || e?.anualidade === "REVISAO_RESOLVIDA";
+  const muda = (alteracao: Partial<NonNullable<LinhaPlanilha["evidencia"]>>) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, alteracao) });
+  const id = (c: string) => `ev-${c}-${l.id}`;
+  // decidido uma vez: não fecha sozinho quando a pessoa completa o último campo
+  const [abertoInicial] = useState(() => faltam.length > 0 || e?.anualidade === "REVISAO_NECESSARIA");
+  return (
+    <div role="cell" className="c-evidencia">
+      <details open={abertoInicial}>
+        <summary className={faltam.length ? "evidencia-falta" : undefined}>
+          {faltam.length ? `Fonte da alteração: falta ${faltam.join(", ")}` : `Fonte da alteração: ${e!.instrumento}, ${e!.clausula}${e!.anualidade === "REVISAO_NECESSARIA" ? " · revisão necessária" : ""}`}
+        </summary>
+        <div className="evidencia-grade">
+          <div className="campo-mini">
+            <label htmlFor={id("i")}>Instrumento</label>
+            <input id={id("i")} aria-label={`Instrumento de ${l.descricao}`} value={e?.instrumento ?? ""} placeholder="ex.: CCT 2026" disabled={somenteLeitura} onChange={(x) => muda({ instrumento: x.target.value })} />
+          </div>
+          <div className="campo-mini">
+            <label htmlFor={id("c")}>Categoria</label>
+            <input id={id("c")} aria-label={`Categoria de ${l.descricao}`} value={e?.categoria ?? ""} placeholder="ex.: Servente" disabled={somenteLeitura} onChange={(x) => muda({ categoria: x.target.value })} />
+          </div>
+          <div className="campo-mini">
+            <label htmlFor={id("d")}>Data-base</label>
+            <input id={id("d")} type="date" aria-label={`Data-base de ${l.descricao}`} value={e?.dataBase ?? ""} disabled={somenteLeitura} onChange={(x) => muda({ dataBase: x.target.value })} />
+          </div>
+          <div className="campo-mini">
+            <label htmlFor={id("cl")}>Cláusula ou item</label>
+            <input id={id("cl")} aria-label={`Cláusula de ${l.descricao}`} value={e?.clausula ?? ""} placeholder="ex.: Cláusula 4ª" disabled={somenteLeitura} onChange={(x) => muda({ clausula: x.target.value })} />
+          </div>
+          <div className="campo-mini">
+            <label htmlFor={id("p")}>Parcela de custo</label>
+            <input id={id("p")} aria-label={`Parcela de ${l.descricao}`} value={e?.parcela ?? ""} placeholder="ex.: mão de obra" disabled={somenteLeitura} onChange={(x) => muda({ parcela: x.target.value })} />
+          </div>
+          <div className="campo-mini">
+            <label htmlFor={id("a")}>Anualidade</label>
+            <select
+              id={id("a")}
+              aria-label={`Conclusão da anualidade de ${l.descricao}`}
+              value={e?.anualidade ?? "VALIDA"}
+              disabled={somenteLeitura}
+              onChange={(x) => muda({ anualidade: x.target.value as "VALIDA" | "REVISAO_NECESSARIA" | "REVISAO_RESOLVIDA" })}
+            >
+              <option value="VALIDA">Conferida</option>
+              <option value="REVISAO_NECESSARIA">Revisão necessária</option>
+              <option value="REVISAO_RESOLVIDA">Revisão resolvida</option>
+            </select>
+          </div>
+          {revisao && (
+            <div className="campo-mini evidencia-motivo">
+              <label htmlFor={id("m")}>Motivo e decisão documentada</label>
+              <input id={id("m")} aria-label={`Motivo da revisão de ${l.descricao}`} value={e?.motivoRevisao ?? ""} disabled={somenteLeitura} onChange={(x) => mudarLinha(postoId, l.id, { evidencia: { ...comEvidencia(l, {}), motivoRevisao: x.target.value } })} />
+            </div>
+          )}
+        </div>
+      </details>
+    </div>
+  );
+}
+
 export function EditorPlanilha({
   pedidoId,
   qual,
@@ -553,64 +624,6 @@ function LinhaEditor({
           onKeyDown={aoTeclar}
           onChange={(e) => mudarLinha(postoId, l.id, { fonte: e.target.value || undefined })}
         />
-        {alterou && (
-          <div className="grade-2 mt-8" style={{ gridColumn: "1 / -1" }}>
-            <input
-              aria-label={`Instrumento de ${l.descricao}`}
-              value={l.evidencia?.instrumento ?? ""}
-              placeholder="Instrumento: CCT, contrato, proposta ou outra fonte"
-              disabled={somenteLeitura}
-              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { instrumento: e.target.value }) })}
-            />
-            <input
-              aria-label={`Categoria de ${l.descricao}`}
-              value={l.evidencia?.categoria ?? ""}
-              placeholder="Categoria profissional ou custos de mercado"
-              disabled={somenteLeitura}
-              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { categoria: e.target.value }) })}
-            />
-            <input
-              type="date"
-              aria-label={`Data-base de ${l.descricao}`}
-              value={l.evidencia?.dataBase ?? ""}
-              disabled={somenteLeitura}
-              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { dataBase: e.target.value }) })}
-            />
-            <input
-              aria-label={`Cláusula de ${l.descricao}`}
-              value={l.evidencia?.clausula ?? ""}
-              placeholder="Cláusula ou item da fonte"
-              disabled={somenteLeitura}
-              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { clausula: e.target.value }) })}
-            />
-            <input
-              aria-label={`Parcela de ${l.descricao}`}
-              value={l.evidencia?.parcela ?? ""}
-              placeholder="Parcela/item de custo correspondente"
-              disabled={somenteLeitura}
-              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { parcela: e.target.value }) })}
-            />
-            <select
-              aria-label={`Conclusão da anualidade de ${l.descricao}`}
-              value={l.evidencia?.anualidade ?? "VALIDA"}
-              disabled={somenteLeitura}
-              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { anualidade: e.target.value as "VALIDA" | "REVISAO_NECESSARIA" | "REVISAO_RESOLVIDA" }) })}
-            >
-              <option value="VALIDA">Anualidade conferida</option>
-              <option value="REVISAO_NECESSARIA">Revisão necessária</option>
-              <option value="REVISAO_RESOLVIDA">Revisão resolvida com justificativa</option>
-            </select>
-            {(l.evidencia?.anualidade === "REVISAO_NECESSARIA" || l.evidencia?.anualidade === "REVISAO_RESOLVIDA") && (
-              <input
-                aria-label={`Motivo da revisão de ${l.descricao}`}
-                value={l.evidencia.motivoRevisao ?? ""}
-                placeholder="Motivo da incerteza e decisão documentada"
-                disabled={somenteLeitura}
-                onChange={(e) => mudarLinha(postoId, l.id, { evidencia: { ...l.evidencia!, motivoRevisao: e.target.value } })}
-              />
-            )}
-          </div>
-        )}
         {(m === "M1" && l.tipo === "VALOR") || semFonte ? (
           <span className="fileira" style={{ gap: 8 }}>
             {m === "M1" && l.tipo === "VALOR" && (
@@ -702,6 +715,7 @@ function LinhaEditor({
           </button>
         )}
       </span>
+      {alterou && <EvidenciaLinha l={l} postoId={postoId} somenteLeitura={somenteLeitura} mudarLinha={mudarLinha} />}
     </div>
   );
 }

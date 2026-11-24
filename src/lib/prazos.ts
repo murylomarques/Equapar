@@ -196,7 +196,7 @@ export function acoesDoContrato(c: ContratoComRel, hoje = hojeUTC()): Acao[] {
     if (p.estado === "DEFERIDO" && !p.apostiladoEm && p.deferidoEm && diasAte(p.deferidoEm) <= -30) {
       out.push({ ...base, chave: `apost:${p.id}`, titulo: "Cobrar o apostilamento", limite: null, detalhe: `deferido ${emDias(diasAte(p.deferidoEm))}, sem apostilamento`, botao: "Abrir", href: `/app/a-receber`, tom: "carimbo" });
     } else if (p.estado === "DEFERIDO" && p.apostiladoEm) {
-      out.push({ ...base, chave: `fat:${p.id}`, titulo: "Faturar a diferença", limite: null, detalhe: "apostilado, falta a nota da diferença retroativa", botao: "Gerar cobrança", href: `/app/a-receber`, tom: "verde" });
+      out.push({ ...base, chave: `fat:${p.id}`, titulo: "Faturar a diferença", limite: null, detalhe: "apostilado, falta a nota da diferença retroativa", botao: "Registrar nota fiscal", href: `/app/pedidos/${p.id}/pronto`, tom: "verde" });
     } else if (p.estado === "INDEFERIDO" && p.recursoPrazo && !p.recursoData && p.recursoPrazo >= hoje) {
       out.push({ ...base, chave: `recurso:${p.id}`, titulo: "Apresentar o recurso", limite: p.recursoPrazo, detalhe: `prazo ${emDias(diasAte(p.recursoPrazo))}`, botao: "Abrir pedido", href: `/app/pedidos/${p.id}/pronto`, tom: "carimbo" });
     } else if (p.estado === "CALCULO_VALIDADO" && !p.protocoloNumero) {

@@ -21,10 +21,9 @@ export default function Precos() {
       <div className="mt-24">
         <TabelaPlanos />
       </div>
-      <div className="mt-32">
+      <div className="precos-detalhe mt-32">
         <CalculadoraPreco />
-      </div>
-      <div className="cartao mt-24 leitura">
+        <div className="cartao">
         <h2>O que cada plano inclui</h2>
         <ul className="pilha-8" style={{ paddingLeft: 20 }}>
           <li>
@@ -50,6 +49,7 @@ export default function Precos() {
         <p className="legenda">Cancele quando quiser, na tela de cobrança. Seus dados ficam disponíveis para exportar.</p>
         <p className="mb-8">Dúvidas sobre o piloto ou sobre o seu caso?</p>
         <Contato />
+        </div>
       </div>
     </div>
   );

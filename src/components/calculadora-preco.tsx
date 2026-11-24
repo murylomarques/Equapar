@@ -1,14 +1,16 @@
 "use client";
 import { useState } from "react";
+import { PRECOS } from "@/lib/planos";
 
-/** Postos × R$ 4, com mínimo de R$ 297 (preço da página de preços, em teste). */
+/** Postos × preço por posto, com o mínimo mensal: os mesmos números da cobrança (lib/planos.ts). */
 export function CalculadoraPreco() {
   const [postos, setPostos] = useState("120");
   const n = Number(postos.replace(/\D/g, "")) || 0;
-  const valor = Math.max(297, n * 4);
+  const { carteiraPorPosto: porPosto, carteiraMinimo: minimo } = PRECOS;
+  const valor = Math.max(minimo, n * porPosto);
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
   return (
-    <div className="cartao" style={{ maxWidth: 520 }}>
+    <div className="cartao">
       <h2>Quanto fica a Carteira para a sua empresa</h2>
       <div className="campo">
         <label htmlFor="calc-postos">Postos de trabalho nos contratos públicos</label>
@@ -25,7 +27,7 @@ export function CalculadoraPreco() {
         </span>{" "}
         por mês
         <span className="ajuda-texto" style={{ display: "block" }}>
-          {n * 4 < 297 ? `${n} × R$ 4 = ${fmt(n * 4)}; vale o mínimo de R$ 297.` : `${n.toLocaleString("pt-BR")} × R$ 4 por posto.`}
+          {n * porPosto < minimo ? `${n} × ${fmt(porPosto)} = ${fmt(n * porPosto)}; vale o mínimo de ${fmt(minimo)}.` : `${n.toLocaleString("pt-BR")} × ${fmt(porPosto)} por posto.`}
         </span>
       </p>
     </div>

@@ -257,7 +257,9 @@ export default function Landing() {
 
       {/* 11. Perguntas */}
       <Revelar className="secao">
-        <div className="site-largura faq" style={{ maxWidth: 860 }}>
+        {/* mesma margem esquerda das outras seções; a largura de leitura fica no bloco de dentro */}
+        <div className="site-largura">
+        <div className="faq" style={{ maxWidth: 860 }}>
           <h2 className="titulo-secao">Perguntas</h2>
           {[
             ["É seguro digitar meu CNPJ?", "Sim. O Raio-X só consulta dados públicos do PNCP. Não pedimos senha, certificado ou documento."],
@@ -281,13 +283,16 @@ export default function Landing() {
             </details>
           ))}
         </div>
+        </div>
       </Revelar>
 
       {/* 12. Chamada final */}
       <Revelar className="secao">
-        <div className="site-largura" style={{ maxWidth: 760 }}>
-          <h2 className="titulo-secao">Seus contratos já estão no PNCP. Veja os prazos agora.</h2>
-          <FormCnpjServidor id="cnpj-final" />
+        <div className="site-largura">
+          <div style={{ maxWidth: 760 }}>
+            <h2 className="titulo-secao">Seus contratos já estão no PNCP. Veja os prazos agora.</h2>
+            <FormCnpjServidor id="cnpj-final" />
+          </div>
         </div>
       </Revelar>
     </>
@@ -300,11 +305,10 @@ function QuemFaz() {
   return (
     <Revelar className="secao">
       <div className="site-largura">
-        <div className="fundador">
-          {e.fundadorNome && e.fundadorFoto ? (
+        {/* sem foto, só o texto: um quadro vazio parece página inacabada */}
+        <div className={e.fundadorNome && e.fundadorFoto ? "fundador" : "fundador fundador-sem-foto"}>
+          {e.fundadorNome && e.fundadorFoto && (
             <img src={e.fundadorFoto} alt={`Foto de ${e.fundadorNome}`} width={160} height={160} style={{ borderRadius: 6, objectFit: "cover" }} />
-          ) : (
-            <div className="foto-vaga" aria-hidden />
           )}
           <blockquote style={{ margin: 0 }}>
             <p style={{ fontFamily: "var(--fonte-serif)", fontSize: 24, lineHeight: 1.3 }}>

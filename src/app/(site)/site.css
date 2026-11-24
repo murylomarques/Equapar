@@ -50,8 +50,9 @@
 .site-rodape a {
   color: var(--papel);
 }
+/* só vertical: com .site-largura no mesmo elemento, a margem lateral (16/32 px) precisa continuar valendo */
 .secao {
-  padding: 64px 0;
+  padding-block: 64px;
 }
 /* Seções abaixo da dobra: o navegador só calcula o layout quando chegam perto da tela.
    Corta o primeiro cálculo de estilo da landing e antecipa a primeira pintura no celular.
@@ -231,19 +232,20 @@
   background: var(--selo-verde-bg);
   font-weight: 500;
 }
+/* quantas colunas houver planos (3 no modo piloto, 4 ou 5 fora dele): nenhuma coluna vazia */
 .planos {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 16px;
 }
-@media (max-width: 980px) {
-  .planos {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.precos-detalhe {
+  display: grid;
+  gap: 24px;
+  align-items: start;
 }
-@media (max-width: 560px) {
-  .planos {
-    grid-template-columns: 1fr;
+@media (min-width: 900px) {
+  .precos-detalhe {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   }
 }
 .plano {
@@ -279,6 +281,12 @@
   .fundador {
     grid-template-columns: 1fr;
   }
+}
+.fundador-sem-foto {
+  grid-template-columns: minmax(0, 860px);
+}
+.fundador-sem-foto {
+  grid-template-columns: minmax(0, 860px);
 }
 .foto-vaga {
   width: 160px;

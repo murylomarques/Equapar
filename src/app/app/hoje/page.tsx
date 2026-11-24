@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { resumoFinanceiro } from "@/lib/financeiro-pedido";
 import { CalendarClock, CheckCircle2, DollarSign, FolderOpen, Hourglass } from "lucide-react";
 import { contexto, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -61,8 +62,21 @@ export default async function Hoje() {
     .sort((a, b) => (a.limite?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.limite?.getTime() ?? Number.MAX_SAFE_INTEGER));
 
   const aguardando = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "PROTOCOLADO").map((p) => ({ c, p })));
-  const receber = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "DEFERIDO" || p.estado === "FATURADO").map((p) => ({ c, p })));
-  const totalReceber = somarReais(receber.map(({ p }) => p.valorDeferido)); // L10
+  const receberBase = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "DEFERIDO" || p.estado === "FATURADO").map((p) => ({ c, p })));
+  // o mesmo saldo da tela A receber: retroativo aprovado menos o que já entrou (notas e baixas válidas)
+  const lancamentos = receberBase.length
+    ? await db.pedido.findMany({
+        where: { id: { in: receberBase.map(({ p }) => p.id) } },
+        select: { id: true, notasFiscais: { select: { id: true, valor: true, canceladaEm: true } }, baixas: { select: { notaFiscalId: true, valor: true, canceladaEm: true } } },
+      })
+    : [];
+  const lancDe = new Map(lancamentos.map((l) => [l.id, l]));
+  const receber = receberBase.map(({ c, p }) => ({
+    c,
+    p,
+    pendente: resumoFinanceiro(p.retroativoAprovado ?? p.valorDeferido ?? 0, lancDe.get(p.id)?.notasFiscais ?? [], lancDe.get(p.id)?.baixas ?? []).totalPendente,
+  }));
+  const totalReceber = somarReais(receber.map((x) => x.pendente)); // L10
   // L1: mesmo conjunto do filtro "Prazo em 30 dias" da Carteira e do resumo semanal
   const prazos30 = contratosComPrazoEm(contratos, 30, hoje).length;
 
@@ -91,8 +105,6 @@ export default async function Hoje() {
           {saudacao()}, {ctx.usuario.nome.split(" ")[0]}. Próximos 30 dias: {plural(prazos30, "contrato com prazo", "contratos com prazo")}.
         </p>
       </div>
-
-      {!ehDemo(ctx) && mostrarPesquisa(ctx.conta, primeiroDossie) && <PesquisaEncaixe />}
 
       <div className="cartoes-numero faixa-numeros">
         <CartaoNumero
@@ -201,7 +213,11 @@ export default async function Hoje() {
                         <strong>Contrato {c.numero}</strong> · {c.orgao}
                         <div style={{ marginTop: 6 }}>
                           <SeloSimples
-                            texto={`Protocolado ${emDias(diasAte(p.protocoloData!))} · resposta preferencial até ${data(r)}${atrasado ? " (vencida)" : ""}`}
+                            texto={
+                              r
+                                ? `Protocolado ${emDias(diasAte(p.protocoloData!))} · resposta preferencial até ${data(r)}${atrasado ? " (vencida)" : ""}`
+                                : `Protocolado ${emDias(diasAte(p.protocoloData!))} · prazo de resposta: falta a data da documentação completa`
+                            }
                             tom={atrasado ? "carimbo" : "azul"}
                             icone="ampulheta"
                           />
@@ -228,12 +244,12 @@ export default async function Hoje() {
               <p className="secundario mt-8">Nada deferido aguardando pagamento.</p>
             ) : (
               <ul className="lista-limpa pilha-8 mt-16">
-                {receber.slice(0, 4).map(({ c, p }) => (
+                {receber.slice(0, 4).map(({ c, p, pendente }) => (
                   <li key={p.id} className="cartao-linha entre">
                     <span>
                       Contrato {c.numero} · {c.orgao}
                     </span>
-                    <span className="num">{reais(p.valorDeferido)}</span>
+                    <span className="num">{reais(pendente)}</span>
                   </li>
                 ))}
               </ul>
@@ -282,6 +298,8 @@ export default async function Hoje() {
           )}
         </aside>
       </div>
+      {/* a pesquisa fica depois do que pede ação: no celular, a primeira tela é o trabalho do dia */}
+      {!ehDemo(ctx) && mostrarPesquisa(ctx.conta, primeiroDossie) && <PesquisaEncaixe />}
     </>
   );
 }
