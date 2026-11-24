@@ -1,104 +1,108 @@
-# Auditoria total: relatório final
+# Equapar: entrega final para homologação
 
-Branch `auditoria-total` (base `697711f`, sem merge e sem deploy). Tudo local, com dados fictícios: nenhuma cobrança real, nenhum cancelamento real no Asaas, nenhuma chamada paga à Anthropic.
+Branch `auditoria-total` (base `697711f`), sem merge na `main` e sem deploy. Tudo local, com dados fictícios: nenhuma cobrança real, nenhum cancelamento real no Asaas, nenhuma chamada paga à Anthropic.
 
-Documentos: [MATRIZ-TELAS.md](MATRIZ-TELAS.md) (todas as telas, achados e situação) · [COBRANCA.md](COBRANCA.md) (política, webhook, revisão independente) · [IA.md](IA.md) (preços, custos, cotas propostas com margem).
+Documentos: [MATRIZ-TELAS.md](MATRIZ-TELAS.md) · [COBRANCA.md](COBRANCA.md) · [IA.md](IA.md). Comparação visual: `D:\Equapar\capturas-auditoria\comparacao.html` (antes × depois, 56 telas, 5 resoluções).
 
-## Como foi verificado (e o que isso não prova)
+## A. Aplicação
 
-- **Capturas reais** em 5 resoluções (1440×900, 1920×1080, 768×1024, 390×844, 375×667): antes (build de `697711f`) e depois (build final), em `D:\Equapar\capturas-auditoria`, com a comparação lado a lado em `comparacao.html`.
-- **Quatro revisões visuais independentes** (cada uma com um quarto das telas) e **uma revisão independente do código** de cobrança, IA e avisos, todas sem acesso às minhas conclusões. Elas encontraram problemas que eu não tinha visto, inclusive regressões minhas e falhas P0 de cobrança; todos estão na matriz e no COBRANCA.md.
-- Quantidade de capturas e de testes não é prova de qualidade: os itens **pendentes** estão listados abaixo e na matriz, com severidade.
+Commits organizados por grupo na branch (cobrança, IA, avisos, telas do site, telas do app, fluxo do pedido, performance, testes). Nada de funcionalidade nova fora do escopo: correções, acabamento, regras conservadoras onde a política comercial não estava aprovada, e testes.
 
-## Funcionalidades testadas
+Decisões tomadas nesta rodada (conservadoras, conforme autorizado):
+- **Anualidade**: nada vem marcado; cada linha alterada exige resposta (Conferida, Não se aplica com motivo, Revisão necessária/resolvida); o servidor bloqueia gerar sem resposta; o PDF da memória diz exatamente o que foi **declarado** ("declarada pela empresa", "não se aplica: motivo", "não respondida"). Também corrigido: o servidor recusava "Revisão resolvida" ao salvar.
+- **Upgrade com período pago em andamento**: sem cobrança pela tela (sem crédito aprovado, seria ambígua); a tela explica e oferece contato para análise manual. Compra também recusada com renovação vencida em aberto (cobraria o mesmo período duas vezes). Conferido de novo com a conta travada no servidor.
 
-| Área | Como | Resultado |
-|---|---|---|
-| Raio-X, criação de conta, confirmação de e-mail, primeiros passos | `npm run e2e` (computador e celular) | ok |
-| Cadastro de contrato, convenção, importação | `e2e` | ok |
-| Pedido completo: passos 1–5, fonte por linha, memória, aprovação, arquivos, protocolo, deferimento, nota, recebimento | `e2e`, `e2e:financeiro` | ok |
-| Arquivos finais bloqueados sem versão aprovada; prévia RASCUNHO; outra conta 404 | `e2e:financeiro`, `bloqueadoras/c2–c4, s4` | ok |
-| Avisos: um evento por ocorrência, urgência, clique leva ao contexto certo | `e2e:auditoria` (D) | ok |
-| Contratação, previsão antes de confirmar, pagamento, cancelamento com data, desfazer | `e2e:auditoria` (E, F) | ok |
-| IA sem orçamento não aparece nem chama | `e2e:auditoria` (G) + testes de banco | ok |
-| Demonstração isolada, sessões | `bloqueadoras/c6` | ok |
-| Recurso e novo pedido, isolamento entre contas | `e2e/fase2.mjs` | ok |
-| Jornada de 40 horas (simulação) | `e2e/jornada.mjs` | ok |
-| Modo piloto | `e2e/modo-piloto.mjs` (agora autossuficiente) | ok |
-| Cabeçalhos de segurança | `bloqueadoras/s3` | ok |
+## B. Comparação visual
 
-## Resultado dos testes (build final)
+- 282 capturas antes (build de `697711f`) e 297 depois (build final), Playwright/Edge, 1440×900, 1920×1080, 768×1024, 390×844, 375×667.
+- Inspeção: quatro revisões visuais independentes na rodada anterior, mais duas na final (site e app), além da minha.
+
+## C. Matriz
+
+[MATRIZ-TELAS.md](MATRIZ-TELAS.md): 18 P1 e 1 P0 encontrados nas telas, todos corrigidos; todos os P2/P3 listados corrigidos; fora: só itens não aplicáveis (com motivo) ou dependentes de aprovação externa.
+
+## D. Testes (build final)
 
 | Comando | Resultado |
 |---|---|
-| `npm run lint` · `npm run typecheck` · `npm run build` | ok |
-| `npm run test:db` | **373 ok** (79 arquivos), inclusive 22 de assinatura e 13 de orçamento de IA no banco |
-| `npm run e2e` | 94 ok |
-| `npm run e2e:auditoria` · `npm run e2e:financeiro` | 12 ok · 23 ok |
+| `npm run lint` · `npm run typecheck` · `npm run build` | ok (0 erros, 0 avisos) |
+| `npm run test:db` (unitários + banco) | **380 ok** (81 arquivos) |
+| `npm run e2e` (fluxo completo no computador e no celular, assessoria e 2FA, sem rolagem lateral) | 94 ok |
+| `npm run e2e:auditoria` (aviso → contexto, contratar, cancelar, IA bloqueada) | 12 ok |
+| `npm run e2e:financeiro` (deferimento parcial, notas, baixas, ZIP final bloqueado) | 23 ok |
+| `e2e/cobranca-simulada.mjs` · `e2e/permissoes.mjs` (papel Leitura) | 5 ok · 6 ok |
 | `npm run e2e:a11y` | 105 verificações, **0 violações graves** (axe) |
 | `npm run e2e:teclado` · `e2e/sem-rolagem-lateral.mjs` | 14 ok · 39 ok |
-| `fase2`, `jornada`, `modo-piloto`, `bloqueadoras` (c2, c3, c6, s3, s4) | ok |
+| `e2e/fase2.mjs`, `jornada.mjs`, `modo-piloto.mjs`, `demo-limite.mjs`, `bloqueadoras/*` (14 arquivos) | todos ok |
 
-Concorrência coberta por testes de banco: 5 entregas simultâneas do mesmo webhook (aplica uma vez), 3 cliques simultâneos na mesma compra (uma fatura, uma cobrança), duas rotinas de renovação ao mesmo tempo (uma renovação), 20 reservas de IA simultâneas (não passam do teto da conta), várias contas ao mesmo tempo (não passam do teto global).
+Jornadas pedidas (1 a 20): 1–14 e 20 pelo `e2e` (computador e celular) e `e2e:financeiro`; 14 e 15–16 pelo `e2e:auditoria` e `cobranca-simulada`; 17 (limite de IA) pelos testes de banco do orçamento (inclusive concorrência); 18 (exportar) por `exportacao.db.test.ts`; 19 (permissão restrita) por `e2e/permissoes.mjs` e `seguranca-acoes.test.ts` (toda ação de servidor confere permissão; as públicas listadas com motivo).
 
-## Performance (laboratório)
+Testes instáveis corrigidos: modo piloto dependia da execução anterior; o fluxo dependia da cota diária do Raio-X por IP (zerada só a chave local no início); cobrança simulada esperava texto que já existia em faturas antigas.
 
-Lighthouse 12.8.2, celular simulado (4G lento, CPU 4×), Edge headless nesta máquina, build de produção local (`next start`), 3 rodadas, mediana:
+## E. Financeiro
 
-| Página | Nota | LCP | FCP | TBT | CLS |
-|---|---|---|---|---|---|
-| `/` (landing) | 95 | 2,62 s | 0,92 s | 164 ms | 0,000 |
-| `/precos` | 96 | 2,58 s | 0,91 s | 94 ms | 0,000 |
-| `/raio-x` | 93 | 2,80 s | 0,91 s | 174 ms | 0,000 |
+- **Cobrança** ([COBRANCA.md](COBRANCA.md)): acesso só por período pago; cancelamento no fim do período (desfazível); só cobranças não iniciadas são canceladas; renovação gerada pela Equapar (cobranças avulsas no Asaas, sem `/subscriptions`), idempotente, com régua de cobrança pelo calendário até somente leitura (dados nunca apagados); webhook idempotente e seguro fora de ordem; pagamento após cancelamento, duplicado ou sobreposto não libera nada e fica marcado para devolução manual; estorno integral tira só o período estornado, parcial mantém e marca; sem crédito proporcional automático; compra ambígua recusada (análise manual).
+- **Verificações independentes**: três rodadas de revisão do código de cobrança por revisores sem contexto; achados P0/P1 corrigidos e cobertos por testes de banco (22 de assinatura + 4 de cobrança), inclusive com relógio controlado (renovação, vencimento, carência) e concorrência.
+- **Migração** `20261124120000_protecao_financeira`: só acrescenta; backfill data apenas períodos ainda válidos (cliente antigo não é rebaixado em silêncio). Ensaiada em banco novo e no existente.
+- **Asaas**: sem credenciais de sandbox neste ambiente: testado com simulação e cliente HTTP falso (`DELETE /payments/{id}`, criação, eventos). **Homologação no sandbox é pendência externa.**
+- **IA** ([IA.md](IA.md)): orçamento zero em todos os planos (nenhuma chamada paga possível); reserva atômica do pior caso com a entrada **contada pela API** antes de chamar; tetos por conta, usuário, concorrência e global; livro de consumo; cache; limites de documento; tentativas controladas; desligamento de emergência; Grátis nunca. A tela não oferece IA sem orçamento e o caminho manual (Excel ou digitação) segue igual. Proposta de cotas com premissas e margem: Grátis 0, Piloto US$ 5, Carteira US$ 5, Assessoria US$ 20, global US$ 150/mês — **não ativada**.
 
-- **CLS 0,00** (meta 0,1): ok. **TBT** abaixo de 200 ms (o INP não é medível em laboratório; TBT é o indicador mais próximo).
-- **LCP 2,6–2,8 s, acima da meta de 2,5 s.** O elemento LCP da landing é o parágrafo da abertura; 82% do tempo é "atraso de renderização" depois do FCP, e a fonte desse texto já usa `display: optional` (não é troca de fonte). No modelo simulado do Lighthouse isso costuma vir de JavaScript no carregamento. Ação: medir em produção com dados de campo (CDN e rede reais) antes de otimizar; se confirmado, reduzir o JavaScript da landing. Não otimizei às cegas.
-- Telas logadas não foram medidas no Lighthouse (exigem sessão); ficam para a medição em produção.
+## F. Performance
 
-## Situação dos riscos financeiros
+Laboratório, nesta máquina. Duas formas de medir, porque dão resultados diferentes:
 
-| Risco | Situação |
-|---|---|
-| Acesso pago sem pagar (clique, upgrade abandonado, cancelamento, renovação não paga) | Fechado: acesso só por período pago; régua pelo calendário até somente leitura |
-| Cobrança duplicada (cliques, renovação + upgrade, rotina repetida, cobrança duplicada paga) | Fechado no código; pagamento duplicado marcado para devolução manual |
-| Evento repetido, simultâneo ou fora de ordem | Fechado (idempotência transacional, travas, transições monotônicas) |
-| Cliente perde acesso pago | Fechado (cancelamento no fim do período; estorno tira só o período estornado) |
-| Gasto de IA | Fechado: orçamento zero; reserva atômica com entrada contada; tetos por conta e global |
-| Assinatura manual no painel do Asaas | Risco operacional: não criar (ver COBRANCA.md) |
-| Devoluções e crédito proporcional | Manuais, por decisão (sem política aprovada) |
-| Validação com o sandbox real do Asaas | **Não feita** (precisa de chave de sandbox e URL pública para o webhook) |
+**Páginas públicas, Lighthouse 12.8.2 celular, throttling simulado (Lantern), mediana de 3–5 rodadas**
 
-## Proposta de orçamento de IA
+| Página | Antes (rodada anterior) | Meio desta rodada | Final |
+|---|---|---|---|
+| `/` | 95 · LCP 2,62 s · TBT 164 ms | 83 · 3,08 s · 449 ms | **93 · 2,79 s · 179 ms** |
+| `/precos` | 96 · 2,58 s · 94 ms | 82 · 2,91 s · 508 ms | **93 · 2,60 s · 201 ms** |
+| `/raio-x` | 93 · 2,80 s · 174 ms | 80 · 3,01 s · 549 ms | **89 · 2,89 s · 289 ms** |
 
-Tabela completa com premissas e margem em [IA.md](IA.md). Resumo: Grátis US$ 0; Piloto US$ 5/conta/mês; Carteira US$ 5; Assessoria US$ 20; global US$ 150/mês no início. Pior caso de 9,1% da receita na Carteira mínima (R$ 297) e uso típico de 2,5%. **Tudo segue em zero até a sua decisão.**
+CLS 0,000 em todas. O meio da rodada mostra uma regressão causada por mim (a calculadora levava o `decimal.js` ao navegador) e por prefetch de links do novo rodapé; os dados apontaram e foram corrigidos (preços e datas em módulos sem dependências; sem prefetch no cabeçalho/rodapé).
 
-## Revisão comercial da landing e dos preços
+- **LCP observado de verdade** (sem simulação) na landing: **0,35 s** (igual ao FCP). O LCP simulado de 2,6–2,9 s vem do modelo do Lighthouse, que conta o JavaScript do React baixado antes da pintura numa rede de 1,6 Mbps; com throttling aplicado de verdade (DevTools), LCP 2,1–2,6 s. **A meta de 2,5 s no simulado não foi atingida**; o restante é o runtime do framework. Confirmar com dados reais de usuários em produção antes de qualquer mudança maior.
 
-**Primeira impressão (dono de empresa de limpeza, poucos segundos):** a abertura diz para quem é ("empresas de limpeza e conservação com contratos públicos"), o problema ("a convenção subiu; o seu contrato também pode subir"), o que a Equapar faz e o próximo passo (CNPJ, grátis, sem cadastro). A prévia da tela mostra o produto real com dados marcados como exemplo. Isso está bom.
+**Telas autenticadas e jornadas, Playwright (`scripts/medir-web-vitals.mjs`), 4G lento + CPU 4×, celular**
 
-**O que atrapalhava e foi corrigido:** página de preços desalinhada (margens, coluna vazia, ações em alturas diferentes) e com o mesmo conteúdo repetido abaixo dos cartões; comparação "Três jeitos" escondendo justamente a coluna da Equapar no celular; quadro vazio no lugar da foto.
+| Tela | LCP | CLS | Interação (INP aprox.) |
+|---|---|---|---|
+| Hoje, Carteira, Contrato, Pedidos, A receber, Avisos, Cobrança | 0,73–1,4 s | 0 | 64–104 ms (filtros) |
+| Pedido passo 3, digitação na planilha | 1,3–1,5 s | 0 | **248 ms → 112–144 ms** (cálculo da memória adiado) |
 
-**O que ainda pesa (pendente, decisão de conteúdo):** a landing tem 10 seções, repete o formulário de CNPJ 3 vezes e um mockup duas vezes, e o aviso "exemplo ilustrativo" aparece 5 vezes. Recomendo cortar para: abertura → problema → como funciona → preços → perguntas → chamada final (6 blocos), um formulário a mais só no fim.
+INP real de usuários exige dados de campo (não há em ambiente local).
 
-**Caminho até experimentar ou contratar:** Raio-X (grátis) → criar conta → primeiros passos → primeiro pedido. A passagem para o pago acontece em Configurações › Cobrança, com previsão antes de confirmar. Não há provas sociais, números de resultado ou selos inventados; a página mostra só o que existe.
+## G. Checklist de produção
 
-## Recomendações comerciais (máximo cinco)
+**Pronto e verificado**
+- Jornada completa do Raio-X ao recebimento, no computador e no celular; avisos acionáveis; cobrança (simulação) com todas as proteções; IA bloqueada sem orçamento; permissões e isolamento entre contas; exportação; acessibilidade sem violações graves; SEO básico (títulos, descrições, canônicos, Open Graph, sitemap, robots, JSON-LD só com dados reais).
 
-1. **ICP explícito:** empresa de limpeza/portaria com 2 a 30 contratos públicos e 50 a 500 postos (abaixo de ~75 postos todos pagam o mínimo). Validar contando as faixas no levantamento do PNCP.
-2. **Ativação = primeira memória aprovada em até 14 dias** da conta criada; os eventos já existem.
-3. **Decidir crédito de upgrade e devoluções** (hoje manuais e sinalizadas).
-4. **Aprovar as cotas de IA** depois da avaliação real com o gabarito.
-5. **Encurtar a landing** como acima e testar o Piloto como entrada da Carteira (hipótese, sem mexer em preço).
+**Depende de credencial ou homologação externa**
+- Asaas: chave de **sandbox**, webhook numa URL pública, rodar os cenários de cobrança no sandbox; depois a chave de produção.
+- E-mail (SMTP com SPF/DKIM/DMARC), hospedagem, banco com backup, S3, domínio e HTTPS, Turnstile.
+- Rotina de hora em hora em produção (worker ou cron `/api/cron/avisos`): gera renovações e anda a régua de cobrança.
+- Medição de Core Web Vitals com usuários reais.
 
-## Pendências realmente necessárias para produção
+**Depende de aprovação comercial ou jurídica**
+- Advogado: termos, privacidade e minutas (até lá, a faixa "Minuta" fica).
+- Dados da empresa (`SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, endereço).
+- Cotas de IA (proposta em IA.md) e avaliação paga com o gabarito.
+- Política de crédito em upgrade e de devoluções (hoje: análise manual).
 
-1. Advogado: aprovar termos, privacidade e minutas; só então tirar a faixa "MINUTA".
-2. Dados da empresa: `SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, endereço (o rodapé ainda diz "empresa em constituição").
-3. Asaas: chave de sandbox, webhook apontando para URL pública, rodar os cenários de cobrança no sandbox; depois a chave de produção. Não criar assinaturas no painel do Asaas.
-4. Rodar a rotina de hora em hora em produção (worker ou cron `/api/cron/avisos`): ela gera renovações e anda a régua de cobrança.
-5. Conferir os dados reais de cobrança antes de aplicar a migração `20261124120000_protecao_financeira` (o backfill só data períodos válidos).
-6. IA: decidir as cotas, rodar a avaliação com orçamento de avaliação, então ligar.
-7. Medir Core Web Vitals em produção; agir no LCP se o campo confirmar.
-8. Decidir a anualidade pré-marcada "Conferida" no passo 3 (tornar a escolha obrigatória muda a regra de validação).
+**Bloqueio efetivo de produção (hoje)**
+- Aprovação jurídica dos textos legais.
+- Asaas real (sandbox testado) e dados da empresa para emitir cobrança.
+- Conferência dos dados reais de cobrança antes de aplicar a migração financeira.
 
-Itens P2/P3 de acabamento ainda abertos estão na matriz; nenhum bloqueia o fluxo principal.
+## H. Resumo executivo
+
+1. **Funcionalmente completo no escopo?** Sim. A jornada de repactuação, do contrato ao recebimento, funciona e está testada de ponta a ponta.
+2. **Telas principais finalizadas?** Sim. Todas as telas foram revisadas com capturas reais em 5 resoluções e corrigidas; o que restou está na matriz como não aplicável ou dependente de decisão externa.
+3. **P0 ou P1 abertos?** Não há P0/P1 técnico aberto conhecido. O único P1 que fica é jurídico (faixa "Minuta" até a aprovação dos textos).
+4. **P2/P3 restantes?** Nenhum técnico. Ficaram 2 não aplicáveis (IP das sessões, artefato de captura) e itens dependentes de dados/aprovação (rodapé, minuta, telas escondidas no modo piloto).
+5. **Testes críticos passaram?** Sim: 380 unitários e de banco, 94 do fluxo completo e todos os conjuntos de navegador, acessibilidade e teclado.
+6. **IA financeiramente protegida?** Sim. Orçamento zero; nenhuma chamada paga é possível sem orçamento configurado, disponível e reservado no servidor.
+7. **Cobrança pronta para homologação?** Sim, para homologação no sandbox do Asaas. Não foi testada contra o Asaas real.
+8. **O que falta para clientes reais?** Aprovação jurídica, dados da empresa, sandbox e depois chave de produção do Asaas, infraestrutura de produção (hospedagem, e-mail, S3, domínio) e a rotina horária no ar.
+9. **Risco de perda financeira?** Nenhum conhecido no código. Riscos residuais: operacionais (criar assinatura manual no painel do Asaas cobraria em dobro; devoluções manuais dependem de alguém acompanhar as faturas marcadas) e de integração (comportamento real do Asaas ainda não exercitado).
+10. **Recomendo publicar?** **Recomendo homologar agora, não publicar ainda.** O código está pronto para homologação; a publicação deve esperar a aprovação jurídica, os dados da empresa e uma rodada de cobrança no sandbox do Asaas com o webhook real. Sem essas três, colocar clientes pagantes seria assumir risco jurídico e de integração que os testes locais não cobrem.

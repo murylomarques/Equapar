@@ -77,3 +77,16 @@ Um revisor sem contexto das minhas conclusões auditou o código de cobrança e 
 ## Compatibilidade com o Asaas
 
 A Equapar cria apenas cobranças avulsas (`POST /payments`, com `externalReference` = id da fatura) e remove as que deixam de ser devidas (`DELETE /payments/{id}`). Não usa `/subscriptions`. Se alguém criar uma assinatura manualmente no painel do Asaas para um cliente da Equapar, os pagamentos dela chegam ao webhook sem fatura correspondente: ficam registrados como "fatura-nao-encontrada" e **não liberam nada**, mas o cliente seria cobrado duas vezes (pela assinatura e pela renovação da Equapar). Regra operacional: **não criar assinaturas no painel do Asaas** para clientes da Equapar. Devoluções (pagamento após cancelamento, duplicado, renovação sobreposta, estorno parcial) continuam manuais, com a marcação na fatura; nenhum crédito proporcional é gerado automaticamente.
+
+## Rodada final: compras que a tela não executa (análise manual)
+
+Decisão conservadora autorizada pelo dono: sem política de crédito aprovada, nenhuma cobrança ambígua é feita pela tela.
+
+| Situação | Comportamento |
+|---|---|
+| Upgrade (ou qualquer compra) com período pago em andamento | A previsão explica o período pago, não mostra preço e oferece contato; o servidor recusa a compra mesmo se a tela for contornada (conferido com a conta travada). A equipe combina e registra a compra à mão (`abrirCobrancaDoPlano` com `analiseManual`). |
+| Renovação vencida e devida em aberto | Compra nova recusada: cobraria o mesmo período duas vezes. A pessoa paga a renovação; a mudança de plano fica para depois. |
+| Downgrade ou troca de ciclo | Agendados para a renovação, sem cobrança agora. |
+| Cancelamento | No fim do período pago, desfazível até a data. |
+
+Testes: `assinatura.db.test.ts` ("Revisão final: sem cobrança ambígua pela tela").
