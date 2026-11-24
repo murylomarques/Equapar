@@ -124,7 +124,7 @@ function EvidenciaLinha({
               </button>
               {copiadas != null && (
                 <span className="legenda" role="status">
-                  {copiadas === 0 ? "Nenhuma outra linha alterada estava sem fonte." : `Fonte e anualidade copiadas para ${copiadas} ${copiadas === 1 ? "linha" : "linhas"}. Confira a parcela e a anualidade de cada uma.`}
+                  {copiadas === 0 ? "Nenhuma outra linha alterada estava sem fonte." : `Fonte copiada para ${copiadas} ${copiadas === 1 ? "linha" : "linhas"}. Confira a parcela e responda a anualidade de cada uma.`}
                 </span>
               )}
             </div>
@@ -278,7 +278,7 @@ export function EditorPlanilha({
           return {
             ...l,
             fonte: l.fonte || [origem.instrumento, origem.clausula].filter(Boolean).join(", ") || undefined,
-            evidencia: { ...comEvidencia(l, {}), instrumento: origem.instrumento, categoria: origem.categoria, dataBase: origem.dataBase, clausula: origem.clausula, parcela: l.evidencia?.parcela || l.descricao, anualidade: origem.anualidade },
+            evidencia: { ...comEvidencia(l, {}), instrumento: origem.instrumento, categoria: origem.categoria, dataBase: origem.dataBase, clausula: origem.clausula, parcela: l.evidencia?.parcela || l.descricao, anualidade: l.evidencia?.anualidade },
           };
         }),
       })),

@@ -75,6 +75,8 @@ const br = (d) => `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCM
 const daqui = (n) => br(new Date(hoje.getTime() + n * 86400000));
 
 const CNPJ_RAIOX = "12345678000195"; // fictício, com dígitos válidos
+// a cota de consultas do Raio-X por IP (60/dia) também vale aqui: muitas execuções no mesmo dia a esgotam; zera só a chave local
+await db.tentativaAcesso.deleteMany({ where: { chave: { startsWith: "cota:raiox-consulta:" } } });
 const email = `e2e-${TAM}-${Date.now()}@exemplo.local`;
 const senha = "SenhaTeste12345";
 

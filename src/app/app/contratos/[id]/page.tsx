@@ -39,7 +39,8 @@ import { HistoricoOrgao } from "@/components/historico-orgao";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const c = await db.contrato.findUnique({ where: { id }, select: { numero: true } });
+  const ctx = await contexto();
+  const c = await db.contrato.findFirst({ where: { id, empresa: { contaId: ctx.conta.id } }, select: { numero: true } });
   return { title: c ? `Contrato ${c.numero} | Equapar` : "Contrato | Equapar" };
 }
 

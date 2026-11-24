@@ -458,7 +458,7 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
           {previsao && destino && (
             <div id="previsao" className="mt-24">
               <Alerta tipo={previsao.possivel ? "info" : "atencao"} titulo={previsao.titulo}>
-                {valorPrevisto && previsao.efeito !== "REATIVAR" && (
+                {valorPrevisto && previsao.efeito !== "REATIVAR" && previsao.efeito !== "ANALISE_MANUAL" && (
                   <p className="tnum mb-8">
                     <strong>{reais(valorPrevisto)}</strong> por {cicloNovo === "ANUAL" ? "ano" : "mês"} · {base(destino)}
                   </p>

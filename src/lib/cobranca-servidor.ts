@@ -9,6 +9,7 @@ import { reais } from "./format";
 import { faturaCancelavel, faturaDevida, fimDoPeriodo, planoEfetivo, situacaoPorAtraso, transicao, type EventoGateway, type FaturaRegra } from "./assinatura";
 import { registrar } from "./registro";
 import { registrarEvento } from "./eventos";
+import { ErroUsuario } from "./acao";
 
 type Tx = Prisma.TransactionClient;
 
@@ -115,10 +116,28 @@ async function garantirCobrancaNoGateway(tx: Tx, faturaId: string, metodo: Metod
  * travada: dois cliques ou duas abas recebem a mesma cobrança, nunca duas.
  * Cancelamento ou mudança agendados continuam valendo até a compra ser paga.
  */
-export async function abrirCobrancaDoPlano(contaId: string, plano: Plano, ciclo: Ciclo, metodo: Metodo | "ESCOLHER", email: string, agora = new Date()) {
+export async function abrirCobrancaDoPlano(
+  contaId: string,
+  plano: Plano,
+  ciclo: Ciclo,
+  metodo: Metodo | "ESCOLHER",
+  email: string,
+  agora = new Date(),
+  opcoes: { analiseManual?: boolean } = {},
+) {
   const r = await db.$transaction(async (tx) => {
     await travarConta(tx, contaId);
     const abertas = await tx.fatura.findMany({ where: { contaId, status: { in: ["ABERTA", "FALHOU"] } } });
+    // regras conferidas de novo com a conta travada (a tela pode ter visto um estado anterior):
+    // renovação vencida e devida em aberto: a compra cobraria o mesmo período duas vezes
+    if (abertas.some((f) => faturaDevida(regra(f), agora)))
+      throw new ErroUsuario("Há uma renovação vencida em aberto. Pague essa fatura para regularizar; a mudança de plano fica para depois.");
+    // compra com período pago em andamento é combinada à mão (sem crédito aprovado, a cobrança seria ambígua)
+    if (!opcoes.analiseManual) {
+      const conta = await tx.conta.findUniqueOrThrow({ where: { id: contaId } });
+      if (conta.plano !== "GRATIS" && conta.planoVigenteAte && conta.planoVigenteAte > agora)
+        throw new ErroUsuario("Seu plano atual tem período pago em andamento. Fale com a gente para combinar a mudança antes de qualquer cobrança.");
+    }
     // a mesma compra ainda pagável: devolve a mesma cobrança (idempotente)
     const igual = abertas.find((f) => !f.renovacao && f.status === "ABERTA" && f.plano === plano && f.ciclo === ciclo && faturaCancelavel(regra(f), agora) && (!f.vencimento || f.vencimento >= agora));
     if (igual) return { fatura: await garantirCobrancaNoGateway(tx, igual.id, metodo, email), cancelar: [] as { id: string; gatewayId: string | null }[] };

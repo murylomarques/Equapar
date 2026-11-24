@@ -313,7 +313,7 @@ export async function enviarPlanilha(_: Resultado, fd: FormData): Promise<Result
     else if (s.mime === "application/pdf") {
       if (!iaPara("PLANILHA", ctx.usuario.email, ctx.conta.plano))
         return {
-          erro: "O PDF foi anexado, mas a leitura automática de PDF está desligada neste ambiente. Envie a planilha em Excel ou preencha as linhas abaixo a partir do modelo.",
+          erro: "O PDF foi guardado nos documentos do pedido, mas a leitura automática de PDF não está disponível agora. Envie a planilha em Excel ou preencha as linhas a partir do modelo.",
         };
       imp = deLeituraIa(await lerPlanilhaPdf(s.buffer, { contaId: ctx.conta.id, usuarioId: ctx.usuario.id, plano: ctx.conta.plano }));
     } else return { erro: "Envie a planilha em Excel (.xlsx) ou PDF." };

@@ -54,6 +54,8 @@ async function limpar() {
 }
 
 const ID = await preparar();
+// a cota de consultas do Raio-X por IP (60/dia) também vale aqui: muitas execuções no mesmo dia a esgotam; zera só a chave local
+await db.tentativaAcesso.deleteMany({ where: { chave: { startsWith: "cota:raiox-consulta:" } } });
 const ROTAS_SITE = [
   ["01", "Landing", "/"],
   ["02", "Raio-X entrada", "/raio-x"],

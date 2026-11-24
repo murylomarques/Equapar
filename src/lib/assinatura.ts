@@ -214,7 +214,7 @@ export function preverMudanca(conta: ContaRegra & { ciclo?: string }, destino: P
       linhas: [
         `Seu plano atual está pago até ${dataBr(conta.planoVigenteAte!)}.`,
         "Para não cobrar o mesmo período duas vezes nem descartar o que você já pagou, o upgrade é combinado com a nossa equipe: fale com a gente e acertamos a data e o valor antes de qualquer cobrança.",
-        "Se preferir, o upgrade também pode valer na próxima renovação.",
+        `Se preferir esperar, o plano novo pode ser contratado depois de ${dataBr(conta.planoVigenteAte!)}.`,
       ],
       efeito: "ANALISE_MANUAL",
       quando: null,
