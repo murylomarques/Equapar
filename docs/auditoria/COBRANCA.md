@@ -53,3 +53,27 @@ Confirmado no código: a Equapar usa só **cobranças avulsas** (`/payments`) no
 - **Devolução** de pagamento após cancelamento e de estorno parcial: feita à mão no Asaas; a tela mostra a marcação.
 - **Dados de cartão salvo / cobrança automática:** a renovação gera cobrança avulsa (Pix, boleto ou cartão na hora). Migrar para `/subscriptions` do Asaas só se o dono quiser débito automático.
 - Testado em simulação e com cliente HTTP falso. **Falta testar com o sandbox do Asaas** (chave de sandbox e webhook apontando para um ambiente público).
+
+## Revisão independente do código (segunda rodada) e correções
+
+Um revisor sem contexto das minhas conclusões auditou o código de cobrança e de IA e encontrou falhas reais, todas corrigidas e cobertas por testes de banco:
+
+| Achado | Sev. | Correção |
+|---|---|---|
+| Renovação devida e nunca paga mantinha o plano pago para sempre (a régua só andava a cada aviso de vencimento, e o Asaas avisa uma vez) | P0 | A régua anda pelo calendário a partir do início do período devido (atrasada → carência em 10 dias → somente leitura em 25), na rotina de hora em hora |
+| Renovação cuja criação no gateway falhou nunca era refeita | P0 | A rotina recria a cobrança de renovação sem `gatewayId` |
+| Dois cliques criavam duas cobranças no Asaas (a trava cobria só o banco) | P0 | A chamada ao gateway acontece dentro da trava da conta; a fatura igual devolve a mesma cobrança |
+| Pagamento de cobrança duplicada passava em silêncio | P0 | Marcado `PAGAMENTO_DUPLICADO` para devolução |
+| Upgrade pago depois de uma renovação já paga era desfeito na virada | P1 | Em períodos sobrepostos vale o plano maior; a renovação paga sobreposta é marcada `RENOVACAO_PAGA_SOBREPOSTA` |
+| Abrir (sem pagar) um upgrade desfazia o cancelamento | P1 | Cancelamento e mudança agendada só caem quando a compra é paga |
+| Backfill podia rebaixar clientes antigos para Grátis | P1 | Só períodos ainda válidos recebem data; pagamento antigo deixa o plano como manual |
+| Eventos de faturas diferentes da mesma conta podiam gravar plano desatualizado | P2 | O recálculo trava a linha da conta |
+| Cancelamento/mudança concorrendo com a rotina de renovação | P2 | Todas as decisões de cobrança usam a mesma trava por conta |
+| Mudança agendada nunca limpa quando já coberta | P2 | Limpa quando a data passou e há período pago |
+| "Restaurada" no gateway reabria cobrança que o cliente cancelou | P2 | Ignorada quando o cancelamento foi da Equapar |
+| Vencimento de compra nunca iniciada mandava e-mail de atraso | P2 | Régua só para fatura devida |
+| Rotina atrasada deixava a conta cair para Grátis sem renovação | P2 | A renovação é gerada antes do recálculo, mesmo atrasada |
+
+## Compatibilidade com o Asaas
+
+A Equapar cria apenas cobranças avulsas (`POST /payments`, com `externalReference` = id da fatura) e remove as que deixam de ser devidas (`DELETE /payments/{id}`). Não usa `/subscriptions`. Se alguém criar uma assinatura manualmente no painel do Asaas para um cliente da Equapar, os pagamentos dela chegam ao webhook sem fatura correspondente: ficam registrados como "fatura-nao-encontrada" e **não liberam nada**, mas o cliente seria cobrado duas vezes (pela assinatura e pela renovação da Equapar). Regra operacional: **não criar assinaturas no painel do Asaas** para clientes da Equapar. Devoluções (pagamento após cancelamento, duplicado, renovação sobreposta, estorno parcial) continuam manuais, com a marcação na fatura; nenhum crédito proporcional é gerado automaticamente.

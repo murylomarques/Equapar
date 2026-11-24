@@ -87,7 +87,10 @@ WHERE "plano" IS NULL;
 UPDATE "Fatura" SET
   "periodoInicio" = COALESCE("pagaEm", "criadoEm"),
   "periodoFim" = COALESCE("pagaEm", "criadoEm") + CASE WHEN "ciclo" = 'ANUAL' THEN INTERVAL '1 year' ELSE INTERVAL '1 month' END
-WHERE "status" = 'PAGA' AND "plano" IS NOT NULL AND "periodoInicio" IS NULL;
+WHERE "status" = 'PAGA' AND "plano" IS NOT NULL AND "periodoInicio" IS NULL
+  -- só períodos ainda válidos: pagamento antigo fica sem período e a conta mantém o plano atual como "manual"
+  -- (não rebaixa ninguém em silêncio na primeira rodada; conferir os dados reais antes do deploy)
+  AND COALESCE("pagaEm", "criadoEm") + CASE WHEN "ciclo" = 'ANUAL' THEN INTERVAL '1 year' ELSE INTERVAL '1 month' END > NOW();
 
 UPDATE "Conta" c SET "planoVigenteAte" = f.fim
 FROM (SELECT "contaId", MAX("periodoFim") AS fim FROM "Fatura" WHERE "status" = 'PAGA' AND "periodoFim" IS NOT NULL GROUP BY "contaId") f

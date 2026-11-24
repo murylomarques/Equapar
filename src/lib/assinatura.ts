@@ -36,6 +36,8 @@ export type FaturaRegra = {
   ciclo?: string | null;
   plano?: PlanoId | null;
   revisao?: string | null;
+  /** cancelada pela própria Equapar (pedido do cliente ou substituição): o gateway não a reabre */
+  canceladaPelaEquapar?: boolean;
 };
 
 export type Transicao = {
@@ -73,7 +75,8 @@ export function transicao(f: FaturaRegra, evento: EventoGateway, agora: Date, ex
       if (ABERTAS.has(s)) return { mudou: true, motivo: "cancelada no gateway", status: "CANCELADA" };
       return { mudou: false, motivo: `cancelamento ignorado (fatura ${s.toLowerCase()})` };
     case "RESTAURADO":
-      if (s === "CANCELADA") return { mudou: true, motivo: "restaurada no gateway", status: "ABERTA" };
+      // só reabre o que o gateway removeu sozinho; cancelamento pedido pelo cliente não volta
+      if (s === "CANCELADA" && !f.canceladaPelaEquapar) return { mudou: true, motivo: "restaurada no gateway", status: "ABERTA" };
       return { mudou: false, motivo: `restauração ignorada (fatura ${s.toLowerCase()})` };
     case "ESTORNADO":
       // estorno integral: o período daquela fatura deixa de contar (os outros períodos pagos continuam)
@@ -113,7 +116,8 @@ export function direitoDeAcesso(faturas: FaturaRegra[], agora: Date): { plano: P
     .sort((a, b) => a.periodoInicio!.getTime() - b.periodoInicio!.getTime());
   const ativas = pagas.filter((f) => f.periodoInicio! <= agora && agora < f.periodoFim!);
   if (!ativas.length) return { plano: null, ate: null };
-  const atual = ativas[ativas.length - 1];
+  // períodos sobrepostos (upgrade pago depois de uma renovação já paga): vale o plano maior; empate, o mais recente
+  const atual = [...ativas].sort((a, b) => ORDEM_PLANO[b.plano!] - ORDEM_PLANO[a.plano!] || b.periodoInicio!.getTime() - a.periodoInicio!.getTime())[0];
   let ate = new Date(Math.max(...ativas.map((f) => f.periodoFim!.getTime())));
   for (const f of pagas) if (f.periodoInicio! <= ate && f.periodoFim! > ate) ate = f.periodoFim!; // emenda renovações contínuas
   return { plano: atual.plano!, ate, ciclo: atual.ciclo };
@@ -145,7 +149,8 @@ export function planoEfetivo(conta: ContaRegra, faturas: FaturaRegra[], agora: D
     return { plano: conta.plano, planoVigenteAte: conta.planoVigenteAte, limparAgendamento: false };
   }
   const d = direitoDeAcesso(faturas, agora);
-  if (d.plano) return { plano: d.plano, planoVigenteAte: d.ate, limparAgendamento: false, ciclo: d.ciclo };
+  // mudança agendada cuja data passou e já tem período pago no plano novo: limpa o agendamento
+  if (d.plano) return { plano: d.plano, planoVigenteAte: d.ate, limparAgendamento: vencida, ciclo: d.ciclo };
   const emCobranca = faturas.some((f) => faturaDevida(f, agora));
   if (emCobranca && !conta.renovacaoCancelada) return { plano: vencida && conta.mudancaAgendada ? conta.mudancaAgendada : conta.plano, planoVigenteAte: conta.planoVigenteAte, limparAgendamento: vencida };
   return { plano: "GRATIS", planoVigenteAte: conta.planoVigenteAte, limparAgendamento: vencida };
@@ -214,4 +219,18 @@ export function preverMudanca(conta: ContaRegra & { ciclo?: string }, destino: P
 
 function dataBr(d: Date) {
   return d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+}
+
+/**
+ * Régua de cobrança pelo calendário, a partir do início do período devido e não pago. Não depende de o gateway
+ * reenviar eventos: o Asaas avisa o vencimento uma vez só. Mesmos prazos da régua por evento (3 tentativas a
+ * cada 5 dias, depois 15 dias de carência; passada a carência, somente leitura via situacaoEfetiva).
+ */
+export function situacaoPorAtraso(inicioDevido: Date, agora: Date, dias = { tentativas: 3, intervalo: 5, carencia: 15 }): { situacao: "EM_DIA" | "ATRASADA" | "CARENCIA"; carenciaAte: Date | null } {
+  const dia = 86_400_000;
+  const atraso = (agora.getTime() - inicioDevido.getTime()) / dia;
+  if (atraso <= 0) return { situacao: "EM_DIA", carenciaAte: null };
+  const fimTentativas = (dias.tentativas - 1) * dias.intervalo;
+  if (atraso < fimTentativas) return { situacao: "ATRASADA", carenciaAte: null };
+  return { situacao: "CARENCIA", carenciaAte: new Date(inicioDevido.getTime() + (fimTentativas + dias.carencia) * dia) };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { direitoDeAcesso, faturaCancelavel, faturaDevida, fimDoPeriodo, planoEfetivo, preverMudanca, transicao, type ContaRegra, type FaturaRegra } from "./assinatura";
+import { direitoDeAcesso, faturaCancelavel, faturaDevida, fimDoPeriodo, planoEfetivo, preverMudanca, situacaoPorAtraso, transicao, type ContaRegra, type FaturaRegra } from "./assinatura";
 
 const d = (s: string) => new Date(`${s}T12:00:00Z`);
 const agora = d("2026-11-24");
@@ -128,5 +128,30 @@ describe("P0: previsão mostrada antes de confirmar", () => {
   });
   it("Piloto é por pedido: não abre cobrança pela tela", () => {
     expect(preverMudanca(conta(), "PILOTO", agora).possivel).toBe(false);
+  });
+});
+
+describe("Auditoria independente: casos que a revisão encontrou", () => {
+  it("upgrade pago depois de uma renovação já paga: o plano maior vale até o fim dele", () => {
+    const renov = paga("CARTEIRA", "2026-12-01", "2027-01-01");
+    const upgrade = paga("ASSESSORIA", "2026-11-26", "2026-12-26");
+    expect(direitoDeAcesso([renov, upgrade], d("2026-12-05")).plano).toBe("ASSESSORIA");
+    expect(direitoDeAcesso([renov, upgrade], d("2026-12-27")).plano).toBe("CARTEIRA");
+  });
+  it("restauração no gateway não reabre o que o cliente cancelou", () => {
+    const f: FaturaRegra = { status: "CANCELADA", valor: "297", plano: "CARTEIRA", ciclo: "MENSAL", periodoInicio: null, canceladaPelaEquapar: true };
+    expect(transicao(f, "RESTAURADO", agora).mudou).toBe(false);
+  });
+  it("mudança agendada já coberta por período pago no plano novo é limpa", () => {
+    const c = conta({ plano: "ASSESSORIA", mudancaAgendada: "CARTEIRA", mudancaAgendadaEm: d("2026-11-20") });
+    expect(planoEfetivo(c, [paga("CARTEIRA", "2026-11-20", "2026-12-20")], agora)).toMatchObject({ plano: "CARTEIRA", limparAgendamento: true });
+  });
+  it("régua pelo calendário: atrasada, carência depois de 10 dias, fim da carência em 25", () => {
+    const inicio = d("2026-11-01");
+    expect(situacaoPorAtraso(inicio, d("2026-10-31")).situacao).toBe("EM_DIA");
+    expect(situacaoPorAtraso(inicio, d("2026-11-05")).situacao).toBe("ATRASADA");
+    const c = situacaoPorAtraso(inicio, d("2026-11-12"));
+    expect(c.situacao).toBe("CARENCIA");
+    expect(c.carenciaAte?.toISOString().slice(0, 10)).toBe("2026-11-26");
   });
 });

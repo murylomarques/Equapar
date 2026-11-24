@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { db } from "./db";
+import { situacaoEfetiva } from "./planos";
 import { abrirCobrancaDoPlano, agendarMudanca, cancelarRenovacao, processarEventoPagamento, reativarRenovacao, renovarAssinaturas } from "./cobranca-servidor";
 
 // P0 (npm run test:db): política de assinatura com uma conta fictícia temporária, gateway em simulação.
@@ -189,5 +190,54 @@ describe("P0: sem cobrança duplicada", () => {
     await abrirCobrancaDoPlano(contaId, "ASSESSORIA", "MENSAL", "PIX", email, quando);
     await renovarAssinaturas(quando);
     expect(await db.fatura.count({ where: { contaId, renovacao: true } })).toBe(0);
+  });
+});
+
+describe("Auditoria independente: cenários reproduzidos e corrigidos", () => {
+  it("renovação devida e nunca paga, sem nenhum evento do gateway: atraso, carência e somente leitura pelo calendário", async () => {
+    await comprar();
+    const vigente = (await conta()).planoVigenteAte!;
+    await renovarAssinaturas(new Date(vigente.getTime() - dia));
+    await renovarAssinaturas(new Date(vigente.getTime() + 3 * dia));
+    expect((await conta()).situacaoCobranca).toBe("ATRASADA");
+    await renovarAssinaturas(new Date(vigente.getTime() + 12 * dia));
+    const c = await conta();
+    expect(c.situacaoCobranca).toBe("CARENCIA");
+    expect(situacaoEfetiva(c.situacaoCobranca, c.carenciaAte, new Date(vigente.getTime() + 26 * dia))).toBe("SOMENTE_LEITURA");
+  });
+  it("renovação que ficou sem cobrança no gateway é refeita na próxima rodada", async () => {
+    await comprar();
+    const vigente = (await conta()).planoVigenteAte!;
+    await renovarAssinaturas(new Date(vigente.getTime() - 2 * dia));
+    const renov = await db.fatura.findFirstOrThrow({ where: { contaId, renovacao: true } });
+    await db.fatura.update({ where: { id: renov.id }, data: { gatewayId: null, linkPagamento: null } });
+    await renovarAssinaturas(new Date(vigente.getTime() - dia));
+    expect((await db.fatura.findUniqueOrThrow({ where: { id: renov.id } })).gatewayId).toBeTruthy();
+    expect(await db.fatura.count({ where: { contaId, renovacao: true } })).toBe(1);
+  });
+  it("cliques simultâneos: a mesma fatura e a mesma cobrança no gateway", async () => {
+    const r = await Promise.all([1, 2, 3].map(() => abrirCobrancaDoPlano(contaId, "CARTEIRA", "MENSAL", "PIX", email)));
+    expect(new Set(r.map((x) => x.link)).size).toBe(1);
+    const f = await db.fatura.findFirstOrThrow({ where: { contaId, status: "ABERTA" } });
+    expect(f.gatewayId).toBeTruthy();
+  });
+  it("pagamento de uma cobrança duplicada em cima de fatura já paga: fica marcado para devolução", async () => {
+    const f = await comprar();
+    await processarEventoPagamento({ gatewayId: "sim_pay_duplicada", faturaId: f, evento: "PAGO", eventoId: evt() });
+    expect(await db.fatura.findUnique({ where: { id: f } })).toMatchObject({ status: "PAGA", revisao: "PAGAMENTO_DUPLICADO" });
+  });
+  it("abrir um upgrade não desfaz o cancelamento; só o pagamento desfaz", async () => {
+    await comprar();
+    await cancelarRenovacao(contaId);
+    const up = await abrirCobrancaDoPlano(contaId, "ASSESSORIA", "MENSAL", "PIX", email);
+    expect(await conta()).toMatchObject({ renovacaoCancelada: true, mudancaAgendada: "GRATIS" });
+    await processarEventoPagamento({ faturaId: up.faturaId, evento: "PAGO", eventoId: evt() });
+    expect(await conta()).toMatchObject({ plano: "ASSESSORIA", renovacaoCancelada: false, mudancaAgendada: null });
+  });
+  it("restauração no gateway de uma cobrança que o cliente cancelou é ignorada", async () => {
+    const r = await abrirCobrancaDoPlano(contaId, "CARTEIRA", "MENSAL", "PIX", email);
+    await cancelarRenovacao(contaId);
+    expect(await processarEventoPagamento({ faturaId: r.faturaId, evento: "RESTAURADO", eventoId: evt() })).toBe("ignorado");
+    expect((await db.fatura.findUniqueOrThrow({ where: { id: r.faturaId } })).status).toBe("CANCELADA");
   });
 });
