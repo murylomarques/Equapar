@@ -3,7 +3,10 @@ import Link from "next/link";
 import { Monitor } from "lucide-react";
 import { contexto, ehDemo, NOME_PAPEL, pode } from "@/lib/auth";
 import { PRECOS, situacaoEfetiva, valorDoPlano } from "@/lib/planos";
-import { cobranca } from "@/lib/cobranca";
+import { cobranca, simulacaoPermitida } from "@/lib/cobranca";
+import { resumoAssinatura } from "@/lib/cobranca-servidor";
+import { preverMudanca } from "@/lib/assinatura";
+import type { PlanoId } from "@/lib/planos";
 import { db } from "@/lib/db";
 import { prefsDe } from "@/lib/avisos";
 import { data, dataHora, reais } from "@/lib/format";
@@ -53,9 +56,9 @@ const PLANOS = [
   { valor: "ASSESSORIA", titulo: "Assessoria", descricao: "A partir de R$ 1.497 por mês, vários clientes." },
 ];
 
-export default async function Configuracoes({ searchParams }: { searchParams: Promise<{ aba?: string }> }) {
+export default async function Configuracoes({ searchParams }: { searchParams: Promise<{ aba?: string; plano?: string; ciclo?: string }> }) {
   const ctx = await contexto();
-  const { aba = "empresa" } = await searchParams;
+  const { aba = "empresa", plano: planoPrevisto, ciclo: cicloPrevisto } = await searchParams;
   const dono = pode(ctx.papel, "gerenciar_conta");
   const demo = ehDemo(ctx);
   return (
@@ -77,7 +80,7 @@ export default async function Configuracoes({ searchParams }: { searchParams: Pr
         {aba === "empresa" && <Empresa dono={dono} />}
         {aba === "pessoas" && <Pessoas dono={dono} />}
         {aba === "avisos" && <AvisosPrefs demo={demo} />}
-        {aba === "cobranca" && <Cobranca dono={dono} />}
+        {aba === "cobranca" && <Cobranca dono={dono} planoPrevisto={planoPrevisto} cicloPrevisto={cicloPrevisto} />}
         {aba === "seguranca" && <Seguranca demo={demo} />}
         {aba === "dados" && <Dados dono={dono} />}
       </div>
@@ -275,77 +278,176 @@ const SITUACAO: Record<string, { tom: "info" | "atencao" | "erro"; texto: string
   SOMENTE_LEITURA: { tom: "erro", texto: "A conta está só para consulta porque o pagamento não foi identificado. Pague a fatura em aberto para voltar a editar. Nenhum dado foi apagado." },
 };
 
-const STATUS_FATURA: Record<string, string> = { ABERTA: "em aberto", PAGA: "paga", FALHOU: "não paga", CANCELADA: "cancelada" };
+const STATUS_FATURA: Record<string, string> = { ABERTA: "em aberto", PAGA: "paga", FALHOU: "não paga", CANCELADA: "cancelada", ESTORNADA: "estornada" };
+const REVISAO: Record<string, string> = {
+  PAGA_APOS_CANCELAMENTO: "Pagamento recebido depois do cancelamento: não reativa o plano; o valor será devolvido.",
+  ESTORNO_PARCIAL: "Estorno parcial registrado: o acesso do período foi mantido.",
+  CHARGEBACK: "Contestação aberta no cartão: o acesso segue até a decisão.",
+};
+const NOME_PLANO_CURTO: Record<string, string> = { GRATIS: "Grátis", PILOTO: "Piloto", CARTEIRA: "Carteira", ASSESSORIA: "Assessoria" };
 
-async function Cobranca({ dono }: { dono: boolean }) {
+async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean; planoPrevisto?: string; cicloPrevisto?: string }) {
   const ctx = await contexto();
-  const agg = await db.contrato.aggregate({ where: { arquivado: false, maoDeObraDedicada: true, empresa: { contaId: ctx.conta.id } }, _sum: { postos: true } });
-  const postos = agg._sum.postos ?? 0;
-  const ciclo = ctx.conta.ciclo === "ANUAL" ? "ANUAL" : "MENSAL";
-  const valor = valorDoPlano(ctx.conta.plano, { postos, ciclo });
-  const faturas = await db.fatura.findMany({ where: { contaId: ctx.conta.id }, orderBy: { criadoEm: "desc" } });
-  const situacao = situacaoEfetiva(ctx.conta.situacaoCobranca, ctx.conta.carenciaAte);
+  const agora = new Date();
+  const a = await resumoAssinatura(ctx.conta.id, agora);
+  const { conta, faturas, postos, ciclo } = a;
+  const situacao = situacaoEfetiva(conta.situacaoCobranca, conta.carenciaAte);
   const simulacao = cobranca().modo === "simulacao";
+  const podeSimular = simulacaoPermitida();
+  const ativo = !!conta.planoVigenteAte && conta.planoVigenteAte > agora && conta.plano !== "GRATIS";
+  const destino = (["GRATIS", "PILOTO", "CARTEIRA", "ASSESSORIA"] as const).find((p) => p === planoPrevisto) as PlanoId | undefined;
+  const cicloNovo = cicloPrevisto === "ANUAL" ? "ANUAL" : cicloPrevisto === "MENSAL" ? "MENSAL" : ciclo;
+  const previsao = destino ? preverMudanca(conta, destino, agora, cicloNovo) : null;
+  const valorPrevisto = destino && (destino === "CARTEIRA" || destino === "ASSESSORIA") ? valorDoPlano(destino, { postos, ciclo: cicloNovo }).toFixed(2) : null;
+  const base = (plano: string) =>
+    plano === "CARTEIRA"
+      ? `${plural(postos, "posto", "postos")} × R$ ${PRECOS.carteiraPorPosto} por mês, mínimo de ${reais(PRECOS.carteiraMinimo.toFixed(2))}`
+      : plano === "ASSESSORIA"
+        ? "valor fixo mensal"
+        : "";
   return (
     <div className="pilha">
       {SITUACAO[situacao] && (
-        <Alerta tipo={SITUACAO[situacao].tom} titulo={situacao === "CARENCIA" && ctx.conta.carenciaAte ? `Carência até ${data(ctx.conta.carenciaAte)}` : undefined}>
+        <Alerta tipo={SITUACAO[situacao].tom} titulo={situacao === "CARENCIA" && conta.carenciaAte ? `Carência até ${data(conta.carenciaAte)}` : undefined}>
           {SITUACAO[situacao].texto}
         </Alerta>
       )}
-      <div className="cartao">
-        <h2>Plano</h2>
+
+      <section className="cartao" aria-labelledby="assinatura">
+        <h2 id="assinatura">Sua assinatura</h2>
         <dl className="dl-resumo">
           <dt>Plano atual</dt>
-          <dd>{PLANOS.find((p) => p.valor === ctx.conta.plano)?.titulo}</dd>
-          {ctx.conta.planoPendente && (
+          <dd>{PLANOS.find((p) => p.valor === conta.plano)?.titulo}</dd>
+          {ativo && (
             <>
-              <dt>Aguardando pagamento</dt>
-              <dd>{PLANOS.find((p) => p.valor === ctx.conta.planoPendente)?.titulo}: passa a valer quando o pagamento for confirmado.</dd>
+              <dt>Período pago até</dt>
+              <dd>{data(conta.planoVigenteAte)}</dd>
+              <dt>Ciclo</dt>
+              <dd>{ciclo === "ANUAL" ? "Anual" : "Mensal"}</dd>
             </>
           )}
-          <dt>Postos contados</dt>
-          <dd>{plural(postos, "posto", "postos")} nos contratos ativos com mão de obra dedicada</dd>
-          <dt>Valor {ciclo === "ANUAL" ? "anual" : "mensal"}</dt>
-          <dd className="tnum">{ctx.conta.plano === "PILOTO" ? "por pedido (a partir de R$ 1.500)" : reais(valor.toFixed(2))}</dd>
+          {ativo && !conta.renovacaoCancelada && a.valorRenovacao && (
+            <>
+              <dt>Próxima cobrança</dt>
+              <dd className="tnum">
+                {reais(a.valorRenovacao)} em {data(conta.planoVigenteAte)}
+                <span className="legenda" style={{ display: "block" }}>
+                  {base(conta.mudancaAgendada && conta.mudancaAgendada !== "GRATIS" ? conta.mudancaAgendada : conta.plano)}. O valor é recalculado na data com os postos ativos.
+                </span>
+              </dd>
+            </>
+          )}
+          {conta.plano === "PILOTO" && (
+            <>
+              <dt>Valor</dt>
+              <dd>por pedido (a partir de {reais(PRECOS.pilotoPorPedido.toFixed(2))})</dd>
+            </>
+          )}
+          {conta.mudancaAgendada && conta.mudancaAgendadaEm && (
+            <>
+              <dt>Mudança programada</dt>
+              <dd>
+                {conta.mudancaAgendada === "GRATIS" ? "Renovação cancelada: passa para o Grátis" : `Passa para o plano ${NOME_PLANO_CURTO[conta.mudancaAgendada]}`} em {data(conta.mudancaAgendadaEm)}.
+              </dd>
+            </>
+          )}
+          {a.pendenteCompra && (
+            <>
+              <dt>Aguardando pagamento</dt>
+              <dd>{NOME_PLANO_CURTO[a.pendenteCompra.plano ?? ""] ?? a.pendenteCompra.descricao}: passa a valer quando o pagamento for confirmado.</dd>
+            </>
+          )}
         </dl>
+        {dono && ativo && (
+          <div className="fileira mt-16">
+            {conta.renovacaoCancelada ? (
+              <Link className="btn" href={`/app/configuracoes?aba=cobranca&plano=${conta.plano}#previsao`} scroll={false}>
+                Manter a assinatura
+              </Link>
+            ) : (
+              <Link className="btn btn-discreto" href="/app/configuracoes?aba=cobranca&plano=GRATIS#previsao" scroll={false}>
+                Cancelar a renovação
+              </Link>
+            )}
+          </div>
+        )}
         {simulacao && (
           <Alerta tipo="info" className="mt-16">
-            Pagamento em modo simulação: nenhuma cobrança real é feita. Cada fatura em aberto tem os botões para simular o pagamento ou o vencimento.
+            Pagamento em modo simulação: nenhuma cobrança real é feita.{podeSimular ? " Cada fatura em aberto tem os botões para simular o pagamento ou o vencimento." : ""}
           </Alerta>
         )}
-        {dono && (
-          <FormAcao action={mudarPlano} className="mt-24">
-            <RadiosCartao nome="plano" legenda="Escolher o plano" valorInicial={ctx.conta.planoPendente ?? ctx.conta.plano} opcoes={PLANOS} />
-            <div className="linha-form">
-              <CampoSelect
-                nome="ciclo"
-                rotulo="Ciclo"
-                valorInicial={ciclo}
-                opcoes={[
-                  { valor: "MENSAL", rotulo: "Mensal" },
-                  { valor: "ANUAL", rotulo: PRECOS.descontoAnualPct() ? `Anual (${PRECOS.descontoAnualPct()}% de desconto)` : "Anual" },
-                ]}
-              />
-              <CampoSelect
-                nome="metodo"
-                rotulo="Forma de pagamento"
-                valorInicial="ESCOLHER"
-                opcoes={[
-                  { valor: "ESCOLHER", rotulo: "Escolher na hora de pagar" },
-                  { valor: "PIX", rotulo: "Pix" },
-                  { valor: "BOLETO", rotulo: "Boleto" },
-                  { valor: "CARTAO", rotulo: "Cartão de crédito" },
-                ]}
-              />
+      </section>
+
+      {dono && (
+        <section className="cartao" aria-labelledby="mudar">
+          <h2 id="mudar">Mudar de plano</h2>
+          <form method="get" action="/app/configuracoes" className="pilha-16">
+            <input type="hidden" name="aba" value="cobranca" />
+            <RadiosCartao nome="plano" legenda="Plano" valorInicial={destino ?? conta.plano} opcoes={PLANOS} />
+            <CampoSelect
+              nome="ciclo"
+              rotulo="Ciclo"
+              valorInicial={cicloNovo}
+              opcoes={[
+                { valor: "MENSAL", rotulo: "Mensal" },
+                { valor: "ANUAL", rotulo: PRECOS.descontoAnualPct() ? `Anual (${PRECOS.descontoAnualPct()}% de desconto)` : "Anual" },
+              ]}
+            />
+            <div>
+              <button type="submit" className="btn">
+                Ver o que muda
+              </button>
             </div>
-            <p className="legenda">Escolher um plano abre a cobrança; ele passa a valer quando o pagamento for confirmado. Escolher o Grátis cancela a assinatura na hora.</p>
-            <BotaoEnvio className="btn">Continuar</BotaoEnvio>
-          </FormAcao>
-        )}
-      </div>
-      <div className="cartao">
-        <h2>Faturas</h2>
+          </form>
+          {previsao && destino && (
+            <div id="previsao" className="mt-24">
+              <Alerta tipo={previsao.possivel ? "info" : "atencao"} titulo={previsao.titulo}>
+                {valorPrevisto && previsao.efeito !== "REATIVAR" && (
+                  <p className="tnum mb-8">
+                    <strong>{reais(valorPrevisto)}</strong> por {cicloNovo === "ANUAL" ? "ano" : "mês"} · {base(destino)}
+                  </p>
+                )}
+                <ul className="mb-0">
+                  {previsao.linhas.map((l) => (
+                    <li key={l}>{l}</li>
+                  ))}
+                </ul>
+              </Alerta>
+              {previsao.possivel && (
+                <FormAcao action={mudarPlano} className="mt-16">
+                  <input type="hidden" name="plano" value={destino} />
+                  <input type="hidden" name="ciclo" value={cicloNovo} />
+                  {previsao.efeito === "IMEDIATO_APOS_PAGAMENTO" && (
+                    <CampoSelect
+                      nome="metodo"
+                      rotulo="Forma de pagamento"
+                      valorInicial="ESCOLHER"
+                      opcoes={[
+                        { valor: "ESCOLHER", rotulo: "Escolher na hora de pagar" },
+                        { valor: "PIX", rotulo: "Pix" },
+                        { valor: "BOLETO", rotulo: "Boleto" },
+                        { valor: "CARTAO", rotulo: "Cartão de crédito" },
+                      ]}
+                    />
+                  )}
+                  <BotaoEnvio className={destino === "GRATIS" ? "btn btn-perigo" : "btn btn-primario"}>
+                    {previsao.efeito === "IMEDIATO_APOS_PAGAMENTO"
+                      ? "Abrir a cobrança"
+                      : previsao.efeito === "REATIVAR"
+                        ? "Manter a assinatura"
+                        : destino === "GRATIS"
+                          ? "Confirmar o cancelamento"
+                          : "Confirmar a mudança"}
+                  </BotaoEnvio>
+                </FormAcao>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="cartao" aria-labelledby="faturas">
+        <h2 id="faturas">Faturas</h2>
         {faturas.length === 0 ? (
           <p className="secundario mb-0">Nenhuma fatura ainda.</p>
         ) : (
@@ -356,22 +458,30 @@ async function Cobranca({ dono }: { dono: boolean }) {
                   <span>
                     <strong style={{ fontWeight: 500 }}>{f.descricao}</strong>
                     <span className="legenda" style={{ display: "block" }}>
-                      {f.referencia}
-                      {f.vencimento ? ` · vence em ${data(f.vencimento)}` : ""}
+                      {f.periodoInicio && f.periodoFim ? `Período ${data(f.periodoInicio)} a ${data(f.periodoFim)}` : f.referencia}
+                      {f.vencimento && (f.status === "ABERTA" || f.status === "FALHOU") ? ` · vence em ${data(f.vencimento)}` : ""}
                       {f.tentativas ? ` · ${plural(f.tentativas, "tentativa", "tentativas")}` : ""}
+                      {f.motivoCancelamento ? ` · ${f.motivoCancelamento}` : ""}
                     </span>
+                    {f.revisao && REVISAO[f.revisao] && (
+                      <span className="legenda" style={{ display: "block" }}>
+                        {REVISAO[f.revisao]}
+                      </span>
+                    )}
                   </span>
                   <span className="num">
                     {reais(f.valor)} · {STATUS_FATURA[f.status] ?? f.status}
+                    {Number(f.valorEstornado) > 0 && f.status !== "ESTORNADA" ? ` · ${reais(f.valorEstornado)} estornado` : ""}
                   </span>
                 </div>
                 <div className="fileira mt-8">
-                  {f.status === "ABERTA" && f.linkPagamento && !f.linkPagamento.startsWith("/") && (
+                  {(f.status === "ABERTA" || f.status === "FALHOU") && f.linkPagamento && !f.linkPagamento.startsWith("/") && (
                     <a className="btn btn-pequeno btn-primario" href={f.linkPagamento} target="_blank" rel="noopener noreferrer">
                       Pagar
                     </a>
                   )}
                   {f.status === "PAGA" &&
+                    !f.revisao &&
                     (f.notaFiscalUrl ? (
                       <a className="btn btn-pequeno" href={f.notaFiscalUrl}>
                         Baixar a nota fiscal
@@ -379,7 +489,7 @@ async function Cobranca({ dono }: { dono: boolean }) {
                     ) : (
                       <span className="legenda">Nota fiscal: emitida depois do pagamento.</span>
                     ))}
-                  {simulacao && dono && f.status === "ABERTA" && (
+                  {podeSimular && dono && (f.status === "ABERTA" || f.status === "FALHOU") && (
                     <>
                       <FormAcao action={simularEventoFatura}>
                         <input type="hidden" name="faturaId" value={f.id} />
@@ -398,7 +508,7 @@ async function Cobranca({ dono }: { dono: boolean }) {
             ))}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }

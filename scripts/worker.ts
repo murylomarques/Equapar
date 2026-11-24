@@ -9,6 +9,8 @@ import { registrar } from "../src/lib/registro";
 import { db } from "../src/lib/db";
 import { limparDemos, limpezaDemosLigada } from "../src/lib/limpeza-demos";
 import { limparContasCanceladas, limpezaCanceladasLigada } from "../src/lib/limpeza-canceladas";
+import { renovarAssinaturas } from "../src/lib/cobranca-servidor";
+import { expirarReservasIa } from "../src/lib/ia-orcamento";
 
 const id = `${os.hostname()}-${process.pid}`;
 let parar = false;
@@ -19,6 +21,7 @@ async function main() {
   let ultimaAgenda = 0;
   let ultimaLimpeza = 0;
   let ultimaLimpezaCanceladas = 0;
+  let ultimaAssinatura = 0;
   while (!parar) {
     if (Date.now() - ultimaAgenda > 60_000) {
       await agendarAvisosDaHora().catch((e) => registrar("erro", "agenda_avisos_falhou", { erro: String(e) }));
@@ -37,6 +40,16 @@ async function main() {
       await limparContasCanceladas({ aplicar: true })
         .then((r) => registrar("info", "limpeza_canceladas", { contas: r.contas, documentos: r.documentos }))
         .catch((e) => registrar("erro", "limpeza_canceladas_falhou", { erro: String(e) }));
+    }
+    // P0: de hora em hora, assinaturas (mudanças agendadas, fim de período, renovação) e reservas de IA esquecidas
+    if (Date.now() - ultimaAssinatura > 3_600_000) {
+      ultimaAssinatura = Date.now();
+      await renovarAssinaturas()
+        .then((r) => registrar("info", "assinaturas", r))
+        .catch((e) => registrar("erro", "assinaturas_falhou", { erro: String(e) }));
+      await expirarReservasIa()
+        .then((n) => n && registrar("info", "reservas_ia_expiradas", { n }))
+        .catch((e) => registrar("erro", "reservas_ia_falhou", { erro: String(e) }));
     }
     const t = await pegarProxima(id).catch((e) => (registrar("erro", "fila_indisponivel", { erro: String(e) }), null));
     if (t) await executarTarefa(t);

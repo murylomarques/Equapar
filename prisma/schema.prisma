@@ -129,6 +129,10 @@ model Conta {
   criadoEm               DateTime  @default(now())
   demo                   Boolean   @default(false) // C6: conta de demonstração de um visitante
   demoExpiraEm           DateTime? // C6: quando a conta de demonstração vence
+  planoVigenteAte        DateTime? // P0: fim do último período pago (o plano pago vale até aqui)
+  renovacaoCancelada     Boolean   @default(false) // P0: o cliente cancelou a renovação; o acesso pago segue até planoVigenteAte
+  mudancaAgendada        Plano? // P0: plano que passa a valer em mudancaAgendadaEm (downgrade no fim do período)
+  mudancaAgendadaEm      DateTime?
 
   membros           Membro[]
   empresas          Empresa[]
@@ -470,22 +474,34 @@ model Aviso {
 }
 
 model Fatura {
-  id            String    @id @default(cuid())
-  contaId       String
-  conta         Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  referencia    String // "2026-11"
-  descricao     String
-  valor         Decimal   @db.Decimal(12, 2)
-  postos        Int?
-  pagaEm        DateTime?
-  status        String    @default("ABERTA") // 4.2: ABERTA, PAGA, FALHOU, CANCELADA
-  vencimento    DateTime?
-  tentativas    Int       @default(0)
-  metodo        String? // PIX, BOLETO, CARTAO
-  gatewayId     String?   @unique
-  linkPagamento String?
-  notaFiscalUrl String?
-  criadoEm      DateTime  @default(now())
+  id                 String    @id @default(cuid())
+  contaId            String
+  conta              Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  referencia         String // "2026-11"
+  descricao          String
+  valor              Decimal   @db.Decimal(12, 2)
+  postos             Int?
+  pagaEm             DateTime?
+  status             String    @default("ABERTA") // 4.2: ABERTA, PAGA, FALHOU, CANCELADA
+  vencimento         DateTime?
+  tentativas         Int       @default(0)
+  metodo             String? // PIX, BOLETO, CARTAO
+  gatewayId          String?   @unique
+  linkPagamento      String?
+  notaFiscalUrl      String?
+  criadoEm           DateTime  @default(now())
+  // P0: cada fatura diz o que compra; o direito de acesso sai dos períodos efetivamente pagos
+  plano              Plano?
+  ciclo              String? // MENSAL ou ANUAL
+  periodoInicio      DateTime?
+  periodoFim         DateTime?
+  renovacao          Boolean   @default(false)
+  valorEstornado     Decimal   @default(0) @db.Decimal(12, 2)
+  canceladaEm        DateTime?
+  motivoCancelamento String?
+  revisao            String? // PAGA_APOS_CANCELAMENTO, ESTORNO_PARCIAL, CHARGEBACK: precisa de olhar humano
+
+  @@index([contaId, status])
 }
 
 // Raio-X: contato deixado para receber o relatório (só com consentimento)
@@ -588,9 +604,56 @@ model TarefaFila {
 
 /// 4.2: eventos recebidos do gateway (cada um processado uma vez só)
 model EventoCobranca {
-  id         String   @id // id do evento no gateway
+  id         String    @id // id do evento no gateway
   tipo       String
-  recebidoEm DateTime @default(now())
+  recebidoEm DateTime  @default(now())
+  faturaId   String? // P0: rastreio e reconciliação
+  gatewayId  String?
+  dataEvento DateTime?
+  resultado  String?
+}
+
+/// P0: livro de consumo de IA. Cada chamada paga reserva o pior custo antes e consolida o custo real depois.
+/// Sem FK para Conta de propósito: o registro financeiro sobrevive à exclusão da conta.
+model UsoIa {
+  id                 String    @id @default(cuid())
+  contaId            String
+  usuarioId          String?
+  operacao           String // LEITURA_PLANILHA, LEITURA_CONVENCAO, AVALIACAO
+  modelo             String
+  periodo            String // AAAA-MM (UTC)
+  status             String // RESERVADO, CONCLUIDO, FALHOU, INCERTO, EXPIRADO, CACHE
+  custoReservadoUsd  Decimal   @db.Decimal(12, 6)
+  custoRealUsd       Decimal?  @db.Decimal(12, 6)
+  tokensEntrada      Int?
+  tokensSaida        Int?
+  tokensCacheLeitura Int?
+  tokensCacheEscrita Int?
+  bytes              Int
+  paginas            Int?
+  hashDocumento      String?
+  duracaoMs          Int?
+  tentativa          Int       @default(1)
+  erro               String?
+  criadoEm           DateTime  @default(now())
+  concluidoEm        DateTime?
+
+  @@index([periodo, status])
+  @@index([contaId, periodo])
+  @@index([usuarioId, criadoEm])
+}
+
+/// P0: resultado de leitura reaproveitado (mesmo documento, mesma operação, mesmo modelo e instruções) dentro da conta.
+model CacheIa {
+  id        String   @id @default(cuid())
+  contaId   String
+  chave     String // sha256(operação, modelo, versão das instruções, documento, entrada extra)
+  operacao  String
+  resultado Json
+  usos      Int      @default(0)
+  criadoEm  DateTime @default(now())
+
+  @@unique([contaId, chave])
 }
 
 /// 5.5: minutos de trabalho humano por conta e tipo (coleta, cálculo, revisão, retrabalho, suporte)

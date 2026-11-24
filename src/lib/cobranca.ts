@@ -5,11 +5,15 @@
  *   - autenticação no cabeçalho `access_token`; produção https://api.asaas.com/v3, sandbox https://api-sandbox.asaas.com/v3
  *   - POST /customers (name, cpfCnpj, email, externalReference) → id "cus_…"
  *   - POST /payments (customer, billingType, value, dueDate, description, externalReference) → id, status, invoiceUrl
- *   - webhook: cabeçalho `asaas-access-token`; eventos PAYMENT_CONFIRMED, PAYMENT_RECEIVED, PAYMENT_OVERDUE, PAYMENT_REFUNDED, PAYMENT_DELETED…
+ *   - DELETE /payments/{id}: remove uma cobrança que deixou de ser devida (gera PAYMENT_DELETED)
+ *   - webhook: cabeçalho `asaas-access-token`; eventos PAYMENT_CONFIRMED, PAYMENT_RECEIVED, PAYMENT_OVERDUE, PAYMENT_REFUNDED,
+ *     PAYMENT_PARTIALLY_REFUNDED, PAYMENT_DELETED, PAYMENT_RESTORED, PAYMENT_CHARGEBACK_REQUESTED…
+ *   - A Equapar usa só cobranças avulsas (/payments). Não há assinatura recorrente (/subscriptions) no Asaas: a renovação
+ *     é gerada pela própria Equapar (cobranca-servidor.ts, renovarAssinaturas).
  * A nota fiscal de serviço fica atrás de outra interface (NotaFiscal), em simulação até o dono decidir o emissor.
  */
 import crypto from "node:crypto";
-import type { EventoPagamento } from "./planos";
+import type { EventoGateway } from "./assinatura";
 
 export type Metodo = "PIX" | "BOLETO" | "CARTAO";
 
@@ -26,6 +30,8 @@ export interface Cobranca {
   readonly modo: "simulacao" | "asaas";
   garantirCliente(c: { contaId: string; nome: string; cpfCnpj: string; email: string; clienteIdAtual: string | null }): Promise<string>;
   criarCobranca(n: NovaCobranca): Promise<{ id: string; link: string }>;
+  /** Remove no gateway uma cobrança que deixou de ser devida. */
+  cancelarCobranca(id: string): Promise<void>;
 }
 
 export interface NotaFiscal {
@@ -41,6 +47,9 @@ class CobrancaSimulada implements Cobranca {
   async criarCobranca(n: NovaCobranca) {
     return { id: `sim_pay_${crypto.randomBytes(6).toString("hex")}`, link: `/app/configuracoes?aba=cobranca&simular=${encodeURIComponent(n.referenciaExterna)}` };
   }
+  async cancelarCobranca() {
+    // simulação: nada sai do servidor
+  }
 }
 
 const TIPO_ASAAS: Record<NovaCobranca["metodo"], string> = { PIX: "PIX", BOLETO: "BOLETO", CARTAO: "CREDIT_CARD", ESCOLHER: "UNDEFINED" };
@@ -52,11 +61,11 @@ export class CobrancaAsaas implements Cobranca {
     private base: string,
     private http: typeof fetch = fetch,
   ) {}
-  private async chamar<T>(caminho: string, corpo: unknown): Promise<T> {
+  private async chamar<T>(caminho: string, corpo: unknown, method = "POST"): Promise<T> {
     const r = await this.http(`${this.base}${caminho}`, {
-      method: "POST",
+      method,
       headers: { access_token: this.chave, "content-type": "application/json", "user-agent": "Equapar" },
-      body: JSON.stringify(corpo),
+      ...(corpo === undefined ? {} : { body: JSON.stringify(corpo) }),
       signal: AbortSignal.timeout(15_000),
     });
     if (!r.ok) throw new Error(`Asaas ${caminho} respondeu ${r.status}`);
@@ -78,6 +87,9 @@ export class CobrancaAsaas implements Cobranca {
     });
     return { id: r.id, link: r.invoiceUrl };
   }
+  async cancelarCobranca(id: string) {
+    await this.chamar(`/payments/${encodeURIComponent(id)}`, undefined, "DELETE");
+  }
 }
 
 /** O gateway configurado: Asaas com ASAAS_API_KEY; senão, simulação. */
@@ -93,12 +105,24 @@ export function notaFiscal(): NotaFiscal {
 }
 
 /** Traduz o evento do Asaas para o evento da Equapar (null = evento que não muda nada aqui). */
-export function eventoAsaas(nome: string): EventoPagamento | null {
+export function eventoAsaas(nome: string): EventoGateway | null {
   if (nome === "PAYMENT_CONFIRMED" || nome === "PAYMENT_RECEIVED") return "PAGO";
   if (nome === "PAYMENT_OVERDUE") return "VENCIDO";
   if (nome === "PAYMENT_REFUNDED") return "ESTORNADO";
+  if (nome === "PAYMENT_PARTIALLY_REFUNDED") return "ESTORNO_PARCIAL";
   if (nome === "PAYMENT_DELETED") return "CANCELADO";
+  if (nome === "PAYMENT_RESTORED") return "RESTAURADO";
+  if (nome === "PAYMENT_CHARGEBACK_REQUESTED") return "CHARGEBACK";
   return null;
+}
+
+/**
+ * Simulação de pagamento na tela: só sem gateway e nunca em produção, salvo ambiente de homologação
+ * que ligue COBRANCA_SIMULACAO=true de propósito.
+ */
+export function simulacaoPermitida(modo = cobranca().modo) {
+  if (modo !== "simulacao") return false;
+  return process.env.NODE_ENV !== "production" || process.env.COBRANCA_SIMULACAO === "true";
 }
 
 /** Confere o token do webhook (tempo constante). */

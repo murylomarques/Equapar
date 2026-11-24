@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cobranca, CobrancaAsaas, eventoAsaas, tokenWebhookValido } from "./cobranca";
+import { cobranca, CobrancaAsaas, eventoAsaas, simulacaoPermitida, tokenWebhookValido } from "./cobranca";
 
 describe("4.2: gateway de cobrança", () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -29,6 +29,24 @@ describe("4.2: gateway de cobrança", () => {
   });
   it("eventos do Asaas viram eventos da Equapar", () => {
     expect(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED", "PAYMENT_OVERDUE", "PAYMENT_REFUNDED", "PAYMENT_DELETED", "PAYMENT_CREATED"].map(eventoAsaas)).toEqual(["PAGO", "PAGO", "VENCIDO", "ESTORNADO", "CANCELADO", null]);
+  });
+  it("P0: estorno parcial, restauração e contestação também são tratados", () => {
+    expect(["PAYMENT_PARTIALLY_REFUNDED", "PAYMENT_RESTORED", "PAYMENT_CHARGEBACK_REQUESTED", "PAYMENT_CHECKOUT_VIEWED"].map(eventoAsaas)).toEqual(["ESTORNO_PARCIAL", "RESTAURADO", "CHARGEBACK", null]);
+  });
+  it("P0: cobrança que deixou de ser devida é removida no Asaas com DELETE", async () => {
+    const http = vi.fn(async () => new Response(JSON.stringify({ deleted: true }), { status: 200 }));
+    await new CobrancaAsaas("$aact_hmlg_teste", "https://api-sandbox.asaas.com/v3", http as never).cancelarCobranca("pay_1");
+    expect(http).toHaveBeenCalledWith("https://api-sandbox.asaas.com/v3/payments/pay_1", expect.objectContaining({ method: "DELETE" }));
+    expect((http.mock.calls[0] as unknown as [string, RequestInit])[1].body).toBeUndefined();
+  });
+  it("P0: simulação de pagamento nunca aparece em produção (salvo homologação explícita)", () => {
+    vi.stubEnv("ASAAS_API_KEY", "");
+    vi.stubEnv("NODE_ENV", "production");
+    expect(simulacaoPermitida()).toBe(false);
+    vi.stubEnv("COBRANCA_SIMULACAO", "true");
+    expect(simulacaoPermitida()).toBe(true);
+    vi.stubEnv("ASAAS_API_KEY", "$aact_x");
+    expect(simulacaoPermitida()).toBe(false);
   });
   it("token do webhook em tempo constante; vazio nunca vale", () => {
     expect(tokenWebhookValido("abc", "abc")).toBe(true);

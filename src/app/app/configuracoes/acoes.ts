@@ -14,8 +14,10 @@ import { normalizarTelefoneBR } from "@/lib/telefone";
 import { gerarCodigosRecuperacao } from "@/lib/recuperacao";
 import { tokenConvite } from "@/lib/convite";
 import { enfileirar } from "@/lib/fila";
-import { abrirCobrancaDoPlano, processarEventoPagamento } from "@/lib/cobranca-servidor";
-import { cobranca } from "@/lib/cobranca";
+import { abrirCobrancaDoPlano, agendarMudanca, cancelarRenovacao, processarEventoPagamento, reativarRenovacao } from "@/lib/cobranca-servidor";
+import { simulacaoPermitida } from "@/lib/cobranca";
+import { preverMudanca } from "@/lib/assinatura";
+import { data } from "@/lib/format";
 
 export async function salvarConta(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
@@ -131,8 +133,11 @@ export async function removerPessoa(_: Resultado, fd: FormData): Promise<Resulta
 }
 
 /**
- * 4.2: escolher o plano só ABRE a cobrança; o plano muda quando o pagamento for confirmado.
- * Cancelar (voltar ao Grátis) vale na hora, sem obstáculo.
+ * P0: mudança de plano com regra única (lib/assinatura.ts, preverMudanca), a mesma que a tela mostra antes de confirmar:
+ *  - compra ou upgrade: abre a cobrança; o plano vale quando o pagamento for confirmado;
+ *  - Grátis com período pago: cancela a renovação; o acesso pago segue até o fim do período;
+ *  - downgrade entre planos pagos ou troca de ciclo: vale na renovação;
+ *  - nada é cobrado proporcionalmente nem vira crédito sem regra comercial explícita.
  */
 export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
@@ -140,14 +145,35 @@ export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado>
     const plano = z.enum(["GRATIS", "PILOTO", "CARTEIRA", "ASSESSORIA"]).parse(texto(fd, "plano")) as Plano;
     const ciclo = texto(fd, "ciclo") === "ANUAL" ? "ANUAL" : "MENSAL";
     const metodo = z.enum(["PIX", "BOLETO", "CARTAO", "ESCOLHER"]).catch("ESCOLHER").parse(texto(fd, "metodo") || "ESCOLHER");
-    if (plano === "GRATIS") {
-      await db.conta.update({ where: { id: ctx.conta.id }, data: { plano: "GRATIS", planoPendente: null } });
-      await registrarHistorico(ctx, "Cancelou a assinatura (plano grátis)");
+    const agora = new Date();
+    const conta = await db.conta.findUniqueOrThrow({ where: { id: ctx.conta.id } });
+    const prev = preverMudanca(conta, plano, agora, ciclo);
+    if (!prev.possivel) return { erro: [prev.titulo, ...prev.linhas].join(" ") };
+    if (prev.efeito === "REATIVAR") {
+      await reativarRenovacao(conta.id);
+      await registrarHistorico(ctx, "Manteve a assinatura (desfez o cancelamento da renovação)");
       revalidatePath("/app", "layout");
-      return { ok: "Assinatura cancelada. Seus dados continuam aqui e disponíveis para exportar." };
+      return { ok: "Assinatura mantida. A renovação volta a valer." };
     }
-    if (plano === "PILOTO") return { erro: "O Piloto é cobrado por pedido. Fale com a gente pelo e-mail de contato para começar." };
-    const r = await abrirCobrancaDoPlano(ctx.conta.id, plano, ciclo, metodo, ctx.usuario.email);
+    if (plano === "GRATIS") {
+      const r = await cancelarRenovacao(conta.id, agora);
+      await registrarHistorico(ctx, r.agendado ? `Cancelou a renovação; o plano pago segue até ${data(r.ate)}` : "Voltou ao plano Grátis");
+      revalidatePath("/app", "layout");
+      return {
+        ok: r.agendado
+          ? `Renovação cancelada. Você continua com o plano atual até ${data(r.ate)}; depois, a conta passa para o Grátis. Seus dados ficam guardados.`
+          : "Conta no plano Grátis. Seus dados continuam aqui e disponíveis para exportar.",
+      };
+    }
+    if (prev.efeito === "AGENDADO") {
+      // downgrade ou troca de ciclo: a renovação ainda não iniciada é refeita no plano e no ciclo novos
+      await db.conta.update({ where: { id: conta.id }, data: { ciclo } });
+      await agendarMudanca(conta.id, plano, agora);
+      await registrarHistorico(ctx, `Agendou a mudança para o plano ${plano.toLowerCase()} (${ciclo.toLowerCase()}) na renovação`);
+      revalidatePath("/app", "layout");
+      return { ok: `Mudança agendada para ${data(prev.quando)}. Nada foi cobrado agora.` };
+    }
+    const r = await abrirCobrancaDoPlano(conta.id, plano, ciclo, metodo, ctx.usuario.email, agora);
     await registrarHistorico(ctx, `Escolheu o plano ${plano.toLowerCase()} (${ciclo.toLowerCase()}); cobrança aberta`);
     revalidatePath("/app/configuracoes");
     return { ok: r.modo === "simulacao" ? "Cobrança aberta (simulação). Use Simular pagamento na fatura para testar." : "Cobrança aberta. Pague pelo link da fatura; o plano muda quando o pagamento for confirmado.", dados: { link: r.link } };
@@ -158,7 +184,7 @@ export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado>
 export async function simularEventoFatura(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("gerenciar_conta");
-    if (cobranca().modo !== "simulacao") return { erro: "A simulação só existe sem o gateway ligado." };
+    if (!simulacaoPermitida()) return { erro: "A simulação de pagamento não está disponível neste ambiente." };
     const f = await db.fatura.findFirst({ where: { id: texto(fd, "faturaId"), contaId: ctx.conta.id } });
     if (!f) return { erro: "Fatura não encontrada nesta conta." };
     const evento = texto(fd, "evento") === "VENCIDO" ? "VENCIDO" : "PAGO";

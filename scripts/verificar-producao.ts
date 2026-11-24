@@ -93,7 +93,7 @@ function pares() {
   };
   par("Turnstile", "TURNSTILE_SECRET_KEY", "NEXT_PUBLIC_TURNSTILE_SITE_KEY");
   par("Google", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET");
-  if (!tem("ASAAS_API_KEY")) marcar("OK", "Asaas", "sem chave: cobrança em simulação");
+  if (!tem("ASAAS_API_KEY")) marcar(producao && env("COBRANCA_SIMULACAO") === "true" ? "FALHA" : "OK", "Asaas", producao && env("COBRANCA_SIMULACAO") === "true" ? "COBRANCA_SIMULACAO=true em produção: qualquer cliente simularia o próprio pagamento" : "sem chave: cobrança em simulação (botões de simular escondidos em produção)");
   else {
     const prod = env("ASAAS_AMBIENTE") === "producao";
     const chaveProd = env("ASAAS_API_KEY").startsWith("$aact_prod_");
@@ -127,6 +127,12 @@ function chaves() {
   marcar("OK", "Chaves", `JORNADA_REGRA_CONFIRMADA ${estado(jornadaLiberada())}${jornadaLiberada() ? "" : " (só PAINEL_EMAILS veem, com a marca de simulação)"}`);
   for (const k of ["IA_LEITURA_PLANILHA", "IA_LEITURA_CONVENCAO"])
     marcar("OK", "Chaves", `${k} ${estado(env(k) === "true")}${tem("ANTHROPIC_API_KEY") ? "" : " (sem ANTHROPIC_API_KEY: nada de IA aparece)"}`);
+  // P0: orçamento de IA (padrão zero = nenhuma chamada paga)
+  const usd = (k: string) => (tem(k) && Number.isFinite(Number(env(k))) ? Number(env(k)) : 0);
+  const global = usd("IA_ORCAMENTO_GLOBAL_USD_MES");
+  const porPlano = ["PILOTO", "CARTEIRA", "ASSESSORIA"].map((p) => `${p.toLowerCase()} US$ ${usd(`IA_ORCAMENTO_${p}_USD_MES`)}`).join(", ");
+  marcar("OK", "IA", env("IA_DESLIGADA") === "true" ? "IA_DESLIGADA: toda a IA desligada" : global > 0 ? `orçamento mensal: global US$ ${global}; por conta ${porPlano}; Grátis sempre zero` : "orçamento zero: nenhuma chamada paga de IA (padrão seguro)");
+  if (global > 0 && !tem("ANTHROPIC_API_KEY")) marcar("AVISO", "IA", "orçamento configurado sem ANTHROPIC_API_KEY: nada de IA aparece");
   for (const k of ["LIMPEZA_DEMOS_AUTOMATICA", "LIMPEZA_CONTAS_CANCELADAS"]) marcar(env(k) === "true" ? "AVISO" : "OK", "Chaves", `${k} ${estado(env(k) === "true")}${env(k) === "true" ? " (APAGA dados: leia a simulação antes)" : ""}`);
   marcar("OK", "Chaves", `DEMO_MAX_ATIVAS ${env("DEMO_MAX_ATIVAS") || "300 (padrão)"}`);
 }

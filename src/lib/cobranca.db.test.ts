@@ -34,14 +34,13 @@ describe("4.2: ciclo da cobrança (simulação)", () => {
     expect(await db.fatura.findUnique({ where: { id: r.faturaId } })).toMatchObject({ status: "PAGA" });
   });
 
-  it("três vencimentos: atrasada, atrasada, carência de 15 dias; os dados ficam", async () => {
+  it("três vencimentos de uma compra nova: a fatura falha, mas a conta não entra em carência (nada foi prestado)", async () => {
+    // P0: antes, uma compra nunca paga deixava a conta em carência e depois somente leitura.
+    // A régua de carência vale para renovação devida (assinatura.db.test.ts).
     const r = await abrirCobrancaDoPlano(contaId, "CARTEIRA", "MENSAL", "BOLETO", email);
     for (let i = 0; i < 3; i++) await processarEventoPagamento({ faturaId: r.faturaId, evento: "VENCIDO" });
     const conta = await db.conta.findUniqueOrThrow({ where: { id: contaId } });
-    expect(conta.situacaoCobranca).toBe("CARENCIA");
-    const dias = (conta.carenciaAte!.getTime() - Date.now()) / 86_400_000;
-    expect(dias).toBeGreaterThan(14.9);
-    expect(dias).toBeLessThanOrEqual(15);
+    expect(conta.situacaoCobranca).toBe("EM_DIA");
     expect(await db.fatura.findUnique({ where: { id: r.faturaId } })).toMatchObject({ status: "FALHOU", tentativas: 3 });
     expect(await db.empresa.count({ where: { contaId } })).toBe(1);
   });
