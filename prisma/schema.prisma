@@ -69,84 +69,86 @@ enum StatusAviso {
 }
 
 model Usuario {
-  id                 String    @id @default(cuid())
-  nome               String
-  email              String    @unique
-  senhaHash          String?
-  googleId           String?   @unique
-  whatsapp           String?
-  whatsappConsentEm  DateTime?
-  totpSegredoCifrado String?
-  totpAtivo          Boolean   @default(false)
+  id                  String    @id @default(cuid())
+  nome                String
+  email               String    @unique
+  senhaHash           String?
+  googleId            String?   @unique
+  whatsapp            String?
+  whatsappConsentEm   DateTime?
+  totpSegredoCifrado  String?
+  totpAtivo           Boolean   @default(false)
   emailVerificadoEm   DateTime? // C7: confirmação do e-mail
   totpSegredoPendente String? // C8: segredo novo até confirmar (cifrado)
   codigosRecuperacao  String[]  @default([]) // C8: hashes dos códigos de recuperação
   // preferências de aviso: { prazo: "EMAIL"|"WHATSAPP"|"AMBOS", resposta: ..., deferido: ..., semanal: bool, hora: 7 }
-  prefsAvisos        Json?
-  criadoEm           DateTime  @default(now())
+  prefsAvisos         Json?
+  criadoEm            DateTime  @default(now())
 
-  sessoes     Sessao[]
-  membros     Membro[]
-  historicos  Historico[]
-  comentarios ComentarioLinha[]
+  sessoes           Sessao[]
+  membros           Membro[]
+  historicos        Historico[]
+  comentarios       ComentarioLinha[]
+  memoriasAprovadas MemoriaVersao[]   @relation("MemoriaAprovador")
+  baixasRegistradas BaixaPedido[]     @relation("BaixaAutor")
 }
 
 model Sessao {
-  id         String   @id // hash SHA-256 do token do cookie
-  usuarioId  String
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  contaId    String?
-  empresaId  String? // empresa selecionada (assessoria)
-  pendente2fa Boolean @default(false)
-  userAgent  String?
-  criadoEm   DateTime @default(now())
-  expiraEm   DateTime
-  vistoEm    DateTime @default(now())
+  id          String   @id // hash SHA-256 do token do cookie
+  usuarioId   String
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaId     String?
+  empresaId   String? // empresa selecionada (assessoria)
+  pendente2fa Boolean  @default(false)
+  userAgent   String?
+  criadoEm    DateTime @default(now())
+  expiraEm    DateTime
+  vistoEm     DateTime @default(now())
 
   @@index([usuarioId])
 }
 
 model Conta {
-  id                      String    @id @default(cuid())
-  nome                    String
-  tipo                    TipoConta @default(EMPRESA)
-  plano                   Plano     @default(GRATIS)
-  marcaNome               String? // assessoria: nome nos PDFs
-  marcaCor                String? // assessoria: cor nos PDFs
-  marcaLogo               String? // assessoria: caminho do logo (PNG/JPG) no armazenamento
-  mostrarValoresWhatsapp  Boolean   @default(false)
-  pilotoInicio            DateTime?
-  planoPendente           Plano? // 4.2: plano escolhido, vale quando o pagamento for confirmado
-  ciclo                   String    @default("MENSAL") // 4.2: MENSAL ou ANUAL
-  situacaoCobranca        String    @default("EM_DIA") // 4.2: EM_DIA, ATRASADA, CARENCIA, SOMENTE_LEITURA
-  carenciaAte             DateTime? // 4.2: fim da carência antes de virar somente leitura
-  gatewayClienteId        String? // 4.2: id do cliente no gateway de pagamento
-  dicasDispensadas        Json? // 5.4: dicas do primeiro pedido já dispensadas
-  avisoJornadaEm          DateTime? // 5.1: aviso da EC 141 já enviado a esta conta
-  pesquisaDispensadaEm    DateTime? // 5.5: pesquisa de Sean Ellis respondida ou dispensada
-  criadoEm                DateTime  @default(now())
-  demo                    Boolean   @default(false) // C6: conta de demonstração de um visitante
-  demoExpiraEm            DateTime? // C6: quando a conta de demonstração vence
+  id                     String    @id @default(cuid())
+  nome                   String
+  tipo                   TipoConta @default(EMPRESA)
+  plano                  Plano     @default(GRATIS)
+  marcaNome              String? // assessoria: nome nos PDFs
+  marcaCor               String? // assessoria: cor nos PDFs
+  marcaLogo              String? // assessoria: caminho do logo (PNG/JPG) no armazenamento
+  mostrarValoresWhatsapp Boolean   @default(false)
+  pilotoInicio           DateTime?
+  planoPendente          Plano? // 4.2: plano escolhido, vale quando o pagamento for confirmado
+  ciclo                  String    @default("MENSAL") // 4.2: MENSAL ou ANUAL
+  situacaoCobranca       String    @default("EM_DIA") // 4.2: EM_DIA, ATRASADA, CARENCIA, SOMENTE_LEITURA
+  carenciaAte            DateTime? // 4.2: fim da carência antes de virar somente leitura
+  gatewayClienteId       String? // 4.2: id do cliente no gateway de pagamento
+  dicasDispensadas       Json? // 5.4: dicas do primeiro pedido já dispensadas
+  avisoJornadaEm         DateTime? // 5.1: aviso da EC 141 já enviado a esta conta
+  pesquisaDispensadaEm   DateTime? // 5.5: pesquisa de Sean Ellis respondida ou dispensada
+  criadoEm               DateTime  @default(now())
+  demo                   Boolean   @default(false) // C6: conta de demonstração de um visitante
+  demoExpiraEm           DateTime? // C6: quando a conta de demonstração vence
 
-  membros     Membro[]
-  empresas    Empresa[]
-  convencoes  Convencao[]
-  historicos  Historico[]
-  avisos      Aviso[]
-  tarefas     Tarefa[]
-  faturas     Fatura[]
-  trabalhos   TrabalhoFundo[]
-  registrosTempo          RegistroTempo[]
-  respostasPesquisa       RespostaPesquisa[]
+  membros           Membro[]
+  empresas          Empresa[]
+  convencoes        Convencao[]
+  historicos        Historico[]
+  avisos            Aviso[]
+  tarefas           Tarefa[]
+  faturas           Fatura[]
+  trabalhos         TrabalhoFundo[]
+  registrosTempo    RegistroTempo[]
+  respostasPesquisa RespostaPesquisa[]
 }
 
 model Membro {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   usuarioId String
   contaId   String
   papel     Papel
-  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  conta     Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  conta     Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
   criadoEm  DateTime @default(now())
 
   @@unique([usuarioId, contaId])
@@ -166,56 +168,62 @@ model Empresa {
 }
 
 model Convencao {
-  id            String            @id @default(cuid())
-  contaId       String
-  conta         Conta             @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  nome          String // ex.: "CCT Asseio e Conservação ES 2026"
-  sindicatos    String?
-  categoria     String            @default("Asseio e conservação")
-  cidade        String?
-  uf            String
-  ano           Int
-  mesDataBase   Int // 1..12
-  situacao      SituacaoConvencao @default(PENDENTE)
-  dataDeposito  DateTime?
-  registroMte   String? // número no sistema Mediador
-  observacoes   String?
-  criadoEm      DateTime          @default(now())
+  id           String            @id @default(cuid())
+  contaId      String
+  conta        Conta             @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  nome         String // ex.: "CCT Asseio e Conservação ES 2026"
+  sindicatos   String?
+  categoria    String            @default("Asseio e conservação")
+  cidade       String?
+  uf           String
+  ano          Int
+  mesDataBase  Int // 1..12
+  situacao     SituacaoConvencao @default(PENDENTE)
+  dataDeposito DateTime?
+  registroMte  String? // número no sistema Mediador
+  observacoes  String?
+  criadoEm     DateTime          @default(now())
 
-  contratos     Contrato[]
-  pedidos       Pedido[]
-  documentos    Documento[]
+  contratos  Contrato[]
+  pedidos    Pedido[]
+  documentos Documento[]
 }
 
 model Contrato {
-  id                  String       @id @default(cuid())
-  empresaId           String
-  empresa             Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  numero              String
-  orgao               String
-  orgaoCnpj           String?
-  uf                  String?
-  municipio           String?
-  esfera              String? // F, E, M, D
-  objeto              String
-  vigenciaInicio      DateTime
-  vigenciaFim         DateTime
-  vigenciaFimPncp     DateTime? // L4: último fim de vigência lido do PNCP
-  valorMensal         Decimal?     @db.Decimal(14, 2)
-  valorGlobal         Decimal?     @db.Decimal(16, 2)
-  postos              Int?
-  maoDeObraDedicada   Boolean      @default(false)
-  tipoReajuste        TipoReajuste @default(REPACTUACAO)
-  clausulaReajuste    String?
-  convencaoId         String?
-  convencao           Convencao?   @relation(fields: [convencaoId], references: [id], onDelete: SetNull)
-  dataProposta        DateTime?
-  ultimoApostilamento DateTime?
-  pncpControle        String?
-  linkPncp            String?
-  arquivado           Boolean      @default(false)
-  criadoEm            DateTime     @default(now())
-  prorrogacoes        Prorrogacao[]
+  id                        String                @id @default(cuid())
+  empresaId                 String
+  empresa                   Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  numero                    String
+  orgao                     String
+  orgaoCnpj                 String?
+  uf                        String?
+  municipio                 String?
+  esfera                    String? // F, E, M, D
+  objeto                    String
+  vigenciaInicio            DateTime
+  vigenciaFim               DateTime
+  vigenciaFimPncp           DateTime? // L4: último fim de vigência lido do PNCP
+  vigenciaFimOrigem         String? // INFORMADA, PNCP ou LEGADO_DESCONHECIDO
+  prorrogacaoPrevistaEm     DateTime?
+  prorrogacaoPrevistaOrigem String?
+  prorrogacaoAssinadaEm     DateTime?
+  prorrogacaoAssinadaOrigem String?
+  valorMensal               Decimal?              @db.Decimal(14, 2)
+  valorGlobal               Decimal?              @db.Decimal(16, 2)
+  postos                    Int?
+  maoDeObraDedicada         Boolean               @default(false)
+  tipoReajuste              TipoReajuste          @default(REPACTUACAO)
+  clausulaReajuste          String?
+  convencaoId               String?
+  convencao                 Convencao?            @relation(fields: [convencaoId], references: [id], onDelete: SetNull)
+  dataProposta              DateTime?
+  ultimoApostilamento       DateTime?
+  pncpControle              String?
+  linkPncp                  String?
+  arquivado                 Boolean               @default(false)
+  criadoEm                  DateTime              @default(now())
+  prorrogacoes              Prorrogacao[]
+  historicoValores          ValorMensalContrato[]
 
   pedidos    Pedido[]
   documentos Documento[]
@@ -227,81 +235,178 @@ model Contrato {
 }
 
 model Pedido {
-  id                  String       @id @default(cuid())
-  contratoId          String
-  contrato            Contrato     @relation(fields: [contratoId], references: [id], onDelete: Cascade)
-  estado              EstadoPedido @default(EM_ANALISE)
-  passoAtual          Int          @default(1)
-  gatilho             Gatilho      @default(NOVA_CONVENCAO)
-  convencaoId         String?
-  convencao           Convencao?   @relation(fields: [convencaoId], references: [id], onDelete: SetNull)
-  dataBase            DateTime? // início dos efeitos financeiros
-  dataDeposito        DateTime?
-  descricaoGatilho    String?
+  id                         String             @id @default(cuid())
+  contratoId                 String
+  contrato                   Contrato           @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  estado                     EstadoPedido       @default(EM_ANALISE)
+  passoAtual                 Int                @default(1)
+  gatilho                    Gatilho            @default(NOVA_CONVENCAO)
+  convencaoId                String?
+  convencao                  Convencao?         @relation(fields: [convencaoId], references: [id], onDelete: SetNull)
+  dataBase                   DateTime? // início dos efeitos financeiros
+  dataDeposito               DateTime?
+  descricaoGatilho           String?
   // Planilhas de custos (formato PlanilhaCustos de src/lib/calculo)
-  planilhaAntes       Json?
-  planilhaAgora       Json?
-  linhasNaoLidas      Json? // linhas que a leitura não entendeu
-  sugestoesConvencao  Json? // 5.5: sugestões da leitura da convenção com IA, esperando confirmação linha a linha
-  checklist           Json? // { [id]: "ANEXADO" | "FALTA" | "OPCIONAL" }
-  dataReferencia      DateTime? // até quando contar a diferença retroativa
-  retroContarAte      RetroContarAte  @default(DATA_INFORMADA) // L11: até quando conta a diferença
-  retroMesIncompleto  RetroMesIncompleto @default(DIAS_CORRIDOS) // L11: mês incompleto
-  retroCompararMes    Boolean            @default(false) // C6: "regra do caso em análise": memória mostra dias corridos e mês de 30 dias lado a lado
-  valoresJaPagos      Decimal?           @default(0) @db.Decimal(14, 2) // C6: já pago pelo órgão no período, descontado do retroativo
-  ultimaCompetenciaPaga String? // C6: informativo, "2026-03"
-  hashCalculo         String? // C2: SHA-256 da base do cálculo no momento da aprovação
-  diferencaMensal     Decimal?     @db.Decimal(14, 2)
-  diferencaRetroativa Decimal?     @db.Decimal(14, 2)
-  memoriaAprovadaPor  String?
-  memoriaAprovadaEm   DateTime?
-  revisaoEspecialista Boolean      @default(false)
-  geradoEm            DateTime?
-  protocoloNumero     String?
-  protocoloData       DateTime?
-  respostaData        DateTime?
-  respostaResumo      String?
-  jornadaAntes        Int? // 5.1: jornada semanal antes (padrão 44)
-  jornadaDepois       Int? // 5.1: 42 ou 40
-  horasCobertura      Decimal?     @db.Decimal(6, 2) // 5.1: horas semanais de cobertura exigidas por posto
-  inicioJornada       DateTime? // 5.1: início da nova jornada
-  jornadaDataAditivo  DateTime? // D4: quando o aditivo foi formalizado
-  jornadaInicioEfeitos DateTime? // D4: início dos efeitos financeiros (padrão: início da etapa); o retroativo usa esta
-  cenarioJornada      String? // 5.1: MANTER_HORAS ou REDUZIR_HORAS (escolha explícita, sem padrão)
-  recursoData         DateTime? // 5.5: recurso depois do indeferimento
-  recursoPrazo        DateTime?
-  pedidoOrigemId      String? // 5.5: novo pedido a partir deste
-  deferidoEm          DateTime?
-  valorDeferido       Decimal?     @db.Decimal(14, 2)
-  apostiladoEm        DateTime?
-  faturadoEm          DateTime?
-  notaFiscal          String?
-  recebidoEm          DateTime?
-  valorRecebido       Decimal?     @db.Decimal(14, 2)
-  criadoEm            DateTime     @default(now())
-  atualizadoEm        DateTime     @updatedAt
+  planilhaAntes              Json?
+  planilhaAgora              Json?
+  linhasNaoLidas             Json? // linhas que a leitura não entendeu
+  regraArredondamento        String             @default("DECIMAL_2_CASAS_MEIO_PARA_CIMA_POR_LINHA")
+  retroativoCompetencias     Json?
+  calculoManual              Boolean            @default(false)
+  calculoManualJustificativa String?
+  sugestoesConvencao         Json? // 5.5: sugestões da leitura da convenção com IA, esperando confirmação linha a linha
+  checklist                  Json? // { [id]: "ANEXADO" | "FALTA" | "OPCIONAL" }
+  dataReferencia             DateTime? // até quando contar a diferença retroativa
+  retroContarAte             RetroContarAte     @default(DATA_INFORMADA) // L11: até quando conta a diferença
+  retroMesIncompleto         RetroMesIncompleto @default(DIAS_CORRIDOS) // L11: mês incompleto
+  retroCompararMes           Boolean            @default(false) // C6: "regra do caso em análise": memória mostra dias corridos e mês de 30 dias lado a lado
+  valoresJaPagos             Decimal?           @default(0) @db.Decimal(14, 2) // C6: já pago pelo órgão no período, descontado do retroativo
+  ultimaCompetenciaPaga      String? // C6: informativo, "2026-03"
+  hashCalculo                String? // C2: SHA-256 da base do cálculo no momento da aprovação
+  memoriaVersaoAtual         Int                @default(0)
+  memoriaVersaoAprovadaId    String?
+  diferencaMensal            Decimal?           @db.Decimal(14, 2)
+  diferencaRetroativa        Decimal?           @db.Decimal(14, 2)
+  memoriaAprovadaPor         String?
+  memoriaAprovadaEm          DateTime?
+  revisaoEspecialista        Boolean            @default(false)
+  geradoEm                   DateTime?
+  protocoloNumero            String?
+  protocoloData              DateTime?
+  documentacaoCompletaEm     DateTime?
+  documentacaoCompletaOrigem String?
+  respostaData               DateTime?
+  respostaResumo             String?
+  jornadaAntes               Int? // 5.1: jornada semanal antes (padrão 44)
+  jornadaDepois              Int? // 5.1: 42 ou 40
+  horasCobertura             Decimal?           @db.Decimal(6, 2) // 5.1: horas semanais de cobertura exigidas por posto
+  inicioJornada              DateTime? // 5.1: início da nova jornada
+  jornadaDataAditivo         DateTime? // D4: quando o aditivo foi formalizado
+  jornadaInicioEfeitos       DateTime? // D4: início dos efeitos financeiros (padrão: início da etapa); o retroativo usa esta
+  cenarioJornada             String? // 5.1: MANTER_HORAS ou REDUZIR_HORAS (escolha explícita, sem padrão)
+  recursoData                DateTime? // 5.5: recurso depois do indeferimento
+  recursoPrazo               DateTime?
+  pedidoOrigemId             String? // 5.5: novo pedido a partir deste
+  deferidoEm                 DateTime?
+  valorDeferido              Decimal?           @db.Decimal(14, 2)
+  decisaoTipo                String? // DEFERIDO_TOTAL, DEFERIDO_PARCIAL, INDEFERIDO
+  decisaoEvidencia           String?
+  mensalSolicitado           Decimal?           @db.Decimal(14, 2)
+  mensalAprovado             Decimal?           @db.Decimal(14, 2)
+  mensalVigenteAnterior      Decimal?           @db.Decimal(14, 2)
+  retroativoAprovado         Decimal?           @db.Decimal(14, 2)
+  conciliacaoPendente        Boolean            @default(false)
+  apostiladoEm               DateTime?
+  faturadoEm                 DateTime?
+  notaFiscal                 String?
+  recebidoEm                 DateTime?
+  valorRecebido              Decimal?           @db.Decimal(14, 2)
+  criadoEm                   DateTime           @default(now())
+  atualizadoEm               DateTime           @updatedAt
 
-  documentos  Documento[]
-  comentarios ComentarioLinha[]
-  historicos  Historico[]
+  documentos   Documento[]
+  comentarios  ComentarioLinha[]
+  historicos   Historico[]
+  memorias     MemoriaVersao[]
+  notasFiscais NotaFiscalPedido[]
+  baixas       BaixaPedido[]
 }
 
 model Documento {
-  id          String     @id @default(cuid())
-  contratoId  String?
-  contrato    Contrato?  @relation(fields: [contratoId], references: [id], onDelete: Cascade)
-  pedidoId    String?
-  pedido      Pedido?    @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  convencaoId String?
-  convencao   Convencao? @relation(fields: [convencaoId], references: [id], onDelete: Cascade)
-  tipo        String // PLANILHA, CONVENCAO, OFICIO, PROTOCOLO, APOSTILAMENTO, NOTA_FISCAL, OUTRO
-  nome        String
-  versao      Int        @default(1)
-  mime        String
-  tamanho     Int
-  caminho     String
-  enviadoPor  String?
-  criadoEm    DateTime   @default(now())
+  id              String         @id @default(cuid())
+  contratoId      String?
+  contrato        Contrato?      @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  pedidoId        String?
+  pedido          Pedido?        @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  convencaoId     String?
+  convencao       Convencao?     @relation(fields: [convencaoId], references: [id], onDelete: Cascade)
+  tipo            String // PLANILHA, CONVENCAO, OFICIO, PROTOCOLO, APOSTILAMENTO, NOTA_FISCAL, OUTRO
+  nome            String
+  versao          Int            @default(1)
+  mime            String
+  tamanho         Int
+  caminho         String
+  enviadoPor      String?
+  criadoEm        DateTime       @default(now())
+  memoriaVersaoId String?
+  memoriaVersao   MemoriaVersao? @relation(fields: [memoriaVersaoId], references: [id], onDelete: SetNull)
+}
+
+/// Snapshot imutável das entradas e dos resultados usados na revisão, geração e protocolo.
+model MemoriaVersao {
+  id              String    @id @default(cuid())
+  pedidoId        String
+  pedido          Pedido    @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  numero          Int
+  hash            String
+  snapshot        Json
+  aprovadoPorId   String?
+  aprovadoPor     Usuario?  @relation("MemoriaAprovador", fields: [aprovadoPorId], references: [id], onDelete: SetNull)
+  aprovadoPorNome String?
+  aprovadoEm      DateTime?
+  protocoladoEm   DateTime?
+  criadoEm        DateTime  @default(now())
+
+  documentos Documento[]
+
+  @@unique([pedidoId, numero])
+  @@unique([pedidoId, hash])
+}
+
+/// Nota fiscal já emitida, vinculada à diferença retroativa aprovada.
+model NotaFiscalPedido {
+  id                 String        @id @default(cuid())
+  pedidoId           String
+  pedido             Pedido        @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  identificacao      String
+  emitidaEm          DateTime
+  valor              Decimal       @db.Decimal(14, 2)
+  referenciaOperacao String
+  evidencia          String?
+  canceladaEm        DateTime?
+  criadoPor          String?
+  criadoEm           DateTime      @default(now())
+  baixas             BaixaPedido[]
+
+  @@unique([pedidoId, identificacao])
+  @@unique([pedidoId, referenciaOperacao])
+  @@index([pedidoId, emitidaEm])
+}
+
+/// Baixa financeira parcial de uma nota fiscal. A referência torna reenvios idempotentes.
+model BaixaPedido {
+  id                 String           @id @default(cuid())
+  pedidoId           String
+  pedido             Pedido           @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  notaFiscalId       String
+  notaFiscal         NotaFiscalPedido @relation(fields: [notaFiscalId], references: [id], onDelete: Restrict)
+  recebidoEm         DateTime
+  valor              Decimal          @db.Decimal(14, 2)
+  referenciaOperacao String
+  autorId            String?
+  autor              Usuario?         @relation("BaixaAutor", fields: [autorId], references: [id], onDelete: SetNull)
+  autorNome          String?
+  canceladaEm        DateTime?
+  criadoEm           DateTime         @default(now())
+
+  @@unique([pedidoId, referenciaOperacao])
+  @@index([notaFiscalId, recebidoEm])
+}
+
+model ValorMensalContrato {
+  id            String   @id @default(cuid())
+  contratoId    String
+  contrato      Contrato @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  pedidoId      String?
+  valorAnterior Decimal? @db.Decimal(14, 2)
+  valorNovo     Decimal  @db.Decimal(14, 2)
+  ato           String
+  evidencia     String?
+  aplicavelEm   DateTime
+  registradoPor String?
+  criadoEm      DateTime @default(now())
+
+  @@index([contratoId, aplicavelEm])
 }
 
 model ComentarioLinha {
@@ -365,14 +470,14 @@ model Aviso {
 }
 
 model Fatura {
-  id         String   @id @default(cuid())
-  contaId    String
-  conta      Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  referencia String // "2026-11"
-  descricao  String
-  valor      Decimal  @db.Decimal(12, 2)
-  postos     Int?
-  pagaEm     DateTime?
+  id            String    @id @default(cuid())
+  contaId       String
+  conta         Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  referencia    String // "2026-11"
+  descricao     String
+  valor         Decimal   @db.Decimal(12, 2)
+  postos        Int?
+  pagaEm        DateTime?
   status        String    @default("ABERTA") // 4.2: ABERTA, PAGA, FALHOU, CANCELADA
   vencimento    DateTime?
   tentativas    Int       @default(0)
@@ -380,22 +485,22 @@ model Fatura {
   gatewayId     String?   @unique
   linkPagamento String?
   notaFiscalUrl String?
-  criadoEm   DateTime @default(now())
+  criadoEm      DateTime  @default(now())
 }
 
 // Raio-X: contato deixado para receber o relatório (só com consentimento)
 model Lead {
-  id                 String   @id @default(cuid())
-  cnpj               String
-  email              String
-  whatsapp           String?
-  consentimentoAvisos Boolean @default(false)
-  criadoEm           DateTime @default(now())
+  id                  String   @id @default(cuid())
+  cnpj                String
+  email               String
+  whatsapp            String?
+  consentimentoAvisos Boolean  @default(false)
+  criadoEm            DateTime @default(now())
 }
 
 model RaioXCache {
-  cnpj        String   @id
-  resultado   Json
+  cnpj         String   @id
+  resultado    Json
   consultadoEm DateTime @default(now())
 }
 
