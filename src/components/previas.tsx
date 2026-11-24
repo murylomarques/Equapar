@@ -4,6 +4,20 @@ import { reais } from "@/lib/format";
 
 /** Recortes de tela do produto com dados fictícios (identificados como exemplo), para a landing. */
 
+/**
+ * Os três contratos fictícios das prévias (landing e entrada do Raio-X): um conjunto só, com o prazo em dias até o fim
+ * da vigência. O 45/2025 usa o mesmo prazo da prévia "Hoje" (EXEMPLO.pedir.diasAteProrrogacao). Sem datas fixas,
+ * para a prévia não envelhecer.
+ */
+export const CONTRATOS_EXEMPLO = [
+  { numero: EXEMPLO.pedir.numero, orgao: EXEMPLO.pedir.orgao, dias: EXEMPLO.pedir.diasAteProrrogacao, falta: `${EXEMPLO.pedir.diasAteProrrogacao} dias` },
+  { numero: EXEMPLO.protocolado.numero, orgao: EXEMPLO.protocolado.orgao, dias: 4 * 30, falta: "4 meses" },
+  { numero: EXEMPLO.deferido.numero, orgao: EXEMPLO.deferido.orgao, dias: 20 * 30, falta: "20 meses" },
+] as const;
+
+/** Quantos dos contratos de exemplo terminam nos próximos 6 meses: contado da lista, nunca escrito à mão. */
+export const terminamEm6MesesExemplo = () => CONTRATOS_EXEMPLO.filter((c) => c.dias <= 183).length;
+
 function Moldura({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <figure className="tela-previa" style={{ margin: 0 }}>
@@ -56,10 +70,11 @@ export function PreviaHoje() {
 }
 
 export function PreviaCarteira() {
+  const [pedir, protocolado, deferido] = CONTRATOS_EXEMPLO;
   const linhas = [
-    ["45/2025", "Prefeitura Municipal de Exemplo", "18/12/2026", { t: "Pedir até 18/12/2026", tom: "carimbo" as const, i: "relogio" as const }],
-    ["12/2024", "Tribunal Regional Exemplo", "03/2027", { t: "Aguardando o órgão", tom: "azul" as const, i: "ampulheta" as const }],
-    ["07/2025", "Universidade Federal Exemplo", "08/2027", { t: "Em dia", tom: "verde" as const, i: "check" as const }],
+    [pedir, { t: "Pedir repactuação", tom: "carimbo" as const, i: "relogio" as const }],
+    [protocolado, { t: "Aguardando o órgão", tom: "azul" as const, i: "ampulheta" as const }],
+    [deferido, { t: "Em dia", tom: "verde" as const, i: "check" as const }],
   ] as const;
   return (
     <Moldura titulo="Equapar · Carteira">
@@ -68,16 +83,16 @@ export function PreviaCarteira() {
           <tr>
             <th>Contrato</th>
             <th>Órgão</th>
-            <th>Fim</th>
+            <th>Fim em</th>
             <th>Situação</th>
           </tr>
         </thead>
         <tbody>
-          {linhas.map(([n, o, f, s]) => (
-            <tr key={n}>
-              <td>{n}</td>
-              <td>{o}</td>
-              <td className="num">{f}</td>
+          {linhas.map(([c, s]) => (
+            <tr key={c.numero}>
+              <td>{c.numero}</td>
+              <td>{c.orgao}</td>
+              <td className="num">{c.falta}</td>
               <td>
                 <SeloSimples texto={s.t} tom={s.tom} icone={s.i} />
               </td>
@@ -89,38 +104,51 @@ export function PreviaCarteira() {
   );
 }
 
+/** Memória de cálculo de exemplo, em centavos por posto; a diferença e o total do contrato saem da própria tabela. */
+const MEMORIA_EXEMPLO = {
+  postos: 42,
+  linhas: [
+    { item: "Salário base", fonte: "Piso da convenção 2026, cláusula 4ª", antes: 174000, agora: 182000 },
+    { item: "INSS", fonte: "20,00% × Módulo 1 + Submódulo 2.1", antes: 42038, agora: 43970 },
+    { item: "Demais itens", fonte: "FGTS, provisões, benefícios e insumos", antes: 153062, agora: 156160 },
+  ],
+} as const;
+
+const centavos = (c: number) => reais((c / 100).toFixed(2));
+
 export function PreviaMemoria() {
+  const { postos, linhas } = MEMORIA_EXEMPLO;
+  const porPosto = linhas.reduce((t, l) => t + l.agora - l.antes, 0);
   return (
     <Moldura titulo="Equapar · Memória de cálculo">
       <table className="tabela" style={{ background: "var(--branco)" }}>
         <thead>
           <tr>
-            <th>Item</th>
+            <th>Item, por posto</th>
             <th className="num">Antes</th>
             <th className="num">Agora</th>
           </tr>
         </thead>
         <tbody>
+          {linhas.map((l) => (
+            <tr key={l.item}>
+              <td>
+                {l.item}
+                <div className="legenda">{l.fonte}</div>
+              </td>
+              <td className="num">{centavos(l.antes)}</td>
+              <td className="num">{centavos(l.agora)}</td>
+            </tr>
+          ))}
           <tr>
-            <td>
-              Salário base
-              <div className="legenda">Piso da convenção 2026, cláusula 4ª</div>
-            </td>
-            <td className="num">R$ 1.740,00</td>
-            <td className="num">R$ 1.820,00</td>
-          </tr>
-          <tr>
-            <td>
-              INSS
-              <div className="legenda">20,00% × Módulo 1 + Submódulo 2.1</div>
-            </td>
-            <td className="num">R$ 420,38</td>
-            <td className="num">R$ 439,70</td>
+            <td>Diferença por posto, por mês</td>
+            <td className="num" />
+            <td className="num">{centavos(porPosto)}</td>
           </tr>
           <tr className="total">
-            <td>Diferença por mês</td>
+            <td>Diferença por mês no contrato ({postos} postos)</td>
             <td className="num" />
-            <td className="num">R$ 4.212,60</td>
+            <td className="num">{centavos(porPosto * postos)}</td>
           </tr>
         </tbody>
       </table>

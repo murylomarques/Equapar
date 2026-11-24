@@ -275,7 +275,7 @@ export default function Landing() {
       </Revelar>
 
       {/* 6. Perguntas e chamada final */}
-      <Revelar className="secao">
+      <Revelar className="secao secao-perguntas">
         <div className="site-largura">
           <div className="faq">
             <h2 className="titulo-secao">Perguntas frequentes</h2>

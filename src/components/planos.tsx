@@ -30,11 +30,14 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
           <ul>
             <li>Contratos vigentes no PNCP pelo CNPJ</li>
             <li>Fim da vigência e prazo de cada um</li>
-            <li>Relatório em PDF por e-mail</li>
+            {/* hífen inseparável (U+2011): "e-mail" não quebra no hífen */}
+            <li>Relatório em PDF por e‑mail</li>
           </ul>
-          <Link href="/raio-x" className="btn">
-            Fazer o Raio-X
-          </Link>
+          <div>
+            <Link href="/raio-x" className="btn">
+              Fazer o Raio-X
+            </Link>
+          </div>
         </div>
         <div className="plano">
           <h3 className="mb-0">Piloto</h3>
@@ -43,10 +46,12 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
             <span className="preco-de">a partir de</span> <span style={{ whiteSpace: "nowrap" }}>{r$(PRECOS.pilotoPorPedido)}</span>
           </div>
           <small className="plano-unidade">por pedido</small>
-          {/* C3 */}
-          <p className="secundario mb-0 plano-texto">
-            Organização de documentos e prazos, consolidação de dados e geração de memória de cálculo e arquivos editáveis para conferência e protocolo pelo cliente.
-          </p>
+          {/* C3: os mesmos termos do texto aprovado, em três pontos como nos outros planos */}
+          <ul>
+            <li>Organização de documentos e prazos</li>
+            <li>Consolidação de dados, memória de cálculo e arquivos editáveis</li>
+            <li>Você confere e protocola</li>
+          </ul>
           <div>
             <Contato agenda={false} />
           </div>
@@ -69,9 +74,11 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
             </p>
           )}
           {revisaoEspecialistaAtiva() && <p className="legenda mb-0">Revisão de especialista é cobrada à parte.</p>}
-          <Link href="/criar-conta" className="btn btn-primario">
-            Criar conta
-          </Link>
+          <div>
+            <Link href="/criar-conta" className="btn btn-primario">
+              Criar conta
+            </Link>
+          </div>
         </div>
         {/* D0: o pacote da jornada só aparece com a jornada liberada */}
         {jornadaLiberada() && (
@@ -98,9 +105,11 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
               <li>Vários clientes numa conta</li>
               <li>A sua marca nos PDFs</li>
             </ul>
-            <Link href="/assessorias" className="btn">
-              Ver o plano
-            </Link>
+            <div>
+              <Link href="/assessorias" className="btn">
+                Ver o plano
+              </Link>
+            </div>
           </div>
         )}
       </div>

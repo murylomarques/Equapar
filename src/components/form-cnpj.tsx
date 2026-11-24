@@ -39,27 +39,36 @@ export function FormCnpj({ id, valorInicial = "", erroInicial = "" }: { id?: str
       <label htmlFor={campoId} className="rotulo" style={{ display: "block", marginBottom: 6 }}>
         CNPJ da empresa
       </label>
+      {/* o erro fica logo abaixo do campo, também no celular, onde o botão desce para a linha de baixo */}
       <div className="form-cnpj">
-        <div className="entrada" style={{ flex: "1 1 240px" }}>
-          <input
-            id={campoId}
-            name="cnpj"
-            autoCapitalize="characters"
-            autoComplete="off"
-            placeholder="00.000.000/0000-00"
-            value={valor}
-            className="tnum"
-            onChange={(e) => {
-              setValor(mascaraCnpj(e.target.value));
-              if (erro) setErro("");
-            }}
-            onBlur={() => {
-              if (normalizarCnpj(valor).length) setErro(erroCnpj(valor) ?? "");
-            }}
-            aria-invalid={!!erro}
-            aria-describedby={erro ? `${campoId}-erro` : undefined}
-          />
-          {valido && <Check className="icone-ok" size={18} strokeWidth={2} aria-label="CNPJ válido" />}
+        <div className="form-cnpj-campo">
+          <div className="entrada">
+            <input
+              id={campoId}
+              name="cnpj"
+              autoCapitalize="characters"
+              autoComplete="off"
+              placeholder="00.000.000/0000-00"
+              value={valor}
+              className="tnum"
+              onChange={(e) => {
+                setValor(mascaraCnpj(e.target.value));
+                if (erro) setErro("");
+              }}
+              onBlur={() => {
+                if (normalizarCnpj(valor).length) setErro(erroCnpj(valor) ?? "");
+              }}
+              aria-invalid={!!erro}
+              aria-describedby={erro ? `${campoId}-erro` : undefined}
+            />
+            {valido && <Check className="icone-ok" size={18} strokeWidth={2} aria-label="CNPJ válido" />}
+          </div>
+          {erro && (
+            <p id={`${campoId}-erro`} className="erro-texto" style={{ marginTop: 8 }} role="alert">
+              <AlertCircle size={16} strokeWidth={1.5} aria-hidden style={{ marginTop: 1, flexShrink: 0 }} />
+              {erro}
+            </p>
+          )}
         </div>
         <button className="btn btn-primario" type="submit" aria-busy={enviando}>
           {enviando ? (
@@ -71,12 +80,6 @@ export function FormCnpj({ id, valorInicial = "", erroInicial = "" }: { id?: str
           )}
         </button>
       </div>
-      {erro && (
-        <p id={`${campoId}-erro`} className="erro-texto" style={{ marginTop: 8 }} role="alert">
-          <AlertCircle size={16} strokeWidth={1.5} aria-hidden style={{ marginTop: 1, flexShrink: 0 }} />
-          {erro}
-        </p>
-      )}
     </form>
   );
 }

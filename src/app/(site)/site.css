@@ -219,14 +219,25 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
 }
+/* tablet: 3 + 2 (grade de 6 colunas; as duas últimas etapas ocupam metade cada), sem etapa sozinha na linha */
 @media (max-width: 1000px) {
   .etapas {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .etapas > .etapa {
+    grid-column: span 2;
+  }
+  .etapas > .etapa:nth-child(n + 4) {
+    grid-column: span 3;
   }
 }
 @media (max-width: 560px) {
   .etapas {
     grid-template-columns: 1fr;
+  }
+  .etapas > .etapa,
+  .etapas > .etapa:nth-child(n + 4) {
+    grid-column: auto;
   }
 }
 .etapa {
@@ -258,10 +269,14 @@
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 16px;
 }
+/* calculadora e "Bom saber" com o topo e a base alinhados (o cartão da calculadora estica) */
 .precos-detalhe {
   display: grid;
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
+}
+.precos-detalhe > .cartao + .cartao {
+  margin-top: 0;
 }
 @media (min-width: 900px) {
   .precos-detalhe {
@@ -476,6 +491,11 @@
   width: 100%;
   justify-content: center;
 }
+/* Piloto: o botão de contato vem dentro de um <span class="contato">; ocupa a largura toda como os outros */
+.plano > :last-child .contato {
+  display: flex;
+  width: 100%;
+}
 
 /* Página inteira: o rodapé fica no pé mesmo quando o conteúdo é curto (ex.: Raio-X com CNPJ inválido) */
 .site-pagina {
@@ -500,8 +520,9 @@
   margin-top: 8px;
   font-weight: 500;
 }
+/* espaço inseparável: a seta nunca desce sozinha para a linha de baixo */
 .link-seta::after {
-  content: " →";
+  content: "\00a0→";
 }
 .secao-intro {
   margin: -8px 0 32px;
@@ -520,7 +541,15 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 32px 24px;
-  align-items: start;
+  align-items: stretch;
+}
+/* cartões da mesma linha com a mesma altura */
+.previa {
+  display: flex;
+  flex-direction: column;
+}
+.previa > .tela-previa {
+  flex: 1;
 }
 @media (max-width: 900px) {
   .previas {
@@ -555,6 +584,13 @@
   .tela-previa .entre {
     flex-wrap: wrap;
     gap: 8px;
+  }
+}
+
+/* celular: a seção de comparação já termina com espaço; as perguntas começam mais perto */
+@media (max-width: 720px) {
+  .secao-perguntas {
+    padding-top: 8px;
   }
 }
 
@@ -706,9 +742,10 @@ a.guia-cartao:focus-visible .guia-cartao-acao {
   border: 1px solid var(--linha);
   border-left: 4px solid var(--verde);
   border-radius: var(--raio);
-  font-family: var(--fonte-serif);
-  font-size: 19px;
-  line-height: 1.45;
+  /* modelo para copiar: fonte do texto, não a serifada condensada dos títulos */
+  font-family: var(--fonte);
+  font-size: 16px;
+  line-height: 1.6;
 }
 .guia-modelo blockquote p {
   margin: 0;
@@ -760,7 +797,7 @@ a.guia-cartao:focus-visible .guia-cartao-acao {
 }
 @media (max-width: 560px) {
   .auth-pagina {
-    padding: 24px 12px;
+    padding: 24px 16px;
   }
 }
 .auth-coluna {
@@ -784,4 +821,69 @@ a.guia-cartao:focus-visible .guia-cartao-acao {
 .auth-rodape {
   margin-top: 20px;
   text-align: center;
+}
+
+/* Passo a passo do cadastro: rótulo curto numa linha só, círculos alinhados */
+.passo-rotulo-curto {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.auth-conteudo .progresso li {
+  min-width: 0;
+}
+
+/* Regras da senha: um círculo vazio no lugar do "·" (vira o ✓ quando a regra é cumprida) */
+.auth-conteudo [id$="-regras"] li > span[aria-hidden] {
+  display: inline-grid;
+  place-items: center;
+  height: 14px;
+  font-size: 0;
+}
+.auth-conteudo [id$="-regras"] li > span[aria-hidden]::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.auth-conteudo [id$="-regras"] {
+  row-gap: 4px;
+}
+
+/* Raio-X: o erro do CNPJ fica logo abaixo do campo; o botão não estica junto */
+.form-cnpj {
+  align-items: flex-start;
+}
+.form-cnpj-campo {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+/* Cabeçalho: entre o celular e o computador, o menu do celular aparece (a navegação some abaixo de 900 px) */
+@media (max-width: 900px) {
+  .site-topo .menu-site.so-celular {
+    display: block !important;
+  }
+}
+
+/* Guias: lista e chamada do Raio-X lado a lado no computador */
+.guias-grade {
+  display: grid;
+  gap: 24px;
+}
+.guias-grade .guia-chamada {
+  margin-top: 0;
+}
+.guias-chamada h2 {
+  font-size: 20px;
+}
+@media (min-width: 900px) {
+  .guias-grade {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+    align-items: start;
+  }
+  .guias-chamada {
+    position: sticky;
+    top: 88px;
+  }
 }

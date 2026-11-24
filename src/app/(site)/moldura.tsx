@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { contatoSite, dadosEmpresa, telefoneFormatado } from "@/lib/site";
+import { contatoSite, dadosEmpresa } from "@/lib/site";
 import { Contato } from "@/components/contato";
 import { MenuSite } from "@/components/menu-site";
 import { jornadaLiberada, modoPiloto } from "@/lib/chaves";
@@ -67,8 +67,9 @@ export function RodapeSite() {
           <nav aria-label="Rodapé" className="rodape-coluna">
             <Link prefetch={false} href="/privacidade">Política de privacidade</Link>
             <Link prefetch={false} href="/termos">Termos de uso</Link>
-            <a href={contato.emailLink}>{contato.email}</a>
-            {contato.whatsapp && contato.whatsappLink && <a href={contato.whatsappLink}>WhatsApp {telefoneFormatado(contato.whatsapp)}</a>}
+            {/* um canal só por vez: o botão ao lado já é o e-mail (ou o WhatsApp, quando houver); o e-mail em texto
+                aparece só quando o botão é o WhatsApp */}
+            {contato.whatsappLink && <a href={contato.emailLink}>{contato.email}</a>}
           </nav>
           <div className="rodape-coluna">
             <Contato agenda={false} />

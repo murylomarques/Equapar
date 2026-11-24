@@ -43,20 +43,35 @@ export function Form2fa({ destino }: { destino?: string }) {
   );
 }
 
-export function FormCriarConta({ cnpj, tipoInicial, google }: { cnpj?: string; tipoInicial: "EMPRESA" | "ASSESSORIA"; google: boolean }) {
+export function FormCriarConta({
+  cnpj,
+  tipoInicial,
+  google,
+  assessoria = true,
+}: {
+  cnpj?: string;
+  tipoInicial: "EMPRESA" | "ASSESSORIA";
+  google: boolean;
+  /** false no modo piloto: só a conta de empresa aparece (o tipo vai num campo escondido) */
+  assessoria?: boolean;
+}) {
   const [tipo, setTipo] = useState(tipoInicial);
   return (
     <FormAcao action={criarConta} semToast>
-      <RadiosCartao
-        nome="tipo"
-        legenda="A conta é de"
-        valorInicial={tipo}
-        aoMudar={(v) => setTipo(v as "EMPRESA" | "ASSESSORIA")}
-        opcoes={[
-          { valor: "EMPRESA", titulo: "Uma empresa fornecedora", descricao: "Seus próprios contratos públicos." },
-          { valor: "ASSESSORIA", titulo: "Uma assessoria com vários clientes", descricao: "Contratos de vários fornecedores, com a sua marca nos PDFs." },
-        ]}
-      />
+      {!assessoria ? (
+        <input type="hidden" name="tipo" value="EMPRESA" />
+      ) : (
+        <RadiosCartao
+          nome="tipo"
+          legenda="A conta é de"
+          valorInicial={tipo}
+          aoMudar={(v) => setTipo(v as "EMPRESA" | "ASSESSORIA")}
+          opcoes={[
+            { valor: "EMPRESA", titulo: "Uma empresa fornecedora", descricao: "Seus próprios contratos públicos." },
+            { valor: "ASSESSORIA", titulo: "Uma assessoria com vários clientes", descricao: "Contratos de vários fornecedores, com a sua marca nos PDFs." },
+          ]}
+        />
+      )}
       <CampoTexto nome="nome" id="nome" rotulo="Seu nome" autoComplete="name" />
       <CampoTexto nome="email" id="email" rotulo="E-mail de trabalho" tipo="email" autoComplete="email" />
       <CampoSenha nome="senha" id="senha" rotulo="Senha" nova />
@@ -91,21 +106,25 @@ export function FormCriarConta({ cnpj, tipoInicial, google }: { cnpj?: string; t
   );
 }
 
-export function FormEmpresa({ novaConta = false }: { novaConta?: boolean }) {
+export function FormEmpresa({ novaConta = false, assessoria = true }: { novaConta?: boolean; assessoria?: boolean }) {
   const [tipo, setTipo] = useState("EMPRESA");
   return (
     <FormAcao action={completarEmpresa} semToast>
       {novaConta && <input type="hidden" name="novaConta" value="1" />}
-      <RadiosCartao
-        nome="tipo"
-        legenda="A conta é de"
-        valorInicial={tipo}
-        aoMudar={setTipo}
-        opcoes={[
-          { valor: "EMPRESA", titulo: "Empresa fornecedora" },
-          { valor: "ASSESSORIA", titulo: "Assessoria com vários clientes" },
-        ]}
-      />
+      {!assessoria ? (
+        <input type="hidden" name="tipo" value="EMPRESA" />
+      ) : (
+        <RadiosCartao
+          nome="tipo"
+          legenda="A conta é de"
+          valorInicial={tipo}
+          aoMudar={setTipo}
+          opcoes={[
+            { valor: "EMPRESA", titulo: "Empresa fornecedora" },
+            { valor: "ASSESSORIA", titulo: "Assessoria com vários clientes" },
+          ]}
+        />
+      )}
       <CampoCnpj nome="cnpj" rotulo={tipo === "ASSESSORIA" ? "CNPJ do primeiro cliente" : "CNPJ da empresa"} opcional={tipo === "ASSESSORIA"} />
       <CampoTexto nome="razaoSocial" rotulo={tipo === "ASSESSORIA" ? "Nome da assessoria" : "Razão social"} opcional />
       <BotaoEnvio>Continuar</BotaoEnvio>
