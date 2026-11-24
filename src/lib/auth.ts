@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import * as OTPAuth from "otpauth";
-import type { Papel, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { db } from "./db";
 import { cifrar, decifrar, sha256, tokenAleatorio } from "./cripto";
 import { EMAIL_DEMO } from "./site";
@@ -113,31 +113,8 @@ export async function idSessaoAtual() {
 // Contexto e permissões
 // ---------------------------------------------------------------------------
 
-export type Acao =
-  | "ver"
-  | "editar_contratos"
-  | "editar_pedidos"
-  | "aprovar_memoria"
-  | "registrar_financeiro"
-  | "gerenciar_conta";
-
-const PERMISSOES: Record<Papel, Acao[]> = {
-  DONO: ["ver", "editar_contratos", "editar_pedidos", "aprovar_memoria", "registrar_financeiro", "gerenciar_conta"],
-  GERENTE: ["ver", "editar_contratos", "editar_pedidos", "registrar_financeiro"],
-  CONTADOR: ["ver", "editar_pedidos", "aprovar_memoria"],
-  LEITURA: ["ver"],
-};
-
-export const NOME_PAPEL: Record<Papel, string> = {
-  DONO: "Dono",
-  GERENTE: "Gerente de contratos",
-  CONTADOR: "Contador",
-  LEITURA: "Leitura",
-};
-
-export function pode(papel: Papel, acao: Acao) {
-  return PERMISSOES[papel].includes(acao);
-}
+export { NOME_PAPEL, pode, type Acao } from "./auth-papeis";
+import { pode, type Acao } from "./auth-papeis";
 
 export const contexto = cache(async () => {
   const s = await sessaoAtual();
