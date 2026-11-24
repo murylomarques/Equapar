@@ -50,7 +50,17 @@ Regras:
 - Informe a página de onde saiu cada linha.`;
 
 export async function lerPlanilhaPdf(pdf: Buffer, quem: QuemUsa): Promise<LeituraIa> {
+  const conteudo: Anthropic.MessageParam[] = [
+    {
+      role: "user",
+      content: [
+        { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf.toString("base64") } },
+        { type: "text", text: INSTRUCOES },
+      ],
+    },
+  ];
   return executarComOrcamento({
+    contar: (cliente, modelo) => cliente.messages.countTokens({ model: modelo, messages: conteudo }),
     ...quem,
     operacao: "LEITURA_PLANILHA",
     pdf,
@@ -65,15 +75,7 @@ export async function lerPlanilhaPdf(pdf: Buffer, quem: QuemUsa): Promise<Leitur
         model: modelo,
         max_tokens: maxSaida,
         output_config: { effort: "medium", format: zodOutputFormat(Saida) },
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf.toString("base64") } },
-              { type: "text", text: INSTRUCOES },
-            ],
-          },
-        ],
+        messages: conteudo,
       }),
   });
 }
@@ -124,7 +126,17 @@ export async function lerConvencaoPdf(pdf: Buffer, linhas: LinhaParaConvencao[],
 export async function lerConvencaoPdfDetalhado(pdf: Buffer, linhas: LinhaParaConvencao[], quem: QuemUsa): Promise<{ leitura: LeituraConvencao; uso: { entrada: number; saida: number } }> {
   let uso = { entrada: 0, saida: 0 };
   const texto = `${INSTRUCOES_CONVENCAO}\n\nLinhas da planilha (JSON):\n${JSON.stringify(linhas)}`;
+  const conteudo: Anthropic.MessageParam[] = [
+    {
+      role: "user",
+      content: [
+        { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf.toString("base64") } },
+        { type: "text", text: texto },
+      ],
+    },
+  ];
   const leitura = await executarComOrcamento({
+    contar: (cliente, modelo) => cliente.messages.countTokens({ model: modelo, messages: conteudo }),
     ...quem,
     operacao: quem.operacao ?? "LEITURA_CONVENCAO",
     pdf,
@@ -140,15 +152,7 @@ export async function lerConvencaoPdfDetalhado(pdf: Buffer, linhas: LinhaParaCon
         model: modelo,
         max_tokens: maxSaida,
         output_config: { effort: "medium", format: zodOutputFormat(SaidaConvencao) },
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf.toString("base64") } },
-              { type: "text", text: texto },
-            ],
-          },
-        ],
+        messages: conteudo,
       }),
   });
   return { leitura, uso };
@@ -192,6 +196,8 @@ async function executarComOrcamento<T>(
     instrucoes: string;
     mensagens: { recusa: string; longo: string; falha: string };
     chamar: (cliente: Anthropic, modelo: string, maxSaida: number) => Promise<RespostaIa<T>>;
+    /** contagem exata dos tokens de entrada (endpoint gratuito); falhou, vale a estimativa por página */
+    contar?: (cliente: Anthropic, modelo: string) => Promise<{ input_tokens: number }>;
     aoConcluir?: (u: Uso) => void;
   },
 ): Promise<T> {
@@ -211,9 +217,18 @@ async function executarComOrcamento<T>(
   if (previo) throw new ErroUsuario(previo.mensagem);
   const paginas = await contarPaginas(o.pdf);
   const tokensExtras = Math.ceil(o.instrucoes.length / 2); // pior caso: ~2 caracteres por token
+  // a reserva usa a entrada exata quando a contagem responde: o teto não estoura pela estimativa por página
+  let entradaExata: number | null = null;
+  if (o.contar) {
+    try {
+      entradaExata = (await o.contar(fabricaCliente(), modelo)).input_tokens;
+    } catch {
+      entradaExata = null;
+    }
+  }
   let ultimoErro = o.mensagens.falha;
   for (let tentativa = 1; tentativa <= cfg.tentativas; tentativa++) {
-    const r = await reservar({ contaId: o.contaId, usuarioId: o.usuarioId, plano: o.plano, operacao: o.operacao, modelo, bytes: o.pdf.length, paginas, tokensExtras, hashDocumento, tentativa });
+    const r = await reservar({ contaId: o.contaId, usuarioId: o.usuarioId, plano: o.plano, operacao: o.operacao, modelo, bytes: o.pdf.length, paginas, tokensExtras, hashDocumento, tentativa, entradaExata });
     if (!eReserva(r)) throw new ErroUsuario(r.mensagem);
     const inicio = Date.now();
     let resposta: RespostaIa<T>;

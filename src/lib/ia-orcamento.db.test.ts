@@ -5,7 +5,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { APIConnectionTimeoutError, APIError } from "@anthropic-ai/sdk";
 import { db } from "./db";
 import { definirClienteIa, lerPlanilhaPdf } from "./ia";
-import { eReserva, expirarReservasIa, periodoDe, reservar } from "./ia-orcamento";
+import { eReserva, expirarReservasIa, periodoDe, piorCustoUsd, reservar } from "./ia-orcamento";
 
 // P0 (npm run test:db): orçamento de IA com limites FICTÍCIOS e um cliente falso da API: nenhuma chamada paga sai daqui.
 const prefixo = `teste-ia-${Date.now()}`;
@@ -169,5 +169,21 @@ describe("P0: leitura com IA de ponta a ponta (cliente falso)", () => {
     const chamadas = clienteFalso([{}]);
     await expect(lerPlanilhaPdf(pdf1, quem(contas[0]))).rejects.toThrow(/ainda não está liberada/);
     expect(chamadas.n).toBe(0);
+  });
+});
+
+describe("Auditoria independente: a reserva usa a contagem exata de entrada", () => {
+  it("com countTokens disponível, a reserva é do pior caso com a entrada real (não a estimativa por página)", async () => {
+    const cliente = {
+      messages: {
+        countTokens: async () => ({ input_tokens: 1000 }),
+        parse: async () => ({ parsed_output: { postos: [], observacoes: "" }, stop_reason: "end_turn", usage: { input_tokens: 1000, output_tokens: 500 } }),
+      },
+    } as unknown as Anthropic;
+    definirClienteIa(() => cliente);
+    await lerPlanilhaPdf(pdf2, quem(contas[4]));
+    const u = await db.usoIa.findFirstOrThrow({ where: { contaId: contas[4] } });
+    expect(u.custoReservadoUsd.toString()).toBe(piorCustoUsd("claude-opus-5-5", { paginas: 1, tokensExtras: 0, entradaExata: 1000 }).toString());
+    expect(u.custoRealUsd!.lte(u.custoReservadoUsd)).toBe(true);
   });
 });

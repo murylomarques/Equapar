@@ -76,8 +76,9 @@ export function custoUsd(modelo: string, u: { entrada: number; saida: number; ca
 }
 
 /** Pior custo de uma tentativa: todas as páginas no teto de tokens, instruções, saída máxima e margem. */
-export function piorCustoUsd(modelo: string, o: { paginas: number; tokensExtras: number; maxSaida?: number }, cfg = configIa()): Decimal {
-  const entrada = o.paginas * cfg.tokensPorPagina + o.tokensExtras + 2_000; // 2 mil: instruções e esquema de saída
+export function piorCustoUsd(modelo: string, o: { paginas: number; tokensExtras: number; maxSaida?: number; entradaExata?: number | null }, cfg = configIa()): Decimal {
+  // com a contagem exata da API (gratuita), a entrada é conhecida; sem ela, estimativa pelo teto de tokens por página
+  const entrada = o.entradaExata != null && o.entradaExata > 0 ? o.entradaExata + 500 : o.paginas * cfg.tokensPorPagina + o.tokensExtras + 2_000;
   return custoUsd(modelo, { entrada, saida: o.maxSaida ?? cfg.maxSaida }).times(cfg.margem).toDecimalPlaces(6, Decimal.ROUND_UP);
 }
 
@@ -121,6 +122,8 @@ export async function reservar(o: {
   tokensExtras: number;
   hashDocumento: string;
   tentativa: number;
+  /** tokens de entrada contados pela API antes da chamada (quando disponível) */
+  entradaExata?: number | null;
   agora?: Date;
 }): Promise<Reserva | Bloqueio> {
   const cfg = configIa();
@@ -128,7 +131,7 @@ export async function reservar(o: {
   if (previo) return previo;
   const agora = o.agora ?? new Date();
   const periodo = periodoDe(agora);
-  const valor = piorCustoUsd(o.modelo, { paginas: o.paginas, tokensExtras: o.tokensExtras }, cfg);
+  const valor = piorCustoUsd(o.modelo, { paginas: o.paginas, tokensExtras: o.tokensExtras, entradaExata: o.entradaExata }, cfg);
   const tetoConta = new Decimal(o.plano === "INTERNO" ? cfg.avaliacaoUsdMes : cfg.planoUsdMes[o.plano]);
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('equapar:ia-orcamento'))`;

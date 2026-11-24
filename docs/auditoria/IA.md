@@ -61,15 +61,20 @@ Projeção (mix 60% leve, 30% típico, 10% intenso): 10 clientes US$ 11,75/mês;
 
 ## Proposta de cotas (para aprovação; hoje tudo em zero)
 
-| Plano | Teto por conta/mês | Cobre | Peso no preço |
-|---|---|---|---|
-| Grátis | US$ 0 | — | — |
-| Piloto | US$ 5 | ~15 leituras típicas por pedido | < 2% de R$ 1.500 |
-| Carteira | US$ 5 | perfil intenso (US$ 4,66) | até 9% do mínimo de R$ 297; < 5% a partir de ~150 postos |
-| Assessoria | US$ 20 | ~4 clientes intensos | ~7% de R$ 1.497 |
-| Global | US$ 150 no início | ~100 clientes típicos | revisar com o livro de consumo |
+Premissas: câmbio R$ 5,40 por US$; custo típico por cliente de US$ 1,37/mês (4 planilhas + 2 convenções, Opus 5.5); preços atuais da página (não alterados). "Margem após IA" considera **só** o custo de IA; hospedagem, gateway, e-mail e suporte não entram porque ainda não têm valor contratado.
 
-Limites por usuário e concorrência: manter os padrões. Para ligar: definir as variáveis, rodar a avaliação com o gabarito conferido e então `IA_LEITURA_*`.
+| Plano | Receita/mês | Teto de IA por conta | Teto em R$ | Pior caso (teto ÷ receita) | Uso típico (R$) | Margem após IA, uso típico | Margem após IA, no teto |
+|---|---|---|---|---|---|---|---|
+| Grátis | R$ 0 | US$ 0 | R$ 0 | — | — | — | — |
+| Piloto | R$ 1.500 por pedido | US$ 5 | R$ 27,00 | 1,8% | R$ 7,40 | 99,5% | 98,2% |
+| Carteira (mínimo, ≤ 74 postos) | R$ 297 | US$ 5 | R$ 27,00 | 9,1% | R$ 7,40 | 97,5% | 90,9% |
+| Carteira (200 postos) | R$ 800 | US$ 5 | R$ 27,00 | 3,4% | R$ 7,40 | 99,1% | 96,6% |
+| Assessoria | R$ 1.497 | US$ 20 | R$ 108,00 | 7,2% | R$ 29,60 (4 clientes) | 98,0% | 92,8% |
+| **Teto global do SaaS** | — | **US$ 150/mês no início** | R$ 810 | corta qualquer soma | — | — | — |
+
+Leitura: o perfil intenso (US$ 4,66) cabe no teto de US$ 5 da Carteira; acima disso a conta vê "a cota do mês acabou, renova em …" e continua pelo Excel ou digitando. O pior caso por conta é conhecido e limitado; o global protege contra muitas contas no teto ao mesmo tempo (30 contas no teto da Carteira já somam US$ 150).
+
+Para ligar: (1) aprovar ou ajustar esta tabela; (2) rodar a avaliação com o gabarito conferido e um orçamento de avaliação (ex.: `IA_ORCAMENTO_AVALIACAO_USD_MES=10`) para medir precisão e custo real por documento; (3) só então definir `IA_ORCAMENTO_*` e `IA_LEITURA_*`. Depois de um mês, substituir as premissas pelo custo real do livro `UsoIa`.
 
 ## Testes (cliente falso, nenhuma chamada paga)
 
