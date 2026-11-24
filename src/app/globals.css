@@ -2125,6 +2125,10 @@ mark {
     clip: rect(0 0 0 0);
     white-space: nowrap;
   }
+  ol.progresso li {
+    min-width: 0;
+    flex: 0 0 44px;
+  }
   ol.progresso li.atual {
     flex: 1 1 auto;
   }
