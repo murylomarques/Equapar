@@ -25,6 +25,7 @@ export interface LinhaCarteira {
   prazoData: string | null;
   prazoTxt: string;
   prazoTitulo: string;
+  prazoCurto: string;
   selo: TSelo;
   pedir: boolean; // repactuação a pedir, sem pedido aberto
 }
@@ -153,8 +154,8 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
                 </td>
                 <td>
                   {l.prazoTxt}
-                  <div className="legenda duas-linhas" title={l.prazoTitulo}>
-                    {l.prazoTitulo}
+                  <div className="legenda" title={l.prazoTitulo}>
+                    {l.prazoCurto}
                   </div>
                 </td>
                 <td>

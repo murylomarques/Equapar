@@ -181,6 +181,23 @@ async function Pessoas({ dono }: { dono: boolean }) {
               </span>
               {dono ? (
                 <>
+                  {m.usuarioId === ctx.usuario.id ? (
+                    <span className="pessoa-papel">
+                      <label htmlFor={`papel-${m.id}`} className="sr-only">
+                        Seu papel
+                      </label>
+                      <select id={`papel-${m.id}`} defaultValue={m.papel} disabled aria-describedby={`papel-ajuda-${m.id}`}>
+                        {papeis.map((p) => (
+                          <option key={p.valor} value={p.valor}>
+                            {p.rotulo}
+                          </option>
+                        ))}
+                      </select>
+                      <span id={`papel-ajuda-${m.id}`} className="legenda pessoa-papel-ajuda">
+                        Outra pessoa com papel de Dono muda o seu.
+                      </span>
+                    </span>
+                  ) : (
                   <FormAcao action={mudarPapel} className="pessoa-papel">
                     <input type="hidden" name="membroId" value={m.id} />
                     <label htmlFor={`papel-${m.id}`} className="sr-only">
@@ -195,6 +212,7 @@ async function Pessoas({ dono }: { dono: boolean }) {
                     </select>
                     <BotaoEnvio className="btn btn-pequeno">Salvar</BotaoEnvio>
                   </FormAcao>
+                  )}
                   <span className="pessoa-remover">
                     {m.usuarioId !== ctx.usuario.id ? (
                       <FormAcao action={removerPessoa} confirmar={{ titulo: `Remover ${m.usuario.nome} da conta?`, texto: "A pessoa perde o acesso imediatamente.", confirmar: "Remover", perigo: true }}>
@@ -405,7 +423,7 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                 Manter a assinatura
               </Link>
             ) : (
-              <Link className="btn btn-discreto" href="/app/configuracoes?aba=cobranca&plano=GRATIS#previsao" scroll={false}>
+              <Link className="btn btn-discreto sem-recuo" href="/app/configuracoes?aba=cobranca&plano=GRATIS#previsao" scroll={false}>
                 Cancelar a renovação
               </Link>
             )}
@@ -537,7 +555,7 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
           <ul className="lista-limpa pilha-8">
             {faturas.map((f) => (
               <li key={f.id} className="item-doc">
-                <div className="entre" style={{ alignItems: "flex-start" }}>
+                <div className="fatura-linha">
                   <span>
                     <strong style={{ fontWeight: 500 }}>{f.descricao}</strong>
                     <span className="legenda" style={{ display: "block" }}>
@@ -552,11 +570,13 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                       </span>
                     )}
                   </span>
-                  <span className="num fatura-valor">
-                    {reais(f.valor)}
+                  <span className="fatura-valor">
+                    <span className="num fatura-montante">{reais(f.valor)}</span>
                     <span className="sr-only"> · </span>
-                    <span className={`selo ${TOM_FATURA[f.status] ?? "selo-neutro"}`}>{STATUS_FATURA[f.status] ?? f.status}</span>
-                    {Number(f.valorEstornado) > 0 && f.status !== "ESTORNADA" ? <span className="legenda">{reais(f.valorEstornado)} estornado</span> : null}
+                    <span className="fatura-situacao">
+                      <span className={`selo ${TOM_FATURA[f.status] ?? "selo-neutro"}`}>{STATUS_FATURA[f.status] ?? f.status}</span>
+                    </span>
+                    {Number(f.valorEstornado) > 0 && f.status !== "ESTORNADA" ? <span className="legenda fatura-estorno">{reais(f.valorEstornado)} estornado</span> : null}
                   </span>
                 </div>
                 <div className="fileira mt-8">
@@ -652,7 +672,7 @@ async function Seguranca({ demo }: { demo: boolean }) {
           ))}
         </ul>
         {sessoes.length > 5 && (
-          <p className="legenda mt-8 mb-0">
+          <p className="legenda sessoes-mais mb-0">
             E mais {plural(sessoes.length - 5, "sessão antiga", "sessões antigas")}. Use “Encerrar as outras sessões” para sair de todas de uma vez.
           </p>
         )}

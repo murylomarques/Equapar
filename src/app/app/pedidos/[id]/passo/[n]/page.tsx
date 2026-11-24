@@ -216,7 +216,18 @@ async function Passo1({ p, contaId, leitura, verJornada }: { p: P; contaId: stri
             </label>
           )}
           </div>
-          <TextoLongo nome="descricaoGatilho" rotulo="Descrição" opcional valorInicial={p.descricaoGatilho} limite={500} ajuda="Obrigatória quando o motivo for “Outro custo”." />
+          <div className="mt-8">
+            <TextoLongo
+              nome="descricaoGatilho"
+              rotulo={
+                <>
+                  Descrição <span className="opcional">(obrigatória quando o motivo for “Outro custo”)</span>
+                </>
+              }
+              valorInicial={p.descricaoGatilho}
+              limite={500}
+            />
+          </div>
         </fieldset>
         <Rodape leitura={leitura} />
       </FormAcao>
@@ -548,8 +559,10 @@ async function Passo4({ p, leitura }: { p: P; leitura: boolean }) {
           <span className="doc-nome">{d.nome}</span> · <a href={`/api/documentos/${d.id}`}>Ver arquivo</a>
         </>
       );
-    return <span>Marcado como entregue fora do sistema ou na lista de anexos abaixo.</span>;
+    return <span>{docs.length ? "Você marcou que já tem este documento. Se ele estiver nos anexos abaixo, vai junto no ZIP." : "Você marcou que já tem este documento fora do sistema."}</span>;
   };
+  // anexado por marcação ("Já tenho fora do sistema"), sem arquivo que o identifique: selo neutro, não o verde de "Anexado"
+  const foraDoSistema = (i: (typeof itens)[number]) => i.situacao === "ANEXADO" && !("automatico" in i && i.automatico) && !docDoItem(i.id);
   return (
     <div className="pilha passo4" style={{ maxWidth: 900, gap: 16 }}>
       <div className="cartao">
@@ -574,11 +587,15 @@ async function Passo4({ p, leitura }: { p: P; leitura: boolean }) {
                   </span>
                   {i.situacao === "ANEXADO" && <span className="doc-comprovante legenda">{comprovante(i.id)}</span>}
                 </div>
-                <SeloSimples
-                  texto={i.situacao === "ANEXADO" ? "Anexado" : i.situacao === "FALTA" ? "Falta" : "Opcional"}
-                  tom={i.situacao === "ANEXADO" ? "verde" : i.situacao === "FALTA" ? "carimbo" : "neutro"}
-                  icone={i.situacao === "ANEXADO" ? "check" : i.situacao === "FALTA" ? "alerta" : "relogio"}
-                />
+                {foraDoSistema(i) ? (
+                  <SeloSimples texto="Entregue fora do sistema" tom="neutro" icone="check" />
+                ) : (
+                  <SeloSimples
+                    texto={i.situacao === "ANEXADO" ? "Anexado" : i.situacao === "FALTA" ? "Falta" : "Opcional"}
+                    tom={i.situacao === "ANEXADO" ? "verde" : i.situacao === "FALTA" ? "carimbo" : "neutro"}
+                    icone={i.situacao === "ANEXADO" ? "check" : i.situacao === "FALTA" ? "alerta" : "relogio"}
+                  />
+                )}
               </div>
               {!leitura && !("automatico" in i && i.automatico) && i.situacao !== "ANEXADO" && (
                 <div className="doc-acoes mt-8">
@@ -712,9 +729,12 @@ function Passo5({ p, leitura, podeAprovar }: { p: P; leitura: boolean; podeAprov
                 Voltar
               </Link>
               {!leitura && (
-                <BotaoEnvio className={aprovada ? undefined : "btn"} pendente="Gerando o ofício, a planilha e a memória…">
-                  <FileText size={16} strokeWidth={1.5} aria-hidden /> Gerar pedido
-                </BotaoEnvio>
+                <div className="gerar-acao">
+                  {!aprovada && <span className="legenda gerar-motivo">Bloqueado: falta aprovar a memória.</span>}
+                  <BotaoEnvio className={aprovada ? undefined : "btn btn-bloqueado"} pendente="Gerando o ofício, a planilha e a memória…">
+                    <FileText size={16} strokeWidth={1.5} aria-hidden /> Gerar pedido
+                  </BotaoEnvio>
+                </div>
               )}
             </div>
           </FormAcao>

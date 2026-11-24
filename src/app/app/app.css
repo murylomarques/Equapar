@@ -1149,3 +1149,152 @@ a.pedido-linha {
 .tabela-clientes td.num {
   text-align: right;
 }
+
+/* ===== Ajustes da revisão visual final ===== */
+
+/* Tabelas largas: abaixo de 900px viram cartões (a lateral some e a tabela não cabe). */
+.cartoes-estreito {
+  display: none;
+}
+@media (max-width: 900px) {
+  .so-largo {
+    display: none !important;
+  }
+  .cartoes-estreito {
+    display: grid;
+    gap: 8px;
+  }
+}
+.cartao-com-acao .cartao-linha-link {
+  display: block;
+  color: var(--tinta);
+  text-decoration: none;
+}
+.cartao-com-acao .cartao-linha-link:hover strong {
+  text-decoration: underline;
+}
+.btn-largura-total {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Colunas secundárias que somem quando a tela estreita (lista de pedidos). */
+@media (max-width: 900px) {
+  .tabela .col-ampla {
+    display: none;
+  }
+}
+.tabela .col-seta {
+  width: 36px;
+  padding-left: 0;
+  text-align: right;
+}
+.tabela .col-seta svg {
+  vertical-align: middle;
+}
+
+/* Confirmação de e-mail: dentro da área de conteúdo, para a lateral e o topo ficarem no mesmo lugar de sempre. */
+.app-conteudo > .faixa-confirmar {
+  font-size: 13px;
+  line-height: 20px;
+  padding: 10px 16px;
+  margin: 0 0 24px;
+  border: 1px solid #ecd9a8;
+  border-radius: var(--raio);
+}
+#adicionar-cliente {
+  scroll-margin-top: 76px;
+}
+
+/* Celular: o conteúdo ocupa a altura toda e a barra inferior encosta no fim, mesmo em páginas curtas. */
+@media (max-width: 900px) {
+  .app {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .app-inferior {
+    align-self: end;
+  }
+}
+
+/* Faturas: valor numa coluna de largura fixa alinhada à direita, antes do selo (o selo muda de largura). */
+.fatura-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 16px;
+}
+.fatura-valor {
+  display: grid;
+  grid-template-columns: 112px 96px;
+  align-items: center;
+  gap: 4px 12px;
+}
+.fatura-montante {
+  text-align: right;
+}
+.fatura-situacao {
+  display: flex;
+}
+.fatura-estorno {
+  grid-column: 1 / -1;
+  text-align: right;
+}
+@media (max-width: 600px) {
+  .fatura-linha {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* no celular, valor e selo ficam sempre no mesmo lugar: embaixo do título, alinhados à esquerda */
+  .fatura-valor {
+    grid-template-columns: auto auto;
+    justify-content: start;
+  }
+  .fatura-montante,
+  .fatura-estorno {
+    text-align: left;
+  }
+}
+.btn.btn-discreto.sem-recuo {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Hoje: pesquisa rápida com respiro entre as opções */
+.pesquisa-opcoes {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.pesquisa-opcoes legend {
+  margin-bottom: 12px;
+}
+
+/* Prorrogação: o grau ("Confirmado"/"Provável") sai do meio da frase e fica na linha de baixo */
+.pagina-prorrogacao .alerta strong > .selo {
+  display: block;
+  width: fit-content;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* Pessoas: seletor de papel na mesma altura dos botões pequenos; o próprio papel fica travado com explicação */
+@media (min-width: 721px) {
+  .pessoa-papel select {
+    min-height: 32px;
+    height: 32px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+.pessoa-papel-ajuda {
+  max-width: 180px;
+}
+.sessoes-mais {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--linha);
+}

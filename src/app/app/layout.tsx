@@ -10,7 +10,7 @@ import { LinkNav } from "./link-nav";
 import { SeletorEmpresa } from "./seletor-empresa";
 import { AtalhoBusca } from "./atalho-busca";
 import { sair } from "../(auth)/acoes";
-import { diasAtras } from "@/lib/format";
+import { contarAvisosPendentes } from "./avisos/eventos";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { reenviarConfirmacao } from "./acoes";
@@ -26,13 +26,19 @@ const NOME_PLANO = { GRATIS: "grátis", PILOTO: "piloto", CARTEIRA: "carteira", 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await contexto();
   const assessoria = ctx.conta.tipo === "ASSESSORIA";
-  const [avisosRecentes, trabalhosProntos, pedidosAbertos, aReceber] = await Promise.all([
-    db.aviso.count({ where: { contaId: ctx.conta.id, enviadoEm: { gte: diasAtras(7) } } }),
+  const [avisosPendentes, trabalhosProntos, pedidosAbertos, aReceber] = await Promise.all([
+    // o mesmo número da aba "Precisa de você" (eventos pendentes que pedem ação), nunca outra contagem
+    contarAvisosPendentes(ctx),
     db.trabalhoFundo.count({ where: { usuarioId: ctx.usuario.id, status: { in: ["PRONTO", "ERRO"] }, vistoEm: null } }),
     db.pedido.count({ where: { contrato: escopoContratos(ctx), estado: { in: ["EM_ANALISE", "CALCULO_VALIDADO"] } } }),
     db.pedido.count({ where: { contrato: escopoContratos(ctx), estado: { in: ["DEFERIDO", "FATURADO"] } } }),
   ]);
-  const sino = avisosRecentes + trabalhosProntos;
+  const sino = avisosPendentes + trabalhosProntos;
+  const rotuloSino = avisosPendentes
+    ? `Avisos: ${avisosPendentes} ${avisosPendentes === 1 ? "precisa" : "precisam"} de você`
+    : trabalhosProntos
+      ? "Avisos: tarefa em segundo plano concluída"
+      : "Avisos";
   const demo = ehDemo(ctx);
   const totalContas = demo ? 1 : await db.membro.count({ where: { usuarioId: ctx.usuario.id } }); // L14
   return (
@@ -65,7 +71,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           )}
         </nav>
         <nav className="nav-conta" aria-label="Avisos e configurações">
-          <LinkNav href="/app/avisos" icone={<Bell size={20} strokeWidth={1.5} />} contador={sino} rotuloContador="avisos novos">
+          <LinkNav href="/app/avisos" icone={<Bell size={20} strokeWidth={1.5} />} contador={avisosPendentes} rotuloContador="avisos que precisam de você">
             Avisos
           </LinkNav>
           <LinkNav href="/app/configuracoes" icone={<Settings size={20} strokeWidth={1.5} />}>
@@ -88,16 +94,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/criar-conta">Crie sua conta para usar</Link>.
           </div>
         )}
-        {!demo && !ctx.usuario.emailVerificadoEm && (
-          <div className="faixa-demo faixa-confirmar">
-            <span>
-              Confirme seu e-mail (<strong>{ctx.usuario.email}</strong>) para receber os avisos de prazo. O link está na sua caixa de entrada.
-            </span>
-            <FormAcao action={reenviarConfirmacao} className="fileira" semToast={false}>
-              <BotaoEnvio className="btn btn-pequeno">Reenviar o link</BotaoEnvio>
-            </FormAcao>
-          </div>
-        )}
         <header className="app-topo">
           <span className="so-celular">
             <Logo href="/app/hoje" largura={96} />
@@ -118,7 +114,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/app/busca" className="icone-botao so-celular" aria-label="Buscar">
               <Search size={20} strokeWidth={1.5} />
             </Link>
-            <Link href="/app/avisos" className="icone-botao" aria-label={sino ? `Avisos: ${sino} novos` : "Avisos"}>
+            <Link href="/app/avisos" className="icone-botao" aria-label={rotuloSino}>
               <Bell size={20} strokeWidth={1.5} />
               {sino > 0 && <span className="ponto" aria-hidden />}
             </Link>
@@ -152,6 +148,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <RolarAbaAtiva />
         </Suspense>
         <main id="conteudo" className="app-conteudo">
+          {!demo && !ctx.usuario.emailVerificadoEm && (
+            <div className="faixa-confirmar" role="status">
+              <span>
+                Confirme seu e-mail (<strong>{ctx.usuario.email}</strong>) para receber os avisos de prazo. O link está na sua caixa de entrada.
+              </span>
+              <FormAcao action={reenviarConfirmacao} className="fileira" semToast={false}>
+                <BotaoEnvio className="btn btn-pequeno">Reenviar o link</BotaoEnvio>
+              </FormAcao>
+            </div>
+          )}
           {children}
         </main>
       </div>

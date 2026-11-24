@@ -62,7 +62,7 @@ export default async function AReceber() {
         />
       ) : (
         <>
-          <div className="tabela-rolagem so-desktop">
+          <div className="tabela-rolagem so-largo">
             <table className="tabela">
               <thead>
                 <tr>
@@ -123,21 +123,23 @@ export default async function AReceber() {
               </tbody>
             </table>
           </div>
-          <div className="cartoes-celular">
+          <div className="cartoes-estreito">
             {pedidos.map((p) => (
-              <Link key={p.id} href={`/app/pedidos/${p.id}/pronto`} className="cartao-linha">
-                <strong>{p.contrato.orgao}</strong>
-                <span className="legenda">
-                  Contrato {p.contrato.numero} · deferido em {data(p.deferidoEm)}
-                </span>
+              <div key={p.id} className="cartao-linha cartao-com-acao">
+                <Link href={`/app/pedidos/${p.id}/pronto`} className="cartao-linha-link">
+                  <strong>{p.contrato.orgao}</strong>
+                  <span className="legenda">
+                    Contrato {p.contrato.numero} · deferido em {data(p.deferidoEm)}
+                  </span>
+                </Link>
                 <div className="entre mt-8">
                   <SeloSimples texto={p.estado === "FATURADO" ? "Faturado" : p.apostiladoEm ? "Apostilado" : "Falta apostilar"} tom={p.apostiladoEm ? "verde" : "ambar"} icone={p.estado === "FATURADO" ? "cifrao" : p.apostiladoEm ? "check" : "alerta"} />
                   <span className="num">{reais(p.financeiro.totalPendente)}</span>
                 </div>
-                <span className="legenda" style={{ display: "block", marginTop: 6 }}>
-                  Próximo passo: {acao(p).toLowerCase()}
-                </span>
-              </Link>
+                <Link href={`/app/pedidos/${p.id}/pronto`} className="btn btn-largura-total mt-16">
+                  {acao(p)}
+                </Link>
+              </div>
             ))}
             {pedidos.length > 1 && (
               <div className="cartao-linha entre" style={{ fontWeight: 600 }}>

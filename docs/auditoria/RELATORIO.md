@@ -14,12 +14,12 @@ Decisões tomadas nesta rodada (conservadoras, conforme autorizado):
 
 ## B. Comparação visual
 
-- 282 capturas antes (build de `697711f`) e 297 depois (build final), Playwright/Edge, 1440×900, 1920×1080, 768×1024, 390×844, 375×667.
-- Inspeção: quatro revisões visuais independentes na rodada anterior, mais duas na final (site e app), além da minha.
+- 282 capturas antes (build de `697711f`), 297 na rodada anterior (`depois`) e 264 na recaptura final (`final`; interrompida por falta de memória da máquina perto do fim do roteiro), Playwright/Edge, 1440×900, 1920×1080, 768×1024, 390×844, 375×667.
+- Inspeção: quatro revisões visuais independentes na rodada anterior, mais duas na final (site e app), além da minha. A final achou 5 P1 novos (tabelas cortadas no tablet, cartão sem ação no celular, layout do estado vazio de clientes, selo de Avisos com número diferente da página): corrigidos e conferidos nas imagens.
 
 ## C. Matriz
 
-[MATRIZ-TELAS.md](MATRIZ-TELAS.md): 18 P1 e 1 P0 encontrados nas telas, todos corrigidos; todos os P2/P3 listados corrigidos; fora: só itens não aplicáveis (com motivo) ou dependentes de aprovação externa.
+[MATRIZ-TELAS.md](MATRIZ-TELAS.md): 23 P1 e 1 P0 encontrados nas telas (18 + 5 na revisão final), todos corrigidos; P2/P3 listados corrigidos; fora: só itens não aplicáveis (com motivo) ou dependentes de aprovação externa.
 
 ## D. Testes (build final)
 
@@ -33,7 +33,9 @@ Decisões tomadas nesta rodada (conservadoras, conforme autorizado):
 | `e2e/cobranca-simulada.mjs` · `e2e/permissoes.mjs` (papel Leitura) | 5 ok · 6 ok |
 | `npm run e2e:a11y` | 105 verificações, **0 violações graves** (axe) |
 | `npm run e2e:teclado` · `e2e/sem-rolagem-lateral.mjs` | 14 ok · 39 ok |
-| `e2e/fase2.mjs`, `jornada.mjs`, `modo-piloto.mjs`, `demo-limite.mjs`, `bloqueadoras/*` (14 arquivos) | todos ok |
+| `e2e/fase2.mjs`, `jornada.mjs`, `modo-piloto.mjs`, `demo-limite.mjs`, `bloqueadoras/*` (13 arquivos) | todos ok |
+
+Todos os conjuntos acima rodados de novo no build com as correções da revisão visual final: todos ok.
 
 Jornadas pedidas (1 a 20): 1–14 e 20 pelo `e2e` (computador e celular) e `e2e:financeiro`; 14 e 15–16 pelo `e2e:auditoria` e `cobranca-simulada`; 17 (limite de IA) pelos testes de banco do orçamento (inclusive concorrência); 18 (exportar) por `exportacao.db.test.ts`; 19 (permissão restrita) por `e2e/permissoes.mjs` e `seguranca-acoes.test.ts` (toda ação de servidor confere permissão; as públicas listadas com motivo).
 
@@ -97,7 +99,7 @@ INP real de usuários exige dados de campo (não há em ambiente local).
 ## H. Resumo executivo
 
 1. **Funcionalmente completo no escopo?** Sim. A jornada de repactuação, do contrato ao recebimento, funciona e está testada de ponta a ponta.
-2. **Telas principais finalizadas?** Sim. Todas as telas foram revisadas com capturas reais em 5 resoluções e corrigidas; o que restou está na matriz como não aplicável ou dependente de decisão externa.
+2. **Telas principais finalizadas?** Sim. Todas as telas foram revisadas com capturas reais em 5 resoluções e corrigidas, inclusive 5 P1 achados só na revisão final; o que restou está na matriz como não aplicável ou dependente de decisão externa. A recaptura final cobriu 264 das ~298 telas (a máquina ficou sem memória no fim).
 3. **P0 ou P1 abertos?** Não há P0/P1 técnico aberto conhecido. O único P1 que fica é jurídico (faixa "Minuta" até a aprovação dos textos).
 4. **P2/P3 restantes?** Nenhum técnico. Ficaram 2 não aplicáveis (IP das sessões, artefato de captura) e itens dependentes de dados/aprovação (rodapé, minuta, telas escondidas no modo piloto).
 5. **Testes críticos passaram?** Sim: 380 unitários e de banco, 94 do fluxo completo e todos os conjuntos de navegador, acessibilidade e teclado.

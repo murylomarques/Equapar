@@ -187,7 +187,7 @@ export default async function ContratoPagina({ params, searchParams }: { params:
             <dt>Vigência</dt>
             <dd>
               {data(c.vigenciaInicio)} a {data(c.vigenciaFim)} <span className="secundario">({emDias(diasFim)})</span>
-              <span className="legenda" style={{ display: "block" }}>Origem do fim: {c.vigenciaFimOrigem === "PNCP" ? "PNCP" : c.vigenciaFimOrigem === "TERMO_ADITIVO" ? "termo aditivo assinado" : c.vigenciaFimOrigem === "INFORMADA" ? "informada no cadastro" : "legado a confirmar"}.</span>
+              <span className="legenda" style={{ display: "block" }}>{origemDoFim(c.vigenciaFimOrigem)}</span>
               {divergenciaPncp(c) && (
                 <span className="legenda" style={{ display: "block" }}>
                   PNCP: {data(c.vigenciaFimPncp)} · você registrou: {data(c.vigenciaFim)}.
@@ -291,11 +291,12 @@ export default async function ContratoPagina({ params, searchParams }: { params:
             </p>
           )}
           <ol className="linha-tempo">
-            {prazosDoContrato(c).map((p, i) => (
+            {prazosDoContrato(c).map((p, i, todos) => (
               <li key={i} className={diasAte(p.data) <= 30 && diasAte(p.data) >= 0 ? "urgente" : undefined} style={{ paddingBottom: 24 }}>
                 <strong className="tnum">{data(p.data)}</strong> · {emDias(diasAte(p.data))}
                 <div style={{ fontSize: 15 }}>{p.titulo}</div>
-                {p.regra && <FonteRegra regra={p.regra} />}
+                {/* a mesma regra (ex.: TCU sobre a preclusão) aparece só no primeiro prazo a que se aplica */}
+                {p.regra && !todos.slice(0, i).some((x) => x.regra?.texto === p.regra!.texto) && <FonteRegra regra={p.regra} />}
               </li>
             ))}
           </ol>
@@ -437,4 +438,12 @@ export default async function ContratoPagina({ params, searchParams }: { params:
       )}
     </>
   );
+}
+
+/** Origem da data de fim em linguagem de quem usa (os códigos ficam no banco). */
+function origemDoFim(origem: string | null) {
+  if (origem === "PNCP") return "Data de fim publicada no PNCP.";
+  if (origem === "TERMO_ADITIVO") return "Data de fim do termo aditivo assinado.";
+  if (origem === "INFORMADA" || origem === "MANUAL") return "Data de fim informada por você.";
+  return "Data de fim a confirmar com o termo assinado.";
 }

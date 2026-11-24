@@ -19,8 +19,8 @@ export function RegistrarProrrogacao({ contratoId, ressalvaSugerida, fonte }: { 
       <FormAcao action={registrarProrrogacao} aoConcluir={(r) => setResultado(r)}>
         <input type="hidden" name="contratoId" value={contratoId} />
         <div className="grade-campos g-2">
-          <CampoData nome="dataTermo" rotulo="Data de assinatura do termo aditivo" mostrarRelativo={false} ajuda="dd/mm/aaaa" />
-          <CampoData nome="novoFim" rotulo="Novo fim da vigência" ajuda="dd/mm/aaaa" />
+          <CampoData nome="dataTermo" rotulo="Data de assinatura do termo aditivo" mostrarRelativo={false} ajuda="" />
+          <CampoData nome="novoFim" rotulo="Novo fim da vigência" ajuda="" />
         </div>
         <label className="check mb-16">
           <input type="checkbox" name="comRessalva" checked={comRessalva} onChange={(e) => setComRessalva(e.target.checked)} />

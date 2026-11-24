@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileText, SearchX } from "lucide-react";
+import { ChevronRight, FileText, SearchX } from "lucide-react";
 import { contexto } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { escopoPedidos } from "@/lib/consultas";
@@ -108,8 +108,11 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
                   <th scope="col" className="num">
                     Desde a data-base
                   </th>
-                  <th scope="col" className="num">
+                  <th scope="col" className="num col-ampla">
                     Atualizado
+                  </th>
+                  <th scope="col" className="col-seta">
+                    <span className="sr-only">Abrir</span>
                   </th>
                 </tr>
               </thead>
@@ -129,7 +132,10 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
                     </td>
                     <td className="num">{p.diferencaMensal ? reais(p.diferencaMensal) : "—"}</td>
                     <td className="num">{p.diferencaRetroativa ? reais(p.diferencaRetroativa) : "—"}</td>
-                    <td className="num">{dataLocal(p.atualizadoEm)}</td>
+                    <td className="num col-ampla">{dataLocal(p.atualizadoEm)}</td>
+                    <td className="col-seta">
+                      <ChevronRight size={18} strokeWidth={1.5} aria-hidden className="cartao-contrato-seta" />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -137,7 +143,8 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
           </div>
           <div className="cartoes-celular">
             {pedidos.map((p) => (
-              <Link key={p.id} href={href(p)} className="cartao-linha">
+              <Link key={p.id} href={href(p)} className="cartao-linha cartao-contrato">
+                <div className="cartao-contrato-corpo">
                 <strong>
                   Contrato {p.contrato.numero} · {p.contrato.orgao}
                 </strong>
@@ -156,6 +163,8 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
                     <dd className="num">{p.diferencaRetroativa ? reais(p.diferencaRetroativa) : "—"}</dd>
                   </div>
                 </dl>
+                </div>
+                <ChevronRight size={20} strokeWidth={1.5} aria-hidden className="cartao-contrato-seta" />
               </Link>
             ))}
           </div>

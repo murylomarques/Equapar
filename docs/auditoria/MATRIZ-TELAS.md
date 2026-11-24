@@ -106,7 +106,7 @@ Fonte dos achados: inspeção própria e quatro revisões visuais independentes 
 
 ## Rodada final (acabamento)
 
-Todos os P2/P3 acima foram corrigidos e conferidos na recaptura final. Ficaram fora, com motivo verificável:
+Os P2/P3 acima foram corrigidos. Uma terceira revisão visual independente (seção seguinte) ainda achou 5 P1 e vários P2/P3, corrigidos depois. Ficaram fora, com motivo verificável:
 
 | Item | Situação |
 |---|---|
@@ -115,3 +115,31 @@ Todos os P2/P3 acima foram corrigidos e conferidos na recaptura final. Ficaram f
 | 06 Assessorias, 13b Guia 40 h, 50 Recuperado | Por design: escondidas no modo piloto (decisão anterior do dono) |
 | 09/10 Faixa "Minuta" | Depende de aprovação jurídica |
 | Rodapé "empresa em constituição" | Depende dos dados reais da empresa (variáveis `SITE_*`) |
+
+## Terceira rodada (revisão visual final, site e app)
+
+Duas revisões independentes das capturas finais. Correções conferidas na recaptura (`D:\Equapar\capturas-auditoriainal`, 5 resoluções; 264 de ~298 telas: a captura foi interrompida por falta de memória da máquina, as telas que faltam são do fim do roteiro e não têm achado P1).
+
+| Tela | Achado | Sev. | Situação |
+|---|---|---|---|
+| 38 A receber (tablet) | Tabela cortada à direita (valor e ação) | P1 | Corrigido e conferido (cartões abaixo de 900 px) |
+| 38 A receber (celular) | Cartão sem ação | P1 | Corrigido e conferido (botão "Registrar nota fiscal") |
+| 28 Pedidos (tablet) | Coluna "Atualizado" cortada | P1 | Corrigido e conferido |
+| 49 Clientes vazio | Faixa de e-mail empurrava menu e cabeçalho | P1 | Corrigido e conferido (faixa dentro do conteúdo) |
+| Menu lateral | Selo de Avisos 27 × "Precisa de você" 1 | P1 | Corrigido e conferido (mesma contagem da página) |
+| 02/03/landing | Dados fictícios diferentes entre prévias; contagem "1 termina" errada | P2 | Corrigido e conferido (um conjunto só; contagem derivada da lista) |
+| 04 CNPJ inválido | Conteúdo sumia; erro longe do campo no celular | P2 | Corrigido e conferido |
+| 12 Criar conta | Opção assessoria no modo piloto; passos quebrando | P2 | Corrigido e conferido (`?tipo=assessoria` continua) |
+| 05 Preços | Calculadora e "Bom saber" desalinhados | P2 | Corrigido e conferido |
+| 32 Passo 3 | Painel da memória cortado; parágrafo da anualidade repetido; cabeçalhos | P2 | Corrigido |
+| 33/34 Passos 4 e 5 | "Anexado" × "entregue fora"; aviso de CPF repetido; botão bloqueado sem motivo | P2 | Corrigido |
+| 36/37 Pedido | Passos colados; "RASCUNHO" em caixa alta; valor anterior mal rotulado | P2 | Corrigido |
+| 46 Faturas | Valores desalinhados | P2 | Corrigido |
+| 19/22 Carteira/Contrato | Prazo cortado; "legado a confirmar" | P2 | Corrigido |
+| Site (P3) | Botões do Piloto, alturas de cartões, passos no tablet, memória da landing, espaçamentos, hífen de e-mail, menu no tablet, páginas legais, regras de senha, guias, rodapé duplicado | P3 | Corrigido |
+| App (P3) | "Concluir" → "Marcar como resolvido", nota TCU repetida, prorrogação, setas nas listas, Pessoas (próprio papel), sessões, abas no celular | P3 | Corrigido |
+| 09/10 "Última atualização" | Sem data real nos textos | P3 | Não aplicável até a versão aprovada pelo advogado (não inventar data) |
+| 51 Borda escura no 1º indicador | Estado de foco/hover do mouse na captura | P3 | Não aplicável (artefato) |
+| Histórico "Descartou o pedido", avisos de pedidos apagados | Resto das execuções de teste no banco local | — | Não aplicável (dado de teste, não código) |
+
+Decisões a confirmar com o dono: textos dos 3 itens do Piloto (reescrevem frase já aprovada); valores fictícios "Demais itens" na prévia da memória da landing; a contagem do selo de Avisos faz uma consulta leve a cada página logada (alternativa: só o ponto no sino).

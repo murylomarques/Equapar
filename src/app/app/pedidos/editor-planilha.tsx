@@ -75,9 +75,6 @@ function EvidenciaLinha({
         <summary className={faltam.length ? "evidencia-falta" : undefined}>
           {faltam.length ? `Fonte da alteração: falta ${faltam.join(", ")}` : `Fonte da alteração: ${e!.instrumento}, ${e!.clausula}${e!.anualidade === "REVISAO_NECESSARIA" ? " · revisão necessária" : ""}`}
         </summary>
-        <p className="legenda mt-8 mb-0">
-          Anualidade: a repactuação de mão de obra pede pelo menos um ano desde a data-base anterior desta parcela. Responda para cada linha alterada; nada vem marcado.
-        </p>
         <div className="evidencia-grade">
           <div className="campo-mini">
             <label htmlFor={id("i")}>Instrumento</label>
@@ -352,7 +349,9 @@ export function EditorPlanilha({
       <div className="pilha" style={{ gap: 12 }} ref={tabela}>
         <div className="so-celular alerta alerta-info">
           <Monitor size={20} strokeWidth={1.5} aria-hidden />
-          <p>É mais confortável no computador. Seu progresso fica salvo.</p>
+          <div className="alerta-corpo">
+            <p>É mais confortável no computador. Seu progresso fica salvo.</p>
+          </div>
         </div>
 
         <div className="abas" role="tablist" aria-label="Tipos de posto" style={{ marginBottom: 0 }}>
@@ -406,6 +405,11 @@ export function EditorPlanilha({
               </span>
             )}
           </div>
+        )}
+        {antes && mudou.size > 0 && !somenteLeitura && (
+          <p className="legenda nota-anualidade mb-0">
+            <strong>Anualidade:</strong> a repactuação de mão de obra pede pelo menos um ano desde a data-base anterior de cada parcela. Em cada linha alterada, abra “Fonte da alteração” e responda; nada vem marcado.
+          </p>
         )}
         {antes && soMudou && mudou.size === 0 && <p className="secundario">Nenhuma linha mudou ainda. Mostre todas e atualize pisos, benefícios e encargos da convenção nova.</p>}
 
@@ -660,6 +664,9 @@ export function EditorPlanilha({
                       </li>
                     ))}
                 </ul>
+                <p className="mt-16 mb-0">
+                  <a href={`/app/pedidos/${pedidoId}/memoria`}>Ver memória completa</a>
+                </p>
               </>
             )}
           </>

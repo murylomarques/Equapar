@@ -88,6 +88,7 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
       prazoData: pp ? pp.data.toISOString() : null,
       prazoTxt: pp ? data(pp.data) : "—",
       prazoTitulo: pp?.titulo ?? "",
+      prazoCurto: pp ? rotuloCurtoPrazo(pp.titulo) : "",
       selo: seloSituacao(c),
       pedir: !!op && !op.pedidoAberto,
     };
@@ -244,4 +245,14 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
       )}
     </>
   );
+}
+
+/** Rótulo curto do próximo prazo para a coluna da tabela (o título completo fica no title). */
+function rotuloCurtoPrazo(titulo: string) {
+  if (titulo.startsWith("Data-limite para pedir a repactuação")) return "Pedir repactuação";
+  if (titulo.startsWith("Data-base da convenção")) return "Data-base CCT";
+  if (titulo.startsWith("Previsão de assinatura da prorrogação")) return "Prorrogação prevista";
+  if (titulo.startsWith("Assinatura efetiva da prorrogação")) return "Prorrogação assinada";
+  if (titulo.startsWith("Prazo preferencial de resposta")) return "Resposta do órgão";
+  return titulo.replace(/\s*\(.*\)\s*$/, "");
 }

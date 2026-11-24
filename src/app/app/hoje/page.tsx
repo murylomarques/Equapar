@@ -188,7 +188,9 @@ export default async function Hoje() {
                       {podeEditar && (
                         <FormAcao action={concluirTarefa}>
                           <input type="hidden" name="id" value={t.id} />
-                          <BotaoEnvio className="btn btn-discreto">Concluir</BotaoEnvio>
+                          <BotaoEnvio className="btn btn-discreto" pendente="Marcando…">
+                            Marcar como resolvido
+                          </BotaoEnvio>
                         </FormAcao>
                       )}
                     </div>

@@ -5,8 +5,8 @@ import { contexto, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { data, dataHora, diasAte, emDias, plural } from "@/lib/format";
 import { emailAtivo, whatsappAtivo } from "@/lib/mensagens";
-import { agrupar, classificar, ordenar, type Classificado } from "@/lib/central-avisos";
-import { situacaoEfetiva } from "@/lib/planos";
+import type { Classificado } from "@/lib/central-avisos";
+import { classificarAvisos, ehPendente, LIMITE_AVISOS } from "./eventos";
 import { SeloSimples } from "@/components/selo";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
@@ -41,30 +41,14 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<{
   const { ver } = await searchParams;
   const visao: Visao = VISOES.some(([k]) => k === ver) ? (ver as Visao) : "acao";
   const [linhas, trabalhos] = await Promise.all([
-    db.aviso.findMany({ where: { contaId: ctx.conta.id }, orderBy: { enviadoEm: "desc" }, take: 300 }),
+    db.aviso.findMany({ where: { contaId: ctx.conta.id }, orderBy: { enviadoEm: "desc" }, take: LIMITE_AVISOS }),
     db.trabalhoFundo.findMany({ where: { usuarioId: ctx.usuario.id }, orderBy: { criadoEm: "desc" }, take: 5 }),
   ]);
   // Ao abrir, as tarefas prontas contam como vistas (o ponto do sino some)
   await db.trabalhoFundo.updateMany({ where: { usuarioId: ctx.usuario.id, status: { in: ["PRONTO", "ERRO"] }, vistoEm: null }, data: { vistoEm: new Date() } });
 
-  const eventos = agrupar(linhas);
-  // destinos só a partir de entidades desta conta (contrato e pedido conferidos no banco)
-  const contratoIds = [...new Set(eventos.map((e) => e.contratoId).filter((x): x is string => !!x))];
-  const pedidoIds = [...new Set(eventos.map((e) => e.pedidoId).filter((x): x is string => !!x))];
-  const [contratos, pedidos] = await Promise.all([
-    db.contrato.findMany({ where: { id: { in: contratoIds }, empresa: { contaId: ctx.conta.id } }, select: { id: true, numero: true, orgao: true, vigenciaFim: true, arquivado: true } }),
-    db.pedido.findMany({ where: { id: { in: pedidoIds }, contrato: { empresa: { contaId: ctx.conta.id } } }, select: { id: true, estado: true, apostiladoEm: true, contratoId: true } }),
-  ]);
-  const contratoDe = new Map(contratos.map((c) => [c.id, c]));
-  const pedidoDe = new Map(pedidos.map((p) => [p.id, p]));
-  const contaEmDia = situacaoEfetiva(ctx.conta.situacaoCobranca, ctx.conta.carenciaAte) === "EM_DIA";
-  const itens = ordenar(
-    eventos.map((ev) => ({
-      ev,
-      c: classificar(ev, { contrato: ev.contratoId ? (contratoDe.get(ev.contratoId) ?? null) : null, pedido: ev.pedidoId ? (pedidoDe.get(ev.pedidoId) ?? null) : null, contaEmDia }),
-    })),
-  );
-  const pendentes = itens.filter((x) => x.c.situacao === "PENDENTE" && x.c.categoria !== "INFO");
+  const { eventos, itens } = await classificarAvisos(ctx, linhas);
+  const pendentes = itens.filter(ehPendente);
   const prazos = itens.filter((x) => x.c.categoria === "PRAZO");
   // ocorrências já resolvidas ou informativas idênticas (ex.: vários pagamentos em dia) viram uma linha com a contagem
   const agrupados: (typeof itens[number] & { iguais: number })[] = [];

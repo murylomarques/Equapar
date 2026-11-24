@@ -87,7 +87,7 @@ export default async function NovoPedido({ searchParams }: { searchParams: Promi
           </dl>
           <hr className="regua" />
           <h3>Tenha à mão</h3>
-          <ul className="pilha-8 legenda" style={{ paddingLeft: 20, marginBottom: 0 }}>
+          <ul className="pilha-8 tenha-mao">
             <li>A planilha de custos vigente do contrato.</li>
             <li>A convenção coletiva nova (PDF), se o gatilho for convenção.</li>
           </ul>

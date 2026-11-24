@@ -74,11 +74,14 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
   const arquivos = (
     <section className="cartao" aria-labelledby="arquivos">
       <h2 id="arquivos">Arquivos do pedido</h2>
+      {!versaoFinal && <p className="legenda mb-16">Os arquivos finais liberam quando a versão atual da memória for aprovada. Até lá, cada download sai como rascunho.</p>}
       <ul className="lista-limpa pilha-8">
         {[...ARQUIVOS.slice(0, -1), ...(p.gatilho === "JORNADA_EC141" ? [{ href: "aditivo.pdf", nome: "Minuta do termo aditivo (PDF)", icone: FileText }] : []), ARQUIVOS[ARQUIVOS.length - 1]].map((a) => (
           <li key={a.href}>
-            <a href={`/api/pedidos/${p.id}/arquivos/${a.href}${versaoFinal ? "" : "?rascunho=1"}`} className="cartao-linha fileira" style={{ boxShadow: "none" }} download>
-              <a.icone size={18} strokeWidth={1.5} aria-hidden /> {a.nome}{versaoFinal ? "" : " · RASCUNHO"}
+            <a href={`/api/pedidos/${p.id}/arquivos/${a.href}${versaoFinal ? "" : "?rascunho=1"}`} className="cartao-linha arquivo-pedido" style={{ boxShadow: "none" }} download>
+              <a.icone size={18} strokeWidth={1.5} aria-hidden />
+              <span className="arquivo-pedido-nome">{a.nome}</span>
+              {!versaoFinal && <span className="selo selo-neutro selo-mini">Rascunho</span>}
             </a>
           </li>
         ))}
@@ -129,8 +132,8 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
       <ol className="estados" tabIndex={0} aria-label="Etapas do pedido até o dinheiro entrar">
         {ESTADOS.map((e, i) => (
           <li key={e.id} className={`${i <= idx && p.estado !== "INDEFERIDO" ? "feito" : ""} ${i === idx ? "atual" : ""}`} aria-current={i === idx ? "step" : undefined}>
-            <strong className="fileira" style={{ gap: 4 }}>
-              {i < idx && p.estado !== "INDEFERIDO" && <Check size={12} strokeWidth={2.5} aria-hidden />}
+            <strong className="estado-nome">
+              {i < idx && p.estado !== "INDEFERIDO" && <Check size={14} strokeWidth={2.5} aria-hidden />}
               {e.nome}
             </strong>
             <span className="tnum">{datas[e.id] ?? ""}</span>
@@ -220,7 +223,9 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 {!prazoResposta(p) && <p className="mb-0 mt-8">O prazo de resposta ainda não começou: falta confirmar a data em que a documentação ficou completa.</p>}
               </Alerta>
             )}
-            <FonteRegra regra={FONTES.resposta} />
+            <div className="mt-16">
+              <FonteRegra regra={FONTES.resposta} />
+            </div>
             {fin && (
               <FormAcao action={registrarResposta} className="mt-24">
                 <input type="hidden" name="pedidoId" value={p.id} />
@@ -268,10 +273,10 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
               </div>
               <div>
                 <dt>Mensal aprovado</dt>
-                <dd>{p.mensalAprovado != null ? reais(p.mensalAprovado) : <span className="secundario">{p.conciliacaoPendente ? "a conciliar (pedido anterior)" : "não registrado"}</span>}</dd>
+                <dd>{p.mensalAprovado != null ? reais(p.mensalAprovado) : <span className="secundario">{p.conciliacaoPendente ? "a conciliar com o pedido anterior" : "não registrado"}</span>}</dd>
               </div>
               <div>
-                <dt>Mensal vigente antes</dt>
+                <dt>Mensal anterior (antes deste pedido)</dt>
                 <dd>{reais(p.mensalVigenteAnterior ?? p.contrato.valorMensal)}</dd>
               </div>
               <div>

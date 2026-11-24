@@ -165,23 +165,18 @@
   }
 }
 
-/* ---------- 32: a memória ao lado rola dentro do painel, com um degradê indicando que há mais */
+/* ---------- 32: a memória ao lado rola dentro do painel. As sombras de rolagem ficam ATRÁS do texto
+   (fundo "local" cobre a sombra quando não há mais conteúdo), então nunca apagam o que está escrito. */
 @media (min-width: 1101px) {
   .assistente-memoria {
     overscroll-behavior: contain;
-  }
-  .assistente-memoria > :last-child {
-    margin-bottom: 24px;
-  }
-  .assistente-memoria::after {
-    content: "";
-    display: block;
-    position: sticky;
-    bottom: 0;
-    height: 40px;
-    margin: -40px -24px 0;
-    background: linear-gradient(to bottom, transparent, var(--superficie) 85%);
-    pointer-events: none;
+    padding-bottom: 24px;
+    background:
+      linear-gradient(var(--superficie) 30%, rgba(255, 255, 255, 0)) center top / 100% 32px no-repeat local,
+      linear-gradient(rgba(255, 255, 255, 0), var(--superficie) 70%) center bottom / 100% 32px no-repeat local,
+      linear-gradient(rgba(20, 20, 20, 0.1), rgba(20, 20, 20, 0)) center top / 100% 10px no-repeat scroll,
+      linear-gradient(rgba(20, 20, 20, 0), rgba(20, 20, 20, 0.1)) center bottom / 100% 10px no-repeat scroll,
+      var(--superficie);
   }
 }
 @media (max-width: 1100px) {
@@ -193,8 +188,9 @@
 }
 
 /* ---------- 33: passo 4, documentos */
+/* o aviso de CPF aparece uma vez no topo do passo; o componente de envio o repete com estilo inline */
 .passo4 .aviso-cpf {
-  display: none;
+  display: none !important;
 }
 .doc-acoes {
   display: grid;
@@ -281,8 +277,8 @@
 }
 .valores-compactos {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 24px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   margin-bottom: 0;
   padding-top: 12px;
   border-top: 1px solid var(--linha);
@@ -317,4 +313,97 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+}
+
+/* ---------- 31/32: cabeçalhos alinhados com o texto dentro dos campos (que têm 10px de recuo + 1px de borda) */
+.linha-planilha.cab > [role="columnheader"] {
+  padding: 0 11px;
+}
+.nota-anualidade {
+  padding: 10px 12px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+/* ---------- 37: valores do deferimento em uma coluna; o valor tem espaço próprio e não quebra no meio */
+.valores-compactos > div + div {
+  padding-top: 8px;
+  border-top: 1px dashed var(--linha);
+}
+.valores-compactos dt {
+  flex: 1 1 auto;
+}
+.valores-compactos dd {
+  flex: 0 1 auto;
+  max-width: 60%;
+}
+
+/* ---------- 36/37: etapas do pedido (ícone separado do rótulo, texto legível) */
+.estados li {
+  font-size: 13px;
+}
+.estados li strong.estado-nome {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.estados li strong.estado-nome svg {
+  flex-shrink: 0;
+}
+@media (max-width: 720px) {
+  .estados li strong.estado-nome {
+    font-size: 14px;
+  }
+}
+
+/* ---------- 36/37: arquivos do pedido (ícone, nome e selo de rascunho na mesma linha) */
+a.arquivo-pedido {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.arquivo-pedido > svg {
+  flex-shrink: 0;
+}
+.arquivo-pedido-nome {
+  flex: 1;
+  min-width: 0;
+}
+.selo-mini {
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 0 8px;
+}
+
+/* ---------- 34: "Gerar pedido" sem aprovação: continua clicável (explica o bloqueio), mas com o motivo ao lado */
+.gerar-acao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+}
+.gerar-motivo {
+  color: var(--selo-ambar-tx);
+}
+.btn.btn-bloqueado {
+  border-style: dashed;
+  color: var(--grafite);
+}
+
+/* ---------- 29: os dois cartões começam na mesma altura; lista "Tenha à mão" em tamanho de leitura */
+.novo-pedido > .cartao {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.tenha-mao {
+  padding-left: 20px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--tinta);
 }

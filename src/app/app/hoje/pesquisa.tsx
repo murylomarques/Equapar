@@ -9,7 +9,7 @@ export function PesquisaEncaixe() {
     <section className="cartao mb-16" aria-labelledby="pesquisa-titulo">
       <h2 id="pesquisa-titulo">Uma pergunta rápida</h2>
       <FormAcao action={responderPesquisa} className="pilha-8">
-        <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+        <fieldset className="pesquisa-opcoes">
           <legend className="mb-8">Como você se sentiria se não pudesse mais usar a Equapar?</legend>
           {Object.entries(RESPOSTAS_PESQUISA).map(([valor, rotulo]) => (
             <label key={valor} className="check">

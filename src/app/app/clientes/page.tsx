@@ -12,7 +12,7 @@ import { CampoCnpj, CampoTexto, Interruptor } from "@/components/ui/campos";
 import { CabecalhoPagina } from "@/components/ui/estrutura";
 import { EstadoVazio } from "@/components/ui/apresentacao";
 import { adicionarCliente } from "../acoes";
-import { BotaoCliente } from "./botao-cliente";
+import { BotaoCliente, BotaoIrParaFormulario, ComecarDoTopo } from "./botao-cliente";
 
 export const metadata: Metadata = { title: "Clientes | Equapar" };
 
@@ -30,15 +30,16 @@ export default async function Clientes() {
       <CabecalhoPagina titulo="Todos os clientes" subtitulo={`${plural(empresas.length, "cliente", "clientes")} nesta assessoria.`} />
       {empresas.length === 0 ? (
         <div className="clientes-coluna">
+          <ComecarDoTopo />
           <EstadoVazio
             icone={Users}
             titulo="Nenhum cliente ainda"
             porque="Adicione o primeiro cliente pelo CNPJ. A Equapar pode buscar os contratos dele no PNCP."
             acao={
               podeEditar ? (
-                <a href="#adicionar-cliente" className="btn btn-primario">
+                <BotaoIrParaFormulario alvo="adicionar-cliente" campo="cnpj">
                   Adicionar o primeiro cliente
-                </a>
+                </BotaoIrParaFormulario>
               ) : undefined
             }
           />
