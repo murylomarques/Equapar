@@ -10,7 +10,8 @@ const outraConta = await db.pedido.findFirst({ where: { contrato: { empresa: { c
 const mensalOriginal = c45.valorMensal;
 const ultimoApostilamentoOriginal = c45.ultimoApostilamento;
 
-const { id: _i, criadoEm: _c, atualizadoEm: _a, ...copia } = modelo;
+const copia = { ...modelo };
+for (const k of ["id", "criadoEm", "atualizadoEm"]) delete copia[k];
 const pedido = await db.pedido.create({
   data: {
     ...copia,

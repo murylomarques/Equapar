@@ -60,8 +60,8 @@ export default async function Passo({ params }: { params: Promise<{ id: string; 
       <DicaPasso contaId={ctx.conta.id} dispensadas={ctx.conta.dicasDispensadas} passo={n} />
       <div className="passo-conteudo">
         {n === 1 && <Passo1 p={p} contaId={ctx.conta.id} leitura={leitura} verJornada={jornadaVisivelPara(ctx.usuario.email)} />}
-        {n === 2 && <Passo2 p={p} leitura={leitura} iaPlanilha={iaPara("PLANILHA", ctx.usuario.email)} />}
-        {n === 3 && <Passo3 p={p} leitura={leitura} iaConvencao={iaPara("CONVENCAO", ctx.usuario.email)} />}
+        {n === 2 && <Passo2 p={p} leitura={leitura} iaPlanilha={iaPara("PLANILHA", ctx.usuario.email, ctx.conta.plano)} />}
+        {n === 3 && <Passo3 p={p} leitura={leitura} iaConvencao={iaPara("CONVENCAO", ctx.usuario.email, ctx.conta.plano)} />}
         {n === 4 && <Passo4 p={p} leitura={leitura} />}
         {n === 5 && <Passo5 p={p} leitura={leitura} podeAprovar={pode(ctx.papel, "aprovar_memoria")} />}
       </div>

@@ -14,10 +14,11 @@ vi.mock("next/navigation", () => ({ redirect: () => { throw new Redirect(); }, u
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 vi.mock("@/lib/eventos", () => ({ registrarEvento: vi.fn() }));
 let email = "cliente@exemplo.local";
+let plano = "CARTEIRA";
 let textoPdf = "Cláusula 3ª: piso de R$ 1.900,00";
 vi.mock("@/lib/pdf-texto", () => ({ textoDoPdf: async () => textoPdf }));
 vi.mock("@/lib/auth", () => ({
-  exigir: async () => ({ conta: { id: "c1" }, usuario: { nome: "Dono", email } }),
+  exigir: async () => ({ conta: { id: "c1", plano }, usuario: { id: "u1", nome: "Dono", email } }),
   pedidoDaConta: async () => ({ ...pedido }),
   contratoDaConta: vi.fn(),
   registrarHistorico: vi.fn(),
@@ -62,6 +63,10 @@ beforeEach(() => {
   vi.stubEnv("ANTHROPIC_API_KEY", "chave-ficticia");
   vi.stubEnv("IA_LEITURA_CONVENCAO", "true");
   vi.stubEnv("PAINEL_EMAILS", "dono@exemplo.local");
+  // P0: orçamento fictício só para o teste (o padrão é zero: sem ele, nada de IA)
+  vi.stubEnv("IA_ORCAMENTO_GLOBAL_USD_MES", "10");
+  vi.stubEnv("IA_ORCAMENTO_CARTEIRA_USD_MES", "1");
+  plano = "CARTEIRA";
   pedido = {
     id: "p1", contratoId: "k1", estado: "EM_ANALISE", passoAtual: 3, gatilho: "NOVA_CONVENCAO", convencaoId: "cv", memoriaAprovadaEm: null,
     dataBase: new Date(Date.UTC(2026, 0, 1)), dataReferencia: null, checklist: null, planilhaAntes: structuredClone(exemplo), planilhaAgora: structuredClone(exemplo), sugestoesConvencao: null,
@@ -115,6 +120,20 @@ describe("5.5: leitura da convenção com IA", () => {
     expect(((await lerConvencaoComIa({}, f())) as { ok?: string }).ok).toMatch(/sugestões/);
     vi.stubEnv("ANTHROPIC_API_KEY", "");
     expect(((await lerConvencaoComIa({}, f())) as { erro?: string }).erro).toMatch(/não está ligada/);
+  });
+  it("P0: Grátis e orçamento zero não usam IA paga, nem o dono do painel", async () => {
+    email = "dono@exemplo.local";
+    const f = () => {
+      const x = form({});
+      x.set("arquivo", new File(["%PDF"], "cct.pdf", { type: "application/pdf" }));
+      return x;
+    };
+    plano = "GRATIS";
+    expect(((await lerConvencaoComIa({}, f())) as { erro?: string }).erro).toMatch(/não está ligada/);
+    plano = "CARTEIRA";
+    vi.stubEnv("IA_ORCAMENTO_CARTEIRA_USD_MES", "0");
+    expect(((await lerConvencaoComIa({}, f())) as { erro?: string }).erro).toMatch(/não está ligada/);
+    expect(updates).toHaveLength(0);
   });
   it("E2: arquivo com CPF de pessoas não vai para a IA e nada é gravado", async () => {
     // CPF FICTÍCIO gerado pelo algoritmo (123.456.789-09)

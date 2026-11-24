@@ -303,18 +303,18 @@ export async function enviarPlanilha(_: Resultado, fd: FormData): Promise<Result
     if ("erro" in troca) return troca;
     // E1/E2: PDF só vai para a IA com a chave (ou para PAINEL_EMAILS) e sem CPF de pessoas; o arquivo com CPF nem é guardado
     const pdf = arquivo.name.toLowerCase().endsWith(".pdf");
-    if (pdf && iaPara("PLANILHA", ctx.usuario.email) && contarCpfs(await textoDoPdf(Buffer.from(await arquivo.arrayBuffer())).catch(() => "")) > 0) return { erro: MENSAGEM_CPF };
+    if (pdf && iaPara("PLANILHA", ctx.usuario.email, ctx.conta.plano) && contarCpfs(await textoDoPdf(Buffer.from(await arquivo.arrayBuffer())).catch(() => "")) > 0) return { erro: MENSAGEM_CPF };
     const s = await salvarArquivo(ctx.conta.id, arquivo);
     const versaoPlanilha = await proximaVersao({ pedidoId: p.id }, "PLANILHA");
     await db.documento.create({ data: { pedidoId: p.id, contratoId: p.contratoId, tipo: "PLANILHA", nome: s.nome, versao: versaoPlanilha, mime: s.mime, tamanho: s.tamanho, caminho: s.caminho, enviadoPor: ctx.usuario.nome } });
     let imp;
     if (s.mime.includes("spreadsheet") || s.nome.toLowerCase().endsWith(".xlsx")) imp = await importarExcel(s.buffer);
     else if (s.mime === "application/pdf") {
-      if (!iaPara("PLANILHA", ctx.usuario.email))
+      if (!iaPara("PLANILHA", ctx.usuario.email, ctx.conta.plano))
         return {
           erro: "O PDF foi anexado, mas a leitura automática de PDF está desligada neste ambiente. Envie a planilha em Excel ou preencha as linhas abaixo a partir do modelo.",
         };
-      imp = deLeituraIa(await lerPlanilhaPdf(s.buffer));
+      imp = deLeituraIa(await lerPlanilhaPdf(s.buffer, { contaId: ctx.conta.id, usuarioId: ctx.usuario.id, plano: ctx.conta.plano }));
     } else return { erro: "Envie a planilha em Excel (.xlsx) ou PDF." };
     if (!imp.planilha.tipos.length) return { erro: "Não achamos linhas de custo neste arquivo. Confira se é a planilha de custos ou preencha a partir do modelo." };
     await db.pedido.update({
@@ -971,7 +971,7 @@ export async function novoPedidoAPartirDe(_: Resultado, fd: FormData): Promise<R
 export async function lerConvencaoComIa(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
     const { ctx, p } = await pedidoEditavel(fd);
-    if (!iaPara("CONVENCAO", ctx.usuario.email)) return { erro: "A leitura com IA não está ligada. Atualize as linhas à mão." };
+    if (!iaPara("CONVENCAO", ctx.usuario.email, ctx.conta.plano)) return { erro: "A leitura com IA não está ligada. Atualize as linhas à mão." };
     if (!p.planilhaAgora) return { erro: "Conclua o passo 2 antes." };
     const arquivo = fd.get("arquivo");
     if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o PDF da convenção." };
@@ -994,7 +994,7 @@ export async function lerConvencaoComIa(_: Resultado, fd: FormData): Promise<Res
       },
     });
     const linhas = linhasParaConvencao(p.planilhaAgora as unknown as PlanilhaCustos);
-    const leitura = await lerConvencaoPdf(s.buffer, linhas);
+    const leitura = await lerConvencaoPdf(s.buffer, linhas, { contaId: ctx.conta.id, usuarioId: ctx.usuario.id, plano: ctx.conta.plano });
     const itens = filtrarSugestoes(leitura, linhas);
     const sugestoes: SugestoesConvencao = { documentoId: doc.id, lidoEm: new Date().toISOString(), observacoes: leitura.observacoes.slice(0, 1000), itens };
     const checklist = { ...((p.checklist as Record<string, string> | null) ?? {}), convencao_nova: "ANEXADO" };

@@ -58,7 +58,8 @@ async function main() {
         console.log(`${c.registro}: PDF não encontrado em ${arquivo}, pulada.\n`);
         continue;
       }
-      const r = await lerConvencaoPdfDetalhado(fs.readFileSync(arquivo), linhas);
+      // P0: a avaliação também passa pelo orçamento (IA_ORCAMENTO_AVALIACAO_USD_MES, dentro do teto global); o modelo vem de IA_MODELO
+      const r = await lerConvencaoPdfDetalhado(fs.readFileSync(arquivo), linhas, { contaId: "interno-avaliacao", usuarioId: null, plano: "INTERNO", operacao: "AVALIACAO" });
       leitura = r.leitura;
       uso = r.uso;
     }
