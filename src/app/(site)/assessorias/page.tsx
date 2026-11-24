@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { PreviaPronto } from "@/components/previas";
 import { entrarNaDemonstracao } from "../demonstracao/acoes";
@@ -6,13 +5,14 @@ import { Captcha } from "@/components/captcha";
 import { modoPiloto } from "@/lib/chaves";
 import { notFound } from "next/navigation";
 import { Contato } from "@/components/contato";
+import { PRECOS } from "@/lib/planos";
+import { metaPagina } from "../seo";
 
-
-
-export const metadata: Metadata = {
-  title: "Para assessorias | Equapar",
-  description: "Todos os prazos e pedidos dos seus clientes numa tela, com a sua marca nos PDFs.",
-};
+export const metadata = metaPagina({
+  titulo: "Repactuação para assessorias e escritórios | Equapar",
+  descricao: "Todos os prazos e pedidos de repactuação dos seus clientes numa tela, com memória de cálculo e a sua marca nos PDFs.",
+  caminho: "/assessorias",
+});
 
 export default function Assessorias() {
   if (modoPiloto()) notFound(); // A6
@@ -21,7 +21,7 @@ export default function Assessorias() {
       <div className="grade-2" style={{ alignItems: "center" }}>
         <div>
           <p className="sobretitulo">Para assessorias de licitação, contadores e advogados</p>
-          <h1 className="titulo-landing" style={{ fontSize: 40 }}>
+          <h1 className="titulo-landing">
             Cuida da repactuação de vários clientes?
           </h1>
           <p className="secundario leitura">
@@ -33,7 +33,7 @@ export default function Assessorias() {
             <li>Papéis por pessoa: dono, gerente de contratos, contador e leitura.</li>
           </ul>
           <p>
-            <strong>A partir de R$ 1.497 por mês.</strong>
+            <strong>A partir de R$ {PRECOS.assessoria.toLocaleString("pt-BR")} por mês.</strong>
           </p>
           <div className="fileira">
             <form action={entrarNaDemonstracao}>

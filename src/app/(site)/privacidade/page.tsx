@@ -1,16 +1,22 @@
-import type { Metadata } from "next";
 import { identificacaoEmpresa } from "@/lib/site";
+import { metaPagina } from "../seo";
 import { subprocessadores } from "@/lib/subprocessadores";
 
-export const metadata: Metadata = { title: "Política de privacidade | Equapar" };
+export const metadata = metaPagina({
+  titulo: "Política de privacidade | Equapar",
+  descricao: "Que dados a Equapar trata no Raio-X, nos avisos e na conta, os subprocessadores, a guarda após o cancelamento e os seus direitos pela LGPD.",
+  caminho: "/privacidade",
+});
 
 export default function Privacidade() {
   const empresa = identificacaoEmpresa();
   const subs = subprocessadores();
   return (
-    <article className="site-largura secao guia">
-      <h1>Política de privacidade</h1>
-      <p className="aviso-caixa">MINUTA. Revise com um profissional antes de publicar.</p>
+    <article className="site-largura secao guia documento-legal">
+      <h1 className="titulo-landing">Política de privacidade</h1>
+      <p className="aviso-caixa minuta" role="note">
+        <span className="minuta-selo">Minuta</span> Este texto está em revisão jurídica e pode mudar antes da versão final.
+      </p>
       <h2>Quem somos</h2>
       <p>
         {empresa.texto}. Canal do titular de dados e do encarregado: <a href={`mailto:${empresa.canal}`}>{empresa.canal}</a>.

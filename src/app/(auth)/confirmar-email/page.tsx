@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { lerTokenConfirmacao } from "@/lib/confirmacao-email";
+import { metaPagina } from "@/app/(site)/seo";
 
-export const metadata: Metadata = { title: "Confirmar e-mail | Equapar" };
+export const metadata = metaPagina({ titulo: "Confirmar e-mail | Equapar", caminho: "/confirmar-email", indexar: false });
 
 /** C7: abre o link do e-mail e marca o e-mail como confirmado. */
 export default async function ConfirmarEmail({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
@@ -19,7 +19,7 @@ export default async function ConfirmarEmail({ searchParams }: { searchParams: P
     }
   }
   return (
-    <div className="cartao" style={{ maxWidth: 440, width: "100%" }}>
+    <div className="cartao">
       {ok ? (
         <>
           <CheckCircle2 size={32} strokeWidth={1.5} aria-hidden style={{ color: "var(--verde)" }} />

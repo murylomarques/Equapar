@@ -43,8 +43,7 @@
 .site-rodape {
   background: var(--tinta);
   color: var(--papel);
-  padding: 48px 0 32px;
-  margin-top: 64px;
+  padding: 32px 0 20px;
   font-size: 14px;
 }
 .site-rodape a {
@@ -174,58 +173,79 @@
 }
 .problemas {
   display: grid;
-  gap: 40px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 0 0 32px;
 }
-.problema {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
-  align-items: center;
-}
-@media (max-width: 820px) {
-  .problema {
+@media (max-width: 900px) {
+  .problemas {
     grid-template-columns: 1fr;
     gap: 16px;
   }
 }
-.problema h3 {
-  font-size: 20px;
+.problema {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
+.problema h3 {
+  font-size: 19px;
+  line-height: 1.3;
+  margin: 0;
+}
+.problema p {
+  margin: 0;
+}
+/* recorte de documento: uma borda e uma sombra só (a sombra dupla parecia uma falha de desenho) */
 .documento {
   background: var(--branco);
   border: 1px solid var(--linha);
   border-radius: var(--raio);
-  padding: 20px 24px;
+  padding: 16px 20px;
   font-size: 13px;
   line-height: 1.6;
-  box-shadow: 4px 4px 0 -1px var(--papel), 4px 4px 0 0 var(--linha);
+  box-shadow: var(--e1);
+}
+.problema .documento {
+  margin-top: auto;
 }
 .documento .borrado {
   filter: blur(3.5px);
   user-select: none;
 }
-.passos {
+/* Como funciona: cinco etapas em linha no computador, em coluna no celular */
+.etapas {
   display: grid;
-  gap: 48px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
 }
-.passo {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 32px;
-  align-items: center;
-}
-@media (max-width: 820px) {
-  .passo {
-    grid-template-columns: 1fr;
-    gap: 16px;
+@media (max-width: 1000px) {
+  .etapas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-.passo-num {
+@media (max-width: 560px) {
+  .etapas {
+    grid-template-columns: 1fr;
+  }
+}
+.etapa {
+  background: var(--branco);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-cartao);
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.etapa h3 {
+  font-size: 17px;
+  margin: 8px 0 6px;
+}
+.etapa-num {
   font-family: var(--fonte-serif);
-  font-size: 40px;
+  font-size: 32px;
   color: var(--verde);
   line-height: 1;
-  margin-bottom: 8px;
 }
 .tabela-comparacao td:last-child,
 .tabela-comparacao th:last-child {
@@ -261,21 +281,49 @@
   border-color: var(--verde);
   box-shadow: inset 0 3px 0 var(--verde);
 }
+.plano h3 {
+  font-size: 18px;
+}
+.plano .plano-para {
+  margin: 0;
+  font-size: 14px;
+  color: var(--grafite);
+}
 .plano .preco {
   font-family: var(--fonte-serif);
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1.1;
+  margin-top: 8px;
+}
+.plano .preco-de {
+  font-family: var(--fonte);
+  font-size: 14px;
+  color: var(--grafite);
+}
+.plano .plano-unidade {
+  font-size: 13px;
+  color: var(--grafite);
+  margin-top: -4px;
+}
+.plano .plano-texto {
+  font-size: 14px;
+  margin-top: 4px;
 }
 .plano ul {
   padding-left: 18px;
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   font-size: 14px;
+}
+.plano li + li {
+  margin-top: 4px;
 }
 .fundador {
   display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 32px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 24px;
   align-items: center;
+  max-width: 860px;
+  margin: 40px 0 0;
 }
 @media (max-width: 560px) {
   .fundador {
@@ -283,10 +331,18 @@
   }
 }
 .fundador-sem-foto {
-  grid-template-columns: minmax(0, 860px);
+  grid-template-columns: minmax(0, 1fr);
 }
-.fundador-sem-foto {
-  grid-template-columns: minmax(0, 860px);
+.fundador blockquote {
+  margin: 0;
+  padding-left: 20px;
+  border-left: 3px solid var(--verde);
+}
+.fundador blockquote p {
+  font-family: var(--fonte-serif);
+  font-size: 22px;
+  line-height: 1.35;
+  margin: 0;
 }
 .foto-vaga {
   width: 160px;
@@ -300,6 +356,9 @@
   color: var(--grafite);
   padding: 12px;
   background: var(--branco);
+}
+.faq {
+  max-width: 860px;
 }
 .faq details {
   border-bottom: 1px solid var(--linha);
@@ -416,4 +475,313 @@
 .plano > :last-child .btn {
   width: 100%;
   justify-content: center;
+}
+
+/* Página inteira: o rodapé fica no pé mesmo quando o conteúdo é curto (ex.: Raio-X com CNPJ inválido) */
+.site-pagina {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.site-pagina > main {
+  flex: 1 0 auto;
+}
+
+/* Abertura */
+.abertura-texto {
+  font-size: 18px;
+  color: var(--grafite);
+}
+.abertura-legenda {
+  margin-top: 10px;
+}
+.link-seta {
+  display: inline-block;
+  margin-top: 8px;
+  font-weight: 500;
+}
+.link-seta::after {
+  content: " →";
+}
+.secao-intro {
+  margin: -8px 0 32px;
+}
+/* faixa clara alternada entre blocos */
+.secao-faixa {
+  background: var(--branco);
+  border-block: 1px solid var(--linha);
+}
+.secao-faixa .fatos {
+  margin-top: 8px;
+}
+
+/* Prévias do produto: grade 2 × 2; o aviso de exemplo fica uma vez, no texto do bloco */
+.previas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .previas {
+    grid-template-columns: 1fr;
+  }
+}
+.previa h3 {
+  font-size: 17px;
+  margin: 0 0 12px;
+}
+.previas-sem-legenda .tela-previa figcaption {
+  display: none;
+}
+/* celular: as tabelas das prévias cabem na tela; colunas secundárias saem */
+@media (max-width: 640px) {
+  .tela-previa > div:not(.tela-previa-barra) {
+    padding: 12px !important;
+  }
+  .tela-previa .tabela th,
+  .tela-previa .tabela td {
+    padding: 8px 6px;
+  }
+  .tela-previa .tabela td:not(.num) {
+    white-space: normal;
+  }
+  .previa-carteira .tabela th:nth-child(3),
+  .previa-carteira .tabela td:nth-child(3),
+  .previa-receber .tabela th:nth-child(2),
+  .previa-receber .tabela td:nth-child(2) {
+    display: none;
+  }
+  .tela-previa .entre {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* Chamada final */
+.chamada-final {
+  margin-top: 48px;
+  padding: 32px;
+  max-width: 760px;
+  background: var(--branco);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-cartao);
+}
+@media (max-width: 560px) {
+  .chamada-final {
+    padding: 20px 16px;
+  }
+}
+.chamada-final .titulo-secao {
+  font-size: 28px;
+  margin-bottom: 16px;
+}
+
+/* Rodapé: compacto, em colunas; a linha da empresa fecha o rodapé */
+.rodape-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+  gap: 24px 32px;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .rodape-grade {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .rodape-grade {
+    grid-template-columns: 1fr;
+  }
+}
+.rodape-coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  overflow-wrap: anywhere;
+}
+.rodape-apoio {
+  color: #b9b6ae;
+}
+.rodape-empresa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin: 24px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(244, 241, 234, 0.15);
+  color: #b9b6ae;
+  font-size: 13px;
+}
+.rodape-selo {
+  border: 1px solid rgba(244, 241, 234, 0.3);
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 12px;
+}
+
+/* Preços: comparação detalhada sob demanda */
+.comparar-planos > summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--verde);
+  padding: 8px 0;
+}
+.comparar-planos[open] > summary {
+  margin-bottom: 12px;
+}
+.comparar-planos .tabela th[scope="row"] {
+  font-weight: 500;
+  text-align: left;
+}
+
+/* Raio-X */
+.raiox-pagina {
+  padding-top: 40px;
+  padding-bottom: 48px;
+}
+.exemplo-raiox-lista {
+  display: grid;
+  gap: 12px;
+  font: var(--t-tabela);
+}
+.exemplo-raiox-lista li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--linha);
+}
+.exemplo-raiox-lista li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.exemplo-raiox-orgao {
+  font-weight: 500;
+}
+
+/* Guias */
+.guias-lista {
+  display: grid;
+  gap: 12px;
+  max-width: 760px;
+}
+.guia-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+}
+.guia-cartao-titulo {
+  font-size: 18px;
+  line-height: 1.35;
+  margin: 0;
+}
+.guia-cartao-acao {
+  color: var(--verde);
+  font-weight: 500;
+  font-size: 14px;
+  margin-top: 4px;
+}
+a.guia-cartao:hover .guia-cartao-acao,
+a.guia-cartao:focus-visible .guia-cartao-acao {
+  text-decoration: underline;
+}
+.guia-trilha {
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.guia-descricao {
+  font-size: 18px;
+}
+.guia-modelo {
+  margin: 16px 0 24px;
+}
+.guia-modelo blockquote {
+  margin: 0 0 12px;
+  padding: 16px 20px;
+  background: var(--branco);
+  border: 1px solid var(--linha);
+  border-left: 4px solid var(--verde);
+  border-radius: var(--raio);
+  font-family: var(--fonte-serif);
+  font-size: 19px;
+  line-height: 1.45;
+}
+.guia-modelo blockquote p {
+  margin: 0;
+}
+.guia-chamada {
+  margin-top: 32px;
+  padding: 28px;
+}
+.guia .guia-chamada h2 {
+  margin-top: 0;
+}
+@media (max-width: 560px) {
+  .guia-chamada {
+    padding: 20px 16px;
+  }
+}
+
+/* Termos e privacidade: a minuta é anunciada uma vez, de forma clara */
+.minuta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+.minuta-selo {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--selo-ambar-tx);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 1px 8px;
+}
+
+/* 404 */
+.nao-encontrada {
+  max-width: 640px;
+  padding-block: 24px;
+}
+
+/* Telas de acesso (entrar, criar conta, senha, confirmação): mesma largura de cartão em todas */
+.auth-pagina {
+  min-height: 100vh;
+  display: grid;
+  place-items: start center;
+  padding: 48px 16px;
+}
+@media (max-width: 560px) {
+  .auth-pagina {
+    padding: 24px 12px;
+  }
+}
+.auth-coluna {
+  width: 100%;
+  max-width: 480px;
+}
+.auth-logo {
+  margin-bottom: 28px;
+}
+.auth-conteudo > .cartao {
+  width: 100%;
+}
+.auth-conteudo .cartao h1 {
+  font-size: 26px;
+  line-height: 1.2;
+}
+/* CNPJ com a mesma largura dos outros campos do cartão */
+.auth-conteudo .w-cnpj {
+  max-width: none;
+}
+.auth-rodape {
+  margin-top: 20px;
+  text-align: center;
 }

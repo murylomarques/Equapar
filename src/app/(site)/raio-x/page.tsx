@@ -1,24 +1,35 @@
-import type { Metadata } from "next";
-import { FormCnpj } from "@/components/form-cnpj";
 import { cnpjValido, formatarCnpj } from "@/lib/cnpj";
 import { ResultadoRaioXCliente } from "./resultado";
-import { normalizarCnpj } from "@/lib/mascaras";
+import { erroCnpj, normalizarCnpj } from "@/lib/mascaras";
+import { FormCnpj } from "@/components/form-cnpj";
+import { metaPagina } from "../seo";
 
-export const metadata: Metadata = {
-  title: "Raio-X grátis dos contratos públicos | Equapar",
-  description: "Digite o CNPJ e veja os contratos vigentes da sua empresa no PNCP e quando cada um termina.",
-};
+export const metadata = metaPagina({
+  titulo: "Raio-X grátis dos contratos públicos pelo CNPJ | Equapar",
+  descricao: "Digite o CNPJ e veja os contratos vigentes da sua empresa no PNCP, quando cada um termina e quais estão perto do prazo de repactuação. Sem cadastro.",
+  caminho: "/raio-x",
+});
+
+const EXEMPLO = [
+  ["Prefeitura Municipal de Exemplo", "fim em 18/12/2026 · faltam 35 dias"],
+  ["Tribunal Regional Exemplo", "fim em 03/2027 · faltam 5 meses"],
+  ["Universidade Federal Exemplo", "fim em 08/2027 · faltam 9 meses"],
+] as const;
 
 export default async function RaioX({ searchParams }: { searchParams: Promise<{ cnpj?: string }> }) {
   const { cnpj: bruto } = await searchParams;
   const cnpj = normalizarCnpj(bruto ?? "");
+  const invalido = !!bruto && !cnpjValido(cnpj);
   return (
-    <div className="site-largura" style={{ paddingTop: 40, paddingBottom: 24 }}>
-      <h1 className="titulo-landing" style={{ fontSize: 38, lineHeight: "44px" }}>
-        Veja os prazos dos seus contratos públicos
-      </h1>
+    <div className="site-largura raiox-pagina">
+      <h1 className="titulo-landing">Veja os prazos dos seus contratos públicos</h1>
       <div style={{ maxWidth: 560 }}>
-        <FormCnpj id="cnpj-raiox" valorInicial={bruto ? formatarCnpj(cnpj) : ""} />
+        <FormCnpj
+          key={bruto ?? ""}
+          id="cnpj-raiox"
+          valorInicial={bruto ? formatarCnpj(cnpj) : ""}
+          erroInicial={invalido ? (erroCnpj(bruto ?? "") ?? "Esse CNPJ não existe. Confira os 14 caracteres.") : ""}
+        />
         <p className="legenda" style={{ marginTop: 10 }}>
           Usamos só dados públicos do Portal Nacional de Contratações Públicas (PNCP). Não pedimos senha nem documento.
         </p>
@@ -36,40 +47,28 @@ export default async function RaioX({ searchParams }: { searchParams: Promise<{ 
           </div>
           <figure className="cartao exemplo-raiox" style={{ margin: 0 }} aria-label="Exemplo de resultado com dados fictícios">
             <span className="selo selo-ambar">Exemplo · dados fictícios</span>
-            <p className="mt-8 mb-8" style={{ fontWeight: 600 }}>
+            <p className="mt-8" style={{ fontWeight: 600, marginBottom: 16 }}>
               Empresa Exemplo Ltda. tem 3 contratos vigentes no PNCP. 1 termina nos próximos 6 meses.
             </p>
-            <ul className="lista-limpa pilha-8" style={{ font: "var(--t-tabela)" }}>
-              <li className="entre">
-                <span>Prefeitura Municipal de Exemplo</span>
-                <span className="tnum">fim 18/12/2026 · faltam 35 dias</span>
-              </li>
-              <li className="entre">
-                <span>Tribunal Regional Exemplo</span>
-                <span className="tnum">fim 03/2027 · faltam 5 meses</span>
-              </li>
-              <li className="entre">
-                <span>Universidade Federal Exemplo</span>
-                <span className="tnum">fim 08/2027 · faltam 9 meses</span>
-              </li>
+            <ul className="lista-limpa exemplo-raiox-lista">
+              {EXEMPLO.map(([orgao, fim]) => (
+                <li key={orgao}>
+                  <span className="exemplo-raiox-orgao">{orgao}</span>
+                  <span className="legenda tnum">{fim}</span>
+                </li>
+              ))}
             </ul>
           </figure>
         </div>
       )}
-      <div className="mt-32">
-        {!bruto ? null : !cnpjValido(cnpj) ? (
-          <p className="erro-texto" role="alert">
-            Esse CNPJ não existe. Confira os 14 caracteres.
-          </p>
-        ) : (
+      {bruto && !invalido && (
+        <div className="mt-32">
           <ResultadoRaioXCliente key={cnpj} cnpj={cnpj} />
-        )}
-        {bruto && cnpjValido(cnpj) && (
           <noscript>
             <p>Para ver o resultado, ative o JavaScript do navegador.</p>
           </noscript>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

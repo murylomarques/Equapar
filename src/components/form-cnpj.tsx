@@ -5,15 +5,16 @@ import { AlertCircle, Check } from "lucide-react";
 import { erroCnpj, mascaraCnpj, normalizarCnpj } from "@/lib/mascaras";
 
 /**
- * Campo do Raio-X: aceita colar em qualquer formato, mostra a máscara,
- * valida ao sair do campo (nunca enquanto digita) e ao enviar.
+ * Campo da página do Raio-X: o mesmo comportamento de components/form-cnpj.tsx (máscara, validação ao sair do
+ * campo e ao enviar) e, além dele, o erro que veio do servidor (?cnpj= inválido na URL) já aparece logo abaixo
+ * do campo, com a borda de erro e aria-invalid.
  */
-export function FormCnpj({ id, valorInicial = "", escuro }: { id?: string; valorInicial?: string; escuro?: boolean }) {
+export function FormCnpj({ id, valorInicial = "", erroInicial = "" }: { id?: string; valorInicial?: string; erroInicial?: string }) {
   const router = useRouter();
   const auto = useId();
   const campoId = id ?? `cnpj-${auto.replace(/:/g, "")}`;
   const [valor, setValor] = useState(mascaraCnpj(valorInicial));
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState(erroInicial);
   const [enviando, setEnviando] = useState(false);
   const valido = normalizarCnpj(valor).length === 14 && !erroCnpj(valor);
   return (
@@ -35,7 +36,7 @@ export function FormCnpj({ id, valorInicial = "", escuro }: { id?: string; valor
         window.setTimeout(() => setEnviando(false), 1500);
       }}
     >
-      <label htmlFor={campoId} className="rotulo" style={{ display: "block", marginBottom: 6, color: escuro ? "#fff" : undefined }}>
+      <label htmlFor={campoId} className="rotulo" style={{ display: "block", marginBottom: 6 }}>
         CNPJ da empresa
       </label>
       <div className="form-cnpj">
@@ -71,7 +72,7 @@ export function FormCnpj({ id, valorInicial = "", escuro }: { id?: string; valor
         </button>
       </div>
       {erro && (
-        <p id={`${campoId}-erro`} className="erro-texto" style={{ marginTop: 8, color: escuro ? "#ffb4a0" : undefined }} role="alert">
+        <p id={`${campoId}-erro`} className="erro-texto" style={{ marginTop: 8 }} role="alert">
           <AlertCircle size={16} strokeWidth={1.5} aria-hidden style={{ marginTop: 1, flexShrink: 0 }} />
           {erro}
         </p>

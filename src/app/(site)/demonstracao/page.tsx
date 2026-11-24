@@ -1,12 +1,16 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ehDemo, sessaoAtual } from "@/lib/auth";
 import { entrarNaDemonstracao } from "./acoes";
 import { Captcha } from "@/components/captcha";
 import { Contato } from "@/components/contato";
 import { AvisoLimiteDemo } from "./limite";
+import { metaPagina } from "../seo";
 
-export const metadata: Metadata = { title: "Demonstração | Equapar" };
+export const metadata = metaPagina({
+  titulo: "Demonstração com dados fictícios | Equapar",
+  descricao: "Navegue pela Equapar com uma empresa fictícia de limpeza: carteira de contratos, prazos, pedido de repactuação com memória de cálculo e valores a receber.",
+  caminho: "/demonstracao",
+});
 
 export default async function Demonstracao({ searchParams }: { searchParams: Promise<{ limite?: string; captcha?: string }> }) {
   const sp = await searchParams;
@@ -15,7 +19,7 @@ export default async function Demonstracao({ searchParams }: { searchParams: Pro
   return (
     <section className="secao">
       <div className="site-largura" style={{ maxWidth: 640 }}>
-        <h1 className="titulo-secao">Ver a Equapar por dentro</h1>
+        <h1 className="titulo-landing">Ver a Equapar por dentro</h1>
         {real ? (
           <>
             <p className="leitura">

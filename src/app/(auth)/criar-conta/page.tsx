@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { sessaoAtual } from "@/lib/auth";
@@ -6,8 +5,9 @@ import { db } from "@/lib/db";
 import { FormCriarConta, FormEmpresa } from "../formularios";
 import { ETAPAS_INICIO } from "@/lib/inicio";
 import { normalizarCnpj } from "@/lib/mascaras";
+import { metaPagina } from "@/app/(site)/seo";
 
-export const metadata: Metadata = { title: "Criar conta | Equapar" };
+export const metadata = metaPagina({ titulo: "Criar conta | Equapar", descricao: "Crie a conta grátis da sua empresa: a Equapar busca os contratos no PNCP e mostra os prazos de repactuação de cada um.", caminho: "/criar-conta" });
 
 
 function Etapas({ atual }: { atual: number }) {

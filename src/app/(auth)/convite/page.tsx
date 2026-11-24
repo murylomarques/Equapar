@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { conviteValido, lerTokenConvite } from "@/lib/convite";
 import { FormAceitarConvite } from "../formularios";
+import { metaPagina } from "@/app/(site)/seo";
 
-export const metadata: Metadata = { title: "Convite | Equapar" };
+export const metadata = metaPagina({ titulo: "Convite | Equapar", caminho: "/convite", indexar: false });
 
 /** S12: abre o link do convite e mostra o formulário para criar a senha. */
 export default async function Convite({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
@@ -14,7 +14,7 @@ export default async function Convite({ searchParams }: { searchParams: Promise<
   const conta = tok ? await db.conta.findUnique({ where: { id: tok.contaId }, select: { nome: true } }) : null;
   const situacao = conviteValido(tok, u);
   return (
-    <div className="cartao" style={{ maxWidth: 440, width: "100%" }}>
+    <div className="cartao">
       {situacao === "ok" && u && conta ? (
         <>
           <h1>Bem-vindo, {u.nome.split(" ")[0]}</h1>

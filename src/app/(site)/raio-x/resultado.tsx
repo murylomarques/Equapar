@@ -94,6 +94,8 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
     );
 
   const proximos6 = r.contratos.filter((c) => diasAte(c.fim) <= 183).length;
+  // sem nenhum valor publicado, a coluna "Valor global" só teria traços: fica de fora
+  const temValor = r.contratos.some((c) => c.valorGlobal != null);
   return (
     <div className="pilha" style={{ gap: 32 }}>
       <div>
@@ -101,16 +103,20 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
           {r.razaoSocial ?? formatarCnpj(cnpj)} tem {plural(r.contratos.length, "contrato vigente", "contratos vigentes")} no PNCP. {proximos6}{" "}
           {proximos6 === 1 ? "termina" : "terminam"} nos próximos 6 meses.
         </h2>
-        <p className="legenda">Consulta feita em {data(r.consultadoEm)}. Só dados públicos: o valor global é o publicado no PNCP.</p>
+        <p className="legenda">
+          Consulta feita em {data(r.consultadoEm)}. Só dados públicos{temValor ? ": o valor global é o publicado no PNCP" : ""}.
+        </p>
         <div className="tabela-rolagem so-desktop">
           <table className="tabela">
             <thead>
               <tr>
                 <th scope="col">Órgão</th>
                 <th scope="col">Objeto</th>
-                <th scope="col" className="num">
-                  Valor global
-                </th>
+                {temValor && (
+                  <th scope="col" className="num">
+                    Valor global
+                  </th>
+                )}
                 <th scope="col" className="num">
                   Fim da vigência
                 </th>
@@ -129,7 +135,7 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
                       {c.objeto}
                     </span>
                   </td>
-                  <td className="num">{c.valorGlobal != null ? reais(c.valorGlobal) : "—"}</td>
+                  {temValor && <td className="num">{c.valorGlobal != null ? reais(c.valorGlobal) : "—"}</td>}
                   <td className="num">
                     {data(c.fim)}
                     <div className="legenda">{tempoAteFim(diasAte(c.fim))}</div>

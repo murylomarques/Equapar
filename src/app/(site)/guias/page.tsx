@@ -1,27 +1,32 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { GUIAS } from "@/lib/guias";
 import { guiaNoAr } from "@/lib/chaves";
+import { metaPagina } from "../seo";
 
-export const metadata: Metadata = {
-  title: "Guias de repactuação | Equapar",
-  description: "Repactuação, prorrogação, convenção coletiva e reforma tributária em contratos públicos.",
-};
+export const metadata = metaPagina({
+  titulo: "Guias de repactuação de contratos públicos | Equapar",
+  descricao: "Repactuação pela Lei 14.133, prorrogação com ressalva, data-base da convenção coletiva e prazos de resposta, explicados com as fontes.",
+  caminho: "/guias",
+});
 
 export default function Guias() {
   return (
     <div className="site-largura secao">
-      <h1 className="titulo-landing" style={{ fontSize: 40 }}>
-        Guias
-      </h1>
-      <div className="pilha" style={{ maxWidth: 760 }}>
+      <h1 className="titulo-landing">Guias de repactuação</h1>
+      <p className="secundario leitura">Regras, prazos e documentos da repactuação de contratos públicos com mão de obra, com as fontes de cada ponto.</p>
+      <ul className="lista-limpa guias-lista mt-24">
         {GUIAS.filter((g) => guiaNoAr(g.slug)).map((g) => (
-          <Link key={g.slug} href={`/guias/${g.slug}`} className="cartao-linha">
-            <strong style={{ fontSize: 18 }}>{g.titulo}</strong>
-            <span className="secundario">{g.descricao}</span>
-          </Link>
+          <li key={g.slug}>
+            <Link href={`/guias/${g.slug}`} className="cartao-linha guia-cartao">
+              <h2 className="guia-cartao-titulo">{g.titulo}</h2>
+              <span className="secundario">{g.descricao}</span>
+              <span className="guia-cartao-acao" aria-hidden>
+                Ler guia →
+              </span>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { FormEsqueciSenha } from "../formularios";
+import { metaPagina } from "@/app/(site)/seo";
 
-export const metadata: Metadata = { title: "Esqueci minha senha | Equapar" };
+export const metadata = metaPagina({ titulo: "Esqueci minha senha | Equapar", caminho: "/esqueci-senha", indexar: false });
 
 export default function EsqueciSenha() {
   return (
-    <div className="cartao" style={{ maxWidth: 440, width: "100%" }}>
+    <div className="cartao">
       <h1>Esqueci minha senha</h1>
       <p className="secundario">Digite o e-mail da sua conta. Mandamos um link para criar uma senha nova; ele vale por 1 hora e serve uma vez só.</p>
       <FormEsqueciSenha />

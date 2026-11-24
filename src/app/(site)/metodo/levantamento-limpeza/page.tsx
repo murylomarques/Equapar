@@ -1,17 +1,18 @@
-import type { Metadata } from "next";
 import { SITE } from "@/lib/site";
+import { metaPagina } from "../../seo";
 
-export const metadata: Metadata = {
-  title: "Como contamos as empresas de limpeza com contratos vigentes | Equapar",
-  description: "Fonte, termos de busca, o que conta, o que fica fora, agrupamento por CNPJ e limites do levantamento no PNCP.",
-};
+export const metadata = metaPagina({
+  titulo: "Método: empresas de limpeza com contratos vigentes no PNCP | Equapar",
+  descricao: "Fonte, termos de busca, o que conta, o que fica fora, agrupamento por CNPJ e limites do levantamento no PNCP.",
+  caminho: "/metodo/levantamento-limpeza",
+});
 
 /** A7: método do levantamento. Trava 8: a página não publica a lista de empresas. */
 export default function MetodoLevantamento() {
   const { empresas, data } = SITE.levantamentoLimpeza;
   return (
     <article className="site-largura secao guia">
-      <h1 className="titulo-landing" style={{ fontSize: 38 }}>
+      <h1 className="titulo-landing">
         Como chegamos a {empresas} empresas com contratos de limpeza vigentes
       </h1>
       <p className="secundario" style={{ fontSize: 18 }}>

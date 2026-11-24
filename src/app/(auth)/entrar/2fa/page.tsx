@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { sessaoAtual } from "@/lib/auth";
 import { Form2fa } from "../../formularios";
 import { sair } from "../../acoes";
+import { metaPagina } from "@/app/(site)/seo";
+
+export const metadata = metaPagina({ titulo: "Verificação em duas etapas | Equapar", caminho: "/entrar/2fa", indexar: false });
 
 export default async function DoisFatores({ searchParams }: { searchParams: Promise<{ destino?: string }> }) {
   const s = await sessaoAtual();

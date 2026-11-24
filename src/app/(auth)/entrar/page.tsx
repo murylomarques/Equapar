@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FormEntrar } from "../formularios";
 import { sessaoAtual } from "@/lib/auth";
+import { metaPagina } from "@/app/(site)/seo";
 
-export const metadata: Metadata = { title: "Entrar | Equapar" };
+export const metadata = metaPagina({ titulo: "Entrar | Equapar", caminho: "/entrar" });
 
 export default async function Entrar({ searchParams }: { searchParams: Promise<{ destino?: string; erro?: string; redefinida?: string }> }) {
   const { destino, erro, redefinida } = await searchParams;

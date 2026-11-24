@@ -14,8 +14,8 @@ export function CalculadoraPreco() {
       <h2>Quanto fica a Carteira para a sua empresa</h2>
       <div className="campo">
         <label htmlFor="calc-postos">Postos de trabalho nos contratos públicos</label>
-        <div className="entrada com-sufixo" style={{ maxWidth: 220 }}>
-          <input id="calc-postos" inputMode="numeric" className="valor-num" value={postos} onChange={(e) => setPostos(e.target.value.replace(/\D/g, "").slice(0, 6))} aria-describedby="calc-resultado" />
+        <div className="entrada com-sufixo" style={{ maxWidth: 240 }}>
+          <input id="calc-postos" inputMode="numeric" className="tnum" style={{ textAlign: "left", fontSize: 18 }} value={postos} onChange={(e) => setPostos(e.target.value.replace(/\D/g, "").slice(0, 6))} aria-describedby="calc-resultado" />
           <span className="sufixo" aria-hidden>
             postos
           </span>
@@ -26,7 +26,7 @@ export function CalculadoraPreco() {
           {fmt(valor)}
         </span>{" "}
         por mês
-        <span className="ajuda-texto" style={{ display: "block" }}>
+        <span className="ajuda-texto" style={{ display: "block", marginTop: 4 }}>
           {n * porPosto < minimo ? `${n} × ${fmt(porPosto)} = ${fmt(n * porPosto)}; vale o mínimo de ${fmt(minimo)}.` : `${n.toLocaleString("pt-BR")} × ${fmt(porPosto)} por posto.`}
         </span>
       </p>

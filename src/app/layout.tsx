@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
+import { urlSite } from "./(site)/seo";
 
 // A5: a fonte do texto usa "optional": se não chegar a tempo na primeira visita, o texto fica na fonte de reserva
 // (ajustada para não deslocar a página) e não espera o download; nas visitas seguintes ela já está em cache.
@@ -8,10 +9,12 @@ const sans = Instrument_Sans({ subsets: ["latin"], weight: ["400", "500", "600"]
 const serif = Instrument_Serif({ subsets: ["latin"], weight: ["400"], variable: "--font-serif", display: "swap" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
-  title: "Equapar | Repactuação de contratos públicos de limpeza no prazo",
+  metadataBase: new URL(urlSite()),
+  title: "Equapar | Repactuação de contratos públicos no prazo",
   description:
-    "Veja os prazos dos seus contratos públicos pelo CNPJ e monte o pedido de repactuação com memória de cálculo. Raio-X grátis com dados do PNCP.",
+    "Prazos, memória de cálculo e documentos da repactuação de contratos públicos com mão de obra, do pedido ao recebimento. Raio-X grátis pelo CNPJ com dados do PNCP.",
+  applicationName: "Equapar",
+  openGraph: { siteName: "Equapar", locale: "pt_BR", type: "website" },
 };
 
 export const viewport: Viewport = { themeColor: "#16181D", width: "device-width", initialScale: 1 };
