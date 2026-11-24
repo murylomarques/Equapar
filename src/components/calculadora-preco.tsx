@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { PRECOS } from "@/lib/planos";
+import { PRECOS } from "@/lib/precos";
 
 /** Postos × preço por posto, com o mínimo mensal: os mesmos números da cobrança (lib/planos.ts). */
 export function CalculadoraPreco() {

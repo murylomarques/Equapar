@@ -1,6 +1,6 @@
 "use client";
 import { AlertTriangle, ChevronDown, Monitor, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { brl, calcularPlanilha, calcularRetroativo, compararPlanilhas, pct, validarPlanilha } from "@/lib/calculo/motor";
 import { BASES_PERMITIDAS, MODULOS, NOME_BASE, type BaseId, type LinhaPlanilha, type ModuloId, type PlanilhaCustos } from "@/lib/calculo/tipos";
 import { novoId, postoModelo } from "@/lib/calculo/modelo";
@@ -222,9 +222,13 @@ export function EditorPlanilha({
   }, [somenteLeitura, salvar]);
 
   // ----- cálculos (o mesmo motor determinístico do servidor)
+  // Desempenho (medido: 248 ms por tecla com CPU 4× lenta): a digitação atualiza o campo na hora e o cálculo
+  // da memória (todas as linhas, em Decimal) roda logo depois, sem travar a tecla. O motor e o resultado são os mesmos.
+  const planilhaCalculo = useDeferredValue(planilha);
   const erros = useMemo(() => validarPlanilha(planilha), [planilha]);
-  const resultado = useMemo(() => (erros.length ? null : calcularPlanilha(planilha)), [planilha, erros]);
-  const comparacao = useMemo(() => (antes && !erros.length ? compararPlanilhas(antes, planilha) : null), [antes, planilha, erros]);
+  const errosCalculo = useMemo(() => validarPlanilha(planilhaCalculo), [planilhaCalculo]);
+  const resultado = useMemo(() => (errosCalculo.length ? null : calcularPlanilha(planilhaCalculo)), [planilhaCalculo, errosCalculo]);
+  const comparacao = useMemo(() => (antes && !errosCalculo.length ? compararPlanilhas(antes, planilhaCalculo) : null), [antes, planilhaCalculo, errosCalculo]);
   const retro = useMemo(() => {
     if (!comparacao || comparacao.erros.length || !dataBase || !dataRef) return null;
     return calcularRetroativo(comparacao.diferencaMensal, new Date(`${dataBase}T00:00:00Z`), new Date(`${dataRef}T00:00:00Z`));

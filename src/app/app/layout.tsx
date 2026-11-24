@@ -64,7 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </LinkNav>
           )}
         </nav>
-        <nav className="nav-conta" aria-label="Conta">
+        <nav className="nav-conta" aria-label="Avisos e configurações">
           <LinkNav href="/app/avisos" icone={<Bell size={20} strokeWidth={1.5} />} contador={sino} rotuloContador="avisos novos">
             Avisos
           </LinkNav>

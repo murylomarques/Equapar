@@ -6,7 +6,10 @@ import { Selo } from "@/components/selo";
 import { EstadoVazio } from "@/components/ui/apresentacao";
 import type { ResultadoRaioX } from "@/lib/pncp";
 import { seloVigencia } from "@/lib/prazos";
-import { diasAte, data, plural, reais } from "@/lib/format";
+import { diasAte, data, plural } from "@/lib/datas";
+
+// valor público do PNCP só para exibir (nenhuma conta): sem trazer o motor de cálculo para o navegador do visitante
+const reais = (v: number | string | null | undefined) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 import { tempoAteFim } from "@/lib/mascaras";
 import { formatarCnpj } from "@/lib/cnpj";
 import { FormAvisarDepois, FormRelatorio } from "./formularios";

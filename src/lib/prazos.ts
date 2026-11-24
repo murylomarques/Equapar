@@ -1,5 +1,5 @@
 import type { Contrato, Convencao, Pedido } from "@prisma/client";
-import { addMeses, data, diasAte, emDias, hojeUTC } from "./format";
+import { addMeses, data, diasAte, emDias, hojeUTC } from "./datas";
 
 /**
  * Regras de prazo (Dossiê, Dor 2; Produto e experiência, Fluxos 4 e 5).

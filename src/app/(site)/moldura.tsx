@@ -6,6 +6,8 @@ import { MenuSite } from "@/components/menu-site";
 import { jornadaLiberada, modoPiloto } from "@/lib/chaves";
 
 /** Topo e rodapé do site público. Usados pelo layout do site e pela página "não encontrada". */
+// Cabeçalho e rodapé do site: sem prefetch (medido: os prefetches dos links visíveis somavam trabalho no carregamento
+// das páginas públicas sem ganho real; a navegação continua normal ao clicar).
 export function TopoSite() {
   return (
     <>
@@ -15,7 +17,7 @@ export function TopoSite() {
           <div className="site-largura">
             {/* texto sugerido no prompt; passa pelo dono (trava 6) */}
             A jornada caiu para 40 horas. Seus contratos com o governo precisam ser recalculados.{" "}
-            <Link href="/guias/jornada-40-horas-contratos-publicos">Entenda o prazo</Link>
+            <Link prefetch={false} href="/guias/jornada-40-horas-contratos-publicos">Entenda o prazo</Link>
           </div>
         </div>
       )}
@@ -23,16 +25,16 @@ export function TopoSite() {
         <div className="site-largura site-topo-in">
           <Logo largura={118} />
           <nav aria-label="Principal" className="site-nav">
-            <Link href="/#como-funciona">Como funciona</Link>
-            <Link href="/precos">Preços</Link>
-            {!modoPiloto() && <Link href="/assessorias">Para assessorias</Link>}
-            <Link href="/guias">Guias</Link>
+            <Link prefetch={false} href="/#como-funciona">Como funciona</Link>
+            <Link prefetch={false} href="/precos">Preços</Link>
+            {!modoPiloto() && <Link prefetch={false} href="/assessorias">Para assessorias</Link>}
+            <Link prefetch={false} href="/guias">Guias</Link>
           </nav>
           <div className="fileira">
-            <Link href="/entrar" className="btn btn-texto">
+            <Link prefetch={false} href="/entrar" className="btn btn-texto">
               Entrar
             </Link>
-            <Link href="/raio-x" className="btn btn-primario so-desktop">
+            <Link prefetch={false} href="/raio-x" className="btn btn-primario so-desktop">
               Fazer o Raio-X grátis
             </Link>
             <MenuSite ocultar={modoPiloto() ? ["/assessorias"] : []} />
@@ -57,14 +59,14 @@ export function RodapeSite() {
             <small className="rodape-apoio">Cada repactuação no prazo, com prova.</small>
           </div>
           <nav aria-label="Produto" className="rodape-coluna">
-            <Link href="/raio-x">Raio-X grátis</Link>
-            <Link href="/#como-funciona">Como funciona</Link>
-            <Link href="/precos">Preços</Link>
-            <Link href="/guias">Guias</Link>
+            <Link prefetch={false} href="/raio-x">Raio-X grátis</Link>
+            <Link prefetch={false} href="/#como-funciona">Como funciona</Link>
+            <Link prefetch={false} href="/precos">Preços</Link>
+            <Link prefetch={false} href="/guias">Guias</Link>
           </nav>
           <nav aria-label="Rodapé" className="rodape-coluna">
-            <Link href="/privacidade">Política de privacidade</Link>
-            <Link href="/termos">Termos de uso</Link>
+            <Link prefetch={false} href="/privacidade">Política de privacidade</Link>
+            <Link prefetch={false} href="/termos">Termos de uso</Link>
             <a href={contato.emailLink}>{contato.email}</a>
             {contato.whatsapp && contato.whatsappLink && <a href={contato.whatsappLink}>WhatsApp {telefoneFormatado(contato.whatsapp)}</a>}
           </nav>
