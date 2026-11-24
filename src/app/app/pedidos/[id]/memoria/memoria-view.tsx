@@ -283,7 +283,9 @@ export function MemoriaView({
             <thead>
               <tr>
                 <th scope="col">Competência</th>
-                <th scope="col">Conta</th>
+                <th scope="col" className="so-desktop">
+                  Conta
+                </th>
                 <th scope="col" className="num">
                   Valor
                 </th>
@@ -292,14 +294,18 @@ export function MemoriaView({
             <tbody>
               {retro.meses.map((m) => (
                 <tr key={m.competencia}>
-                  <td className="tnum">{m.competencia}</td>
-                  <td>{m.conta}</td>
+                  <td className="tnum">
+                    {competenciaBr(m.competencia)}
+                    {/* celular: a conta vira uma linha embaixo do mês (a coluna quebrava o valor em 3 a 5 linhas) */}
+                    <div className="legenda so-celular">{m.conta}</div>
+                  </td>
+                  <td className="so-desktop">{m.conta}</td>
                   <td className="num">{brl(m.valor)}</td>
                 </tr>
               ))}
               <tr className="total">
                 <td>Total</td>
-                <td />
+                <td className="so-desktop" />
                 <td className="num">{brl(retro.total)}</td>
               </tr>
             </tbody>
@@ -308,4 +314,11 @@ export function MemoriaView({
       )}
     </div>
   );
+}
+
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+/** "2026-01" → "jan/2026" (a competência continua com a mesma chave; só a leitura muda). */
+function competenciaBr(c: string) {
+  const m = /^(\d{4})-(\d{2})$/.exec(c);
+  return m ? `${MESES[Number(m[2]) - 1]}/${m[1]}` : c;
 }

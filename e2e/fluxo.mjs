@@ -160,7 +160,7 @@ try {
   await formConv.getByLabel("UF").selectOption("ES");
   await formConv.getByLabel("Mês da data-base").selectOption("1");
   await formConv.getByLabel("Ano").fill(String(ano));
-  await formConv.getByLabel("Data do depósito (Mediador)").fill(`10/02/${ano}`);
+  await formConv.getByLabel(/^Data do depósito(?! da)/).fill(`10/02/${ano}`);
   await formConv.getByLabel("Número do registro").fill(`ES999999/${ano}`);
   await formConv.getByRole("button", { name: "Cadastrar convenção" }).click();
   await page.getByText(`CCT Teste ES ${ano}`, { exact: true }).filter({ visible: true }).first().waitFor();

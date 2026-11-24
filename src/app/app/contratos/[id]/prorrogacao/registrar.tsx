@@ -27,7 +27,7 @@ export function RegistrarProrrogacao({ contratoId, ressalvaSugerida, fonte }: { 
           <span>O termo aditivo tem ressalva do direito à repactuação</span>
         </label>
         {comRessalva && <TextoLongo nome="textoRessalva" rotulo="Texto da ressalva, como ficou no termo" valorInicial={ressalvaSugerida} limite={1000} />}
-        <BotaoEnvio>Registrar prorrogação</BotaoEnvio>
+        <BotaoEnvio className="btn">Registrar prorrogação</BotaoEnvio>
       </FormAcao>
     </div>
   );
