@@ -176,19 +176,46 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
             {f.nome} <span className="n">({n(f.teste)})</span>
           </Link>
         ))}
-        {ufs.length > 1 &&
-          ufs.map((u) => (
-            <Link key={u} href={link({ uf: sp.uf === u ? undefined : u })} className="filtro" aria-current={sp.uf === u ? "true" : undefined}>
-              {u} <span className="n">({n((c) => c.uf === u)})</span>
-            </Link>
-          ))}
-        {esferas.length > 1 &&
-          esferas.map((e) => (
-            <Link key={e} href={link({ esfera: sp.esfera === e ? undefined : e })} className="filtro" aria-current={sp.esfera === e ? "true" : undefined}>
-              {ESFERAS[e] ?? e} <span className="n">({n((c) => c.esfera === e)})</span>
-            </Link>
-          ))}
       </nav>
+      {(ufs.length > 1 || esferas.length > 1) && (
+        <form action="/app/carteira" method="get" className="filtros-local" aria-label="Filtrar por local">
+          {sp.filtro && <input type="hidden" name="filtro" value={sp.filtro} />}
+          {ufs.length > 1 && (
+            <span className="filtro-select">
+              <label htmlFor="filtro-uf">UF</label>
+              <select id="filtro-uf" name="uf" defaultValue={sp.uf ?? ""}>
+                <option value="">Todas</option>
+                {ufs.map((u) => (
+                  <option key={u} value={u}>
+                    {u} ({n((c) => c.uf === u)})
+                  </option>
+                ))}
+              </select>
+            </span>
+          )}
+          {esferas.length > 1 && (
+            <span className="filtro-select">
+              <label htmlFor="filtro-esfera">Esfera</label>
+              <select id="filtro-esfera" name="esfera" defaultValue={sp.esfera ?? ""}>
+                <option value="">Todas</option>
+                {esferas.map((e) => (
+                  <option key={e} value={e}>
+                    {ESFERAS[e] ?? e} ({n((c) => c.esfera === e)})
+                  </option>
+                ))}
+              </select>
+            </span>
+          )}
+          <button type="submit" className="btn btn-pequeno">
+            Filtrar
+          </button>
+          {(sp.uf || sp.esfera) && (
+            <Link href={link({ uf: undefined, esfera: undefined })} className="btn btn-discreto btn-pequeno">
+              Limpar local
+            </Link>
+          )}
+        </form>
+      )}
 
       {contratos.length === 0 ? (
         todos.length === 0 ? (

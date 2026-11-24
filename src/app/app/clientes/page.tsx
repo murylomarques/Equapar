@@ -29,11 +29,24 @@ export default async function Clientes() {
     <>
       <CabecalhoPagina titulo="Todos os clientes" subtitulo={`${plural(empresas.length, "cliente", "clientes")} nesta assessoria.`} />
       {empresas.length === 0 ? (
-        <EstadoVazio icone={Users} titulo="Nenhum cliente ainda" porque="Adicione o primeiro cliente pelo CNPJ. A Equapar pode buscar os contratos dele no PNCP." />
+        <div className="clientes-coluna">
+          <EstadoVazio
+            icone={Users}
+            titulo="Nenhum cliente ainda"
+            porque="Adicione o primeiro cliente pelo CNPJ. A Equapar pode buscar os contratos dele no PNCP."
+            acao={
+              podeEditar ? (
+                <a href="#adicionar-cliente" className="btn btn-primario">
+                  Adicionar o primeiro cliente
+                </a>
+              ) : undefined
+            }
+          />
+        </div>
       ) : (
         <>
         <div className="tabela-rolagem so-desktop">
-          <table className="tabela">
+          <table className="tabela tabela-clientes">
             <thead>
               <tr>
                 <th scope="col">Cliente</th>
@@ -115,7 +128,7 @@ export default async function Clientes() {
         </>
       )}
       {podeEditar && (
-        <div className="cartao mt-24" style={{ maxWidth: 640 }}>
+        <div className="cartao mt-24 clientes-coluna" id="adicionar-cliente">
           <h2>Adicionar cliente</h2>
           <FormAcao action={adicionarCliente} limparAoSalvar>
             <CampoCnpj nome="cnpj" rotulo="CNPJ do cliente" />

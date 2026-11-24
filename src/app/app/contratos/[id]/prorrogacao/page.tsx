@@ -29,15 +29,15 @@ export default async function Prorrogacao({ params }: { params: Promise<{ id: st
   const inicial = c.tipoReajuste === "INDICE" ? "indice" : c.convencao?.situacao === "REGISTRADA" ? "registrada" : c.convencao ? "pendente" : null;
 
   return (
-    <div style={{ maxWidth: 1000 }}>
+    <div className="pagina-prorrogacao" style={{ maxWidth: 1000 }}>
       <CabecalhoPagina
         trilha={[
           { rotulo: "Carteira", href: "/app/carteira" },
           { rotulo: `Contrato ${c.numero}`, href: `/app/contratos/${c.id}` },
           { rotulo: "Decisão de prorrogação" },
         ]}
-        titulo={d >= 0 ? `O contrato ${c.numero} termina em ${plural(d, "dia", "dias")}. Antes de assinar a prorrogação:` : `O contrato ${c.numero} terminou há ${plural(-d, "dia", "dias")}.`}
-        subtitulo={c.orgao}
+        titulo={d >= 0 ? `O contrato ${c.numero} termina em ${plural(d, "dia", "dias")}` : `O contrato ${c.numero} terminou há ${plural(-d, "dia", "dias")}`}
+        subtitulo={`${c.orgao} · Decida o caso abaixo antes de assinar a prorrogação.`}
       />
       {/* C5: alerta antes de assinar, com grau */}
       {alerta && <AlertaDeProrrogacao alerta={alerta} fonte={FONTES.preclusao} />}

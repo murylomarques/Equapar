@@ -156,7 +156,11 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<{
         />
       ) : (
         <ul className="lista-limpa pilha-8" aria-label={VISOES.find(([k]) => k === visao)?.[1]}>
-          {lista.map(({ ev, c, iguais }) => (
+          {lista.map(({ ev, c, iguais }) => {
+            // o título já começa com "Contrato N": a linha de cima mostra só o órgão
+            const partes = c.objeto?.split(" · ") ?? [];
+            const objeto = partes.length > 1 && c.titulo.startsWith(partes[0]) ? partes.slice(1).join(" · ") : c.objeto;
+            return (
             <li key={ev.chave} className={`cartao aviso-item${c.situacao === "RESOLVIDO" ? " aviso-resolvido" : ""}`}>
               <div className="aviso-corpo">
                 <div className="fileira" style={{ flexWrap: "wrap", gap: 8 }}>
@@ -165,12 +169,12 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<{
                   ) : (
                     c.situacao === "RESOLVIDO" ? <SeloSimples texto="Resolvido" tom="verde" icone="check" /> : <SeloSimples texto="Informativo" tom="azul" icone="ampulheta" />
                   )}
-                  {c.objeto && <span className="legenda">{c.objeto}</span>}
+                  {objeto && <span className="legenda aviso-objeto">{objeto}</span>}
                 </div>
                 <h2 className="aviso-titulo">{c.titulo}</h2>
                 <p className="secundario mb-0">{c.resumo}</p>
                 {visao === "historico" && ev.envios[0]?.assunto && <p className="legenda mt-8 mb-0">Mensagem: {ev.envios[0].assunto}</p>}
-                <p className="legenda mt-8 mb-0">
+                <p className="aviso-meta mt-8 mb-0">
                   Avisado{" "}
                   <time dateTime={ev.ultimoEnvio.toISOString()} title={dataHora(ev.ultimoEnvio)}>
                     {quando(ev.ultimoEnvio)}
@@ -202,7 +206,8 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<{
                 </Link>
               )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

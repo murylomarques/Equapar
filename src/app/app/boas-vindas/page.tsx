@@ -90,6 +90,21 @@ function Importar({ empresa, temContratos }: { empresa?: { id: string; cnpj: str
           </Link>
         </div>
       </FormAcao>
+      <div className="explica-importacao">
+        <h2>O que será importado</h2>
+        <ul>
+          <li>
+            <strong>Contratos vigentes</strong> em que o CNPJ acima é o contratado: número, órgão, objeto, vigência e valor.
+          </li>
+          <li>
+            <strong>Você confirma antes de usar:</strong> no passo seguinte, marca quais contratos têm funcionários dedicados.
+          </li>
+          <li>
+            <strong>Nada é enviado ao órgão.</strong> A consulta só lê dados públicos do PNCP.
+          </li>
+        </ul>
+        <p className="legenda mb-0">Contrato que não aparecer no PNCP pode ser cadastrado à mão a qualquer momento.</p>
+      </div>
     </div>
   );
 }
@@ -173,7 +188,7 @@ async function Convencoes() {
       <h1>Qual convenção coletiva vale para estes contratos?</h1>
       <p className="secundario">Agrupamos por cidade. Use a mesma convenção da planilha de custos da proposta.</p>
       <FormAcao action={onboardingConvencoes} semToast>
-        <div className="pilha" style={{ gap: 24 }}>
+        <div className="pilha grupos-convencao" style={{ gap: 24 }}>
           {[...grupos.entries()].map(([g, cs], gi) => {
             const chave = `g${gi}`;
             const [cidade, uf] = g.split("/");
@@ -196,14 +211,14 @@ async function Convencoes() {
                       </span>
                     </label>
                   ))}
-                  <label className="radio-cartao">
+                  <label className="radio-cartao opcao-com-campos">
                     <input type="radio" name={`conv_${chave}`} value="nova" defaultChecked={!sugerida} />
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <strong>Cadastrar a convenção</strong>
                       <span className="desc">Confirme o nome e escolha o mês da data-base.</span>
-                      <span className="mt-16" style={{ display: "block" }}>
+                      <span className="campos-da-opcao mt-16">
                         <CampoTexto nome={`nome_${chave}`} rotulo="Nome" valorInicial={`Convenção de asseio e conservação de ${g} ${anoAtual}`} />
-                        <span className="linha-form">
+                        <span className="linha-form ano-a-esquerda">
                           <SelectMes nome={`mes_${chave}`} rotulo="Mês da data-base" />
                           <CampoInteiro nome={`ano_${chave}`} rotulo="Ano" valorInicial={anoAtual} />
                         </span>
@@ -256,7 +271,15 @@ async function Pronto() {
         </Link>
       </div>
       {contratos.some((c) => c.maoDeObraDedicada && !c.convencao) && (
-        <Alerta tipo="atencao" className="mt-16">
+        <Alerta
+          tipo="atencao"
+          className="mt-16"
+          acao={
+            <Link href="/app/boas-vindas?passo=convencoes" className="btn btn-pequeno">
+              Informar as convenções
+            </Link>
+          }
+        >
           Alguns contratos estão sem convenção. Sem ela, não dá para avisar a data-base.
         </Alerta>
       )}

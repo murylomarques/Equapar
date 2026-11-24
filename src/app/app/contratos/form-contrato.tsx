@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { FormAcao } from "@/components/form-acao";
 import {
@@ -59,7 +60,7 @@ export function FormContrato({
   aoCancelar?: () => void;
 }) {
   return (
-    <FormAcao action={action} id={idForm} aoConcluir={aoConcluir}>
+    <FormAcao action={action} id={idForm} aoConcluir={aoConcluir} className="form-grade">
       {c && <input type="hidden" name="id" value={c.id} />}
 
       <fieldset className="grupo-form">
@@ -74,10 +75,12 @@ export function FormContrato({
           />
         )}
         {!c && empresas.length === 1 && <input type="hidden" name="empresaId" value={empresas[0].id} />}
-        <CampoTexto nome="numero" rotulo="Número do contrato" valorInicial={c?.numero} largura="curto" ajuda="Ex.: 45/2025" />
-        <CampoTexto nome="orgao" rotulo="Órgão contratante" valorInicial={c?.orgao} ajuda="Ex.: Prefeitura Municipal de Vitória" />
+        <div className="grade-campos g-1-2">
+          <CampoTexto nome="numero" rotulo="Número do contrato" valorInicial={c?.numero} ajuda="Ex.: 45/2025" />
+          <CampoTexto nome="orgao" rotulo="Órgão contratante" valorInicial={c?.orgao} ajuda="Ex.: Prefeitura Municipal de Vitória" />
+        </div>
         <TextoLongo nome="objeto" rotulo="Objeto" valorInicial={c?.objeto} limite={600} ajuda="Como está no contrato." />
-        <div className="linha-form" style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr)" }}>
+        <div className="grade-campos g-local">
           <CampoTexto nome="municipio" rotulo="Cidade" opcional valorInicial={c?.municipio} />
           <SelectUF nome="uf" rotulo="UF" opcional valorInicial={c?.uf} />
           <CampoSelect
@@ -98,28 +101,29 @@ export function FormContrato({
 
       <fieldset className="grupo-form">
         <legend>Vigência</legend>
-        <div className="linha-form">
-          <CampoData nome="vigenciaInicio" rotulo="Início da vigência" valorInicial={c?.vigenciaInicio} mostrarRelativo={false} />
-          <CampoData nome="vigenciaFim" rotulo="Fim da vigência" valorInicial={c?.vigenciaFim} />
+        <p className="legenda grupo-ajuda">Datas no formato dd/mm/aaaa.</p>
+        <div className="grade-campos g-2">
+          <CampoData nome="vigenciaInicio" rotulo="Início da vigência" valorInicial={c?.vigenciaInicio} mostrarRelativo={false} ajuda="" />
+          <CampoData nome="vigenciaFim" rotulo="Fim da vigência" valorInicial={c?.vigenciaFim} ajuda="" />
+          <CampoData nome="prorrogacaoPrevistaEm" rotulo="Prorrogação prevista para" opcional valorInicial={c?.prorrogacaoPrevistaEm} mostrarRelativo={false} ajuda="Previsão operacional; não substitui a data do termo assinado." />
+          <CampoData
+            nome="dataProposta"
+            rotulo="Data da proposta"
+            opcional
+            valorInicial={c?.dataProposta}
+            mostrarRelativo={false}
+            ajuda="Define se a reforma tributária (LC 214/2025) alcança o contrato."
+          />
         </div>
-        <CampoData nome="prorrogacaoPrevistaEm" rotulo="Prorrogação prevista para" opcional valorInicial={c?.prorrogacaoPrevistaEm} mostrarRelativo={false} ajuda="Previsão operacional; não substitui a data do termo assinado." />
-        <CampoData
-          nome="dataProposta"
-          rotulo="Data da proposta"
-          opcional
-          valorInicial={c?.dataProposta}
-          mostrarRelativo={false}
-          ajuda="Define se a reforma tributária (LC 214/2025) alcança o contrato."
-        />
       </fieldset>
 
       <fieldset className="grupo-form">
         <legend>Valores</legend>
-        <div className="linha-form">
+        <div className="grade-campos g-3">
           <CampoInteiro nome="postos" rotulo="Postos de trabalho" opcional valorInicial={c?.postos} sufixo="postos" />
           <CampoDinheiro nome="valorMensal" rotulo="Valor mensal" opcional valorInicial={c?.valorMensal} />
+          <CampoData nome="ultimoApostilamento" rotulo="Último apostilamento" opcional valorInicial={c?.ultimoApostilamento} mostrarRelativo={false} ajuda="" />
         </div>
-        <CampoData nome="ultimoApostilamento" rotulo="Último apostilamento" opcional valorInicial={c?.ultimoApostilamento} mostrarRelativo={false} />
       </fieldset>
 
       <fieldset className="grupo-form">
@@ -130,7 +134,7 @@ export function FormContrato({
           descricao="Mão de obra dedicada. Só esses contratos têm repactuação pela convenção coletiva."
           valorInicial={c?.maoDeObraDedicada ?? true}
         />
-        <div className="mt-16" />
+        <div className="mt-16" aria-hidden />
         <RadiosCartao
           nome="tipoReajuste"
           legenda="Como o preço é atualizado"
@@ -161,7 +165,14 @@ export function FormContrato({
           <BotaoEnvio>Salvar</BotaoEnvio>
         </div>
       ) : (
-        !semBotao && <BotaoEnvio>{c ? "Salvar contrato" : "Cadastrar contrato"}</BotaoEnvio>
+        !semBotao && (
+          <div className="acoes-form">
+            <Link href={c ? `/app/contratos/${c.id}` : "/app/carteira"} className="btn">
+              Cancelar
+            </Link>
+            <BotaoEnvio>{c ? "Salvar contrato" : "Cadastrar contrato"}</BotaoEnvio>
+          </div>
+        )
       )}
     </FormAcao>
   );

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, Layers } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Layers } from "lucide-react";
 import { Selo } from "@/components/selo";
 import type { Selo as TSelo } from "@/lib/prazos";
 import { FormAcao } from "@/components/form-acao";
@@ -173,17 +173,23 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
       </div>
       <div className="cartoes-celular cartoes-carteira">
         {ordenadas.map((l) => (
-          <Link key={l.id} href={`/app/contratos/${l.id}`} className="cartao-linha">
-            <strong>{l.orgao}</strong>
-            <span className="legenda" style={{ display: "block" }}>
-              Contrato {l.numero} · fim da vigência {l.fimTxt}
+          <Link key={l.id} href={`/app/contratos/${l.id}`} className="cartao-linha cartao-contrato">
+            <span className="cartao-contrato-corpo">
+              <strong>Contrato {l.numero}</strong>
+              <span className="uma-linha" style={{ display: "block" }}>
+                {l.orgao}
+              </span>
+              <span className="legenda" style={{ display: "block" }}>
+                Próximo prazo: {l.prazoTxt} · fim {l.fimTxt}
+              </span>
+              <span className="legenda" style={{ display: "block" }}>
+                Valor mensal: {l.valorMensalTxt}
+              </span>
+              <span style={{ display: "block", marginTop: 8 }}>
+                <Selo selo={l.selo} />
+              </span>
             </span>
-            <span className="legenda" style={{ display: "block" }}>
-              Próximo prazo: {l.prazoTxt} · {l.valorMensalTxt}
-            </span>
-            <div style={{ marginTop: 8 }}>
-              <Selo selo={l.selo} />
-            </div>
+            <ChevronRight size={20} strokeWidth={1.5} aria-hidden className="cartao-contrato-seta" />
           </Link>
         ))}
       </div>

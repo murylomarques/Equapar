@@ -9,7 +9,7 @@ import { preverMudanca } from "@/lib/assinatura";
 import type { PlanoId } from "@/lib/planos";
 import { db } from "@/lib/db";
 import { prefsDe } from "@/lib/avisos";
-import { data, dataHora, reais } from "@/lib/format";
+import { data, dataHora, MESES, reais } from "@/lib/format";
 import { navegadorLegivel, plural } from "@/lib/mascaras";
 import { emailAtivo, whatsappAtivo } from "@/lib/mensagens";
 import { FormAcao } from "@/components/form-acao";
@@ -98,7 +98,12 @@ async function Empresa({ dono }: { dono: boolean }) {
         <h2>Empresa</h2>
         <FormAcao action={salvarConta}>
           <fieldset disabled={!dono} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-            <CampoTexto nome="nome" rotulo="Nome da conta" valorInicial={ctx.conta.nome} />
+            <CampoTexto
+              nome="nome"
+              rotulo="Nome da conta"
+              valorInicial={ctx.conta.nome}
+              ajuda="Como a conta aparece na Equapar, no menu e nos e-mails. A razão social de cada empresa vem do CNPJ e está na lista abaixo."
+            />
             {assessoria && (
               <div className="linha-form">
                 <CampoTexto nome="marcaNome" rotulo="Nome nos PDFs" opcional valorInicial={ctx.conta.marcaNome} />
@@ -169,19 +174,19 @@ async function Pessoas({ dono }: { dono: boolean }) {
         <p className="ajuda-texto">Dono: tudo. Gerente de contratos: carteira e pedidos. Contador: memória e aprovação. Leitura: só vê.</p>
         <ul className="lista-limpa pilha-8">
           {membros.map((m) => (
-            <li key={m.id} className="cartao-linha entre" style={{ boxShadow: "none" }}>
-              <span style={{ minWidth: 0 }}>
+            <li key={m.id} className={`cartao-linha pessoa-linha${dono ? "" : " so-leitura"}`} style={{ boxShadow: "none" }}>
+              <span className="pessoa-info">
                 <strong>{m.usuario.nome}</strong>
                 <span className="legenda">{m.usuario.email}</span>
               </span>
               {dono ? (
-                <div className="fileira">
-                  <FormAcao action={mudarPapel} className="fileira">
+                <>
+                  <FormAcao action={mudarPapel} className="pessoa-papel">
                     <input type="hidden" name="membroId" value={m.id} />
                     <label htmlFor={`papel-${m.id}`} className="sr-only">
                       Papel de {m.usuario.nome}
                     </label>
-                    <select id={`papel-${m.id}`} name="papel" defaultValue={m.papel} style={{ width: "auto", minHeight: 36 }}>
+                    <select id={`papel-${m.id}`} name="papel" defaultValue={m.papel}>
                       {papeis.map((p) => (
                         <option key={p.valor} value={p.valor}>
                           {p.rotulo}
@@ -190,13 +195,17 @@ async function Pessoas({ dono }: { dono: boolean }) {
                     </select>
                     <BotaoEnvio className="btn btn-pequeno">Salvar</BotaoEnvio>
                   </FormAcao>
-                  {m.usuarioId !== ctx.usuario.id && (
-                    <FormAcao action={removerPessoa} confirmar={{ titulo: `Remover ${m.usuario.nome} da conta?`, texto: "A pessoa perde o acesso imediatamente.", confirmar: "Remover", perigo: true }}>
-                      <input type="hidden" name="membroId" value={m.id} />
-                      <BotaoEnvio className="btn btn-pequeno btn-perigo">Remover</BotaoEnvio>
-                    </FormAcao>
-                  )}
-                </div>
+                  <span className="pessoa-remover">
+                    {m.usuarioId !== ctx.usuario.id ? (
+                      <FormAcao action={removerPessoa} confirmar={{ titulo: `Remover ${m.usuario.nome} da conta?`, texto: "A pessoa perde o acesso imediatamente.", confirmar: "Remover", perigo: true }}>
+                        <input type="hidden" name="membroId" value={m.id} />
+                        <BotaoEnvio className="btn btn-pequeno btn-perigo">Remover</BotaoEnvio>
+                      </FormAcao>
+                    ) : (
+                      <span className="legenda">Você</span>
+                    )}
+                  </span>
+                </>
               ) : (
                 <SeloSimples texto={NOME_PAPEL[m.papel]} tom="neutro" />
               )}
@@ -236,7 +245,7 @@ async function AvisosPrefs({ demo }: { demo: boolean }) {
           {semCanal.join(" e ")} {semCanal.length > 1 ? "ainda não estão ligados" : "ainda não está ligado"}. As mensagens ficam registradas em <Link href="/app/avisos">Avisos</Link>.
         </Alerta>
       )}
-      <FormAcao action={salvarAvisos}>
+      <FormAcao action={salvarAvisos} className="form-grade form-prefs">
         <fieldset disabled={demo} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <fieldset className="grupo-form">
             <legend>Por onde avisar</legend>
@@ -252,7 +261,7 @@ async function AvisosPrefs({ demo }: { demo: boolean }) {
                 nome="hora"
                 rotulo="Horário do resumo"
                 valorInicial={String(p.hora)}
-                largura="curto"
+                largura="medio"
                 opcoes={Array.from({ length: 16 }, (_, i) => i + 6).map((h) => ({ valor: String(h), rotulo: `${h}h` }))}
               />
             </div>
@@ -280,6 +289,12 @@ const SITUACAO: Record<string, { tom: "info" | "atencao" | "erro"; texto: string
 };
 
 const STATUS_FATURA: Record<string, string> = { ABERTA: "em aberto", PAGA: "paga", FALHOU: "não paga", CANCELADA: "cancelada", ESTORNADA: "estornada" };
+const TOM_FATURA: Record<string, string> = { ABERTA: "selo-ambar", PAGA: "selo-verde", FALHOU: "selo-carimbo", CANCELADA: "selo-neutro", ESTORNADA: "selo-neutro" };
+/** "2026-11" → "novembro/2026"; outro formato fica como veio. */
+function referenciaLegivel(ref: string) {
+  const m = /^(\d{4})-(\d{2})$/.exec(ref);
+  return m && Number(m[2]) >= 1 && Number(m[2]) <= 12 ? `${MESES[Number(m[2]) - 1]}/${m[1]}` : ref;
+}
 const REVISAO: Record<string, string> = {
   PAGA_APOS_CANCELAMENTO: "Pagamento recebido depois do cancelamento: não reativa o plano; o valor será devolvido.",
   ESTORNO_PARCIAL: "Estorno parcial registrado: o acesso do período foi mantido.",
@@ -408,7 +423,23 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
           <h2 id="mudar">Mudar de plano</h2>
           <form method="get" action="/app/configuracoes" className="pilha-16">
             <input type="hidden" name="aba" value="cobranca" />
-            <RadiosCartao nome="plano" legenda="Plano" valorInicial={destino ?? conta.plano} opcoes={PLANOS} />
+            <RadiosCartao
+              nome="plano"
+              legenda="Plano"
+              valorInicial={destino ?? conta.plano}
+              opcoes={PLANOS.map((p) =>
+                p.valor === conta.plano
+                  ? {
+                      ...p,
+                      titulo: (
+                        <span className="plano-titulo">
+                          {p.titulo} <span className="selo selo-verde selo-atual">Atual</span>
+                        </span>
+                      ),
+                    }
+                  : p,
+              )}
+            />
             <CampoSelect
               nome="ciclo"
               rotulo="Ciclo"
@@ -510,7 +541,7 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                   <span>
                     <strong style={{ fontWeight: 500 }}>{f.descricao}</strong>
                     <span className="legenda" style={{ display: "block" }}>
-                      {f.periodoInicio && f.periodoFim ? `Período ${data(f.periodoInicio)} a ${data(f.periodoFim)}` : f.referencia}
+                      {f.periodoInicio && f.periodoFim ? `Período ${data(f.periodoInicio)} a ${data(f.periodoFim)}` : `Referência ${referenciaLegivel(f.referencia)}`}
                       {f.vencimento && (f.status === "ABERTA" || f.status === "FALHOU") ? ` · vence em ${data(f.vencimento)}` : ""}
                       {f.tentativas ? ` · ${plural(f.tentativas, "tentativa", "tentativas")}` : ""}
                       {f.motivoCancelamento ? ` · ${f.motivoCancelamento}` : ""}
@@ -521,9 +552,11 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                       </span>
                     )}
                   </span>
-                  <span className="num">
-                    {reais(f.valor)} · {STATUS_FATURA[f.status] ?? f.status}
-                    {Number(f.valorEstornado) > 0 && f.status !== "ESTORNADA" ? ` · ${reais(f.valorEstornado)} estornado` : ""}
+                  <span className="num fatura-valor">
+                    {reais(f.valor)}
+                    <span className="sr-only"> · </span>
+                    <span className={`selo ${TOM_FATURA[f.status] ?? "selo-neutro"}`}>{STATUS_FATURA[f.status] ?? f.status}</span>
+                    {Number(f.valorEstornado) > 0 && f.status !== "ESTORNADA" ? <span className="legenda">{reais(f.valorEstornado)} estornado</span> : null}
                   </span>
                 </div>
                 <div className="fileira mt-8">

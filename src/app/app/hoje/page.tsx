@@ -238,7 +238,9 @@ export default async function Hoje() {
               <h2 id="receber" className="mb-0">
                 A receber
               </h2>
-              <Link href="/app/a-receber">Ver tudo</Link>
+              <Link href="/app/a-receber" className="link-ver-tudo">
+                Ver tudo
+              </Link>
             </div>
             {receber.length === 0 ? (
               <p className="secundario mt-8">Nada deferido aguardando pagamento.</p>
@@ -269,30 +271,29 @@ export default async function Hoje() {
                 const d = diasAte(evs[0].data);
                 return (
                   <li key={dia} className={d <= 30 ? "urgente" : undefined}>
-                    <strong className="tnum">{data(evs[0].data)}</strong> · {emDias(d)}
-                    {evs.length === 1 ? (
-                      <>
-                        <div>{evs[0].titulo}</div>
-                        <Link href={`/app/contratos/${evs[0].contrato.id}?aba=prazos`} className="legenda">
-                          Contrato {evs[0].contrato.numero} · {evs[0].contrato.orgao}
-                        </Link>
-                      </>
-                    ) : (
-                      <details>
-                        <summary style={{ cursor: "pointer" }}>
-                          {[...new Set(evs.map((e) => e.titulo.replace(/ \(.*\)$/, "")))].join("; ")} · {plural(new Set(evs.map((e) => e.contrato.id)).size, "contrato", "contratos")}
-                        </summary>
-                        <ul className="lista-limpa" style={{ marginTop: 4 }}>
-                          {evs.map((e, i) => (
-                            <li key={i} style={{ padding: "2px 0" }}>
-                              <Link href={`/app/contratos/${e.contrato.id}?aba=prazos`} className="legenda">
-                                Contrato {e.contrato.numero} · {e.contrato.orgao}
-                              </Link>
-                            </li>
+                    <strong className="tnum">{data(evs[0].data)}</strong> <span className="legenda">· {emDias(d)}</span>
+                    <ul className="lista-limpa eventos-dia">
+                      {agruparEventos(evs).map(({ titulo, contratos: cs }) => (
+                        <li key={titulo}>
+                          <span className="evento-linha">
+                            <span className="evento-titulo" title={titulo}>
+                              {titulo}
+                            </span>
+                            {cs.length > 1 && (
+                              <span className="evento-contagem">
+                                {cs.length}
+                                <span className="sr-only"> contratos</span>
+                              </span>
+                            )}
+                          </span>
+                          {cs.map((c) => (
+                            <Link key={c.id} href={`/app/contratos/${c.id}?aba=prazos`} className="legenda evento-contrato" title={`Contrato ${c.numero} · ${c.orgao}`}>
+                              Contrato {c.numero} · {c.orgao}
+                            </Link>
                           ))}
-                        </ul>
-                      </details>
-                    )}
+                        </li>
+                      ))}
+                    </ul>
                   </li>
                 );
               })}
@@ -302,4 +303,16 @@ export default async function Hoje() {
       </div>
     </>
   );
+}
+
+/** Agrupa os prazos do mesmo dia pelo título (sem o detalhe entre parênteses), um contrato por linha. */
+function agruparEventos<E extends { titulo: string; contrato: { id: string; numero: string; orgao: string } }>(evs: E[]) {
+  const grupos = new Map<string, Map<string, E["contrato"]>>();
+  for (const e of evs) {
+    const t = e.titulo.replace(/ \(.*\)$/, "");
+    const g = grupos.get(t) ?? new Map<string, E["contrato"]>();
+    g.set(e.contrato.id, e.contrato);
+    grupos.set(t, g);
+  }
+  return [...grupos.entries()].map(([titulo, g]) => ({ titulo, contratos: [...g.values()] }));
 }

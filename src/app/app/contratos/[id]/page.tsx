@@ -15,6 +15,7 @@ import {
   Upload,
   DollarSign,
   Gavel,
+  ChevronRight,
 } from "lucide-react";
 import { contexto, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -86,6 +87,17 @@ export default async function ContratoPagina({ params, searchParams }: { params:
   });
   if (!c) notFound();
   const convencoes = await db.convencao.findMany({ where: { contaId: ctx.conta.id }, orderBy: { ano: "desc" } });
+  // O histórico do contrato inclui o que foi feito nos pedidos dele (registrados só com o pedido)
+  const historicos =
+    aba === "historico"
+      ? await db.historico.findMany({
+          where: { contaId: ctx.conta.id, OR: [{ contratoId: c.id }, { pedidoId: { in: c.pedidos.map((p) => p.id) } }] },
+          orderBy: { criadoEm: "desc" },
+          include: { usuario: true },
+          take: 100,
+        })
+      : c.historicos;
+  const registrouEntrada = historicos.some((h) => h.contratoId === c.id && /cadastrou|importou/i.test(h.acao));
   const op = oportunidade(c);
   const protocolado = c.pedidos.find((p) => p.estado === "PROTOCOLADO");
   const aReceber = c.pedidos.find((p) => p.estado === "FATURADO" || p.estado === "DEFERIDO");
@@ -304,44 +316,46 @@ export default async function ContratoPagina({ params, searchParams }: { params:
             }
           />
         ) : (
-          <div className="tabela-rolagem">
-            <table className="tabela">
-              <thead>
-                <tr>
-                  <th scope="col">Criado em</th>
-                  <th scope="col">Situação</th>
-                  <th scope="col" className="num">
-                    Diferença por mês
-                  </th>
-                  <th scope="col" className="num">
-                    Desde a data-base
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {c.pedidos.map((p) => (
-                  <tr key={p.id} className="linha-clicavel">
-                    <td>
-                      <Link className="linha-link" href={p.estado === "EM_ANALISE" ? `/app/pedidos/${p.id}` : `/app/pedidos/${p.id}/pronto`}>
-                        {dataLocal(p.criadoEm)}
-                      </Link>
-                    </td>
-                    <td>{NOME_ESTADO[p.estado]}</td>
-                    <td className="num">{p.diferencaMensal ? reais(p.diferencaMensal) : "—"}</td>
-                    <td className="num">{p.diferencaRetroativa ? reais(p.diferencaRetroativa) : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="lista-limpa pilha-8 pedidos-do-contrato">
+            {c.pedidos.map((p) => {
+              const href = p.estado === "EM_ANALISE" ? `/app/pedidos/${p.id}` : `/app/pedidos/${p.id}/pronto`;
+              return (
+                <li key={p.id}>
+                  <Link href={href} className="cartao-linha pedido-linha">
+                    <span className="pedido-linha-corpo">
+                      <strong>Pedido de {dataLocal(p.criadoEm)}</strong>
+                      <span className="legenda">{NOME_ESTADO[p.estado]}</span>
+                    </span>
+                    <span className="pedido-linha-valor">
+                      <span className="legenda">Diferença por mês</span>
+                      {p.diferencaMensal ? <span className="tnum">{reais(p.diferencaMensal)}</span> : <span className="secundario">ainda não calculada</span>}
+                    </span>
+                    <span className="pedido-linha-valor">
+                      <span className="legenda">Desde a data-base</span>
+                      {p.diferencaRetroativa ? <span className="tnum">{reais(p.diferencaRetroativa)}</span> : <span className="secundario">ainda não calculada</span>}
+                    </span>
+                    <ChevronRight size={20} strokeWidth={1.5} aria-hidden className="pedido-linha-seta" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         ))}
 
       {aba === "documentos" && (
-        <div className="grade-2">
+        <div className="grade-2 documentos-contrato">
           <div className="cartao">
             <h2>Documentos</h2>
             {c.documentos.length === 0 ? (
-              <p className="secundario mb-0">Nenhum documento ainda. Guarde aqui contrato, aditivos, planilhas, ofícios e protocolos, com versão e data.</p>
+              <div className="documentos-vazio">
+                <FileText size={28} strokeWidth={1.5} aria-hidden />
+                <p className="mb-0">
+                  <strong>Nenhum documento ainda.</strong>
+                  <span className="secundario" style={{ display: "block" }}>
+                    Guarde aqui contrato, aditivos, planilhas, ofícios e protocolos, com versão e data.{podePedidos ? " Use o formulário ao lado para anexar o primeiro." : ""}
+                  </span>
+                </p>
+              </div>
             ) : (
               <ul className="lista-limpa pilha-8">
                 {c.documentos.map((d) => (
@@ -377,11 +391,14 @@ export default async function ContratoPagina({ params, searchParams }: { params:
       {aba === "historico" && (
         <div className="cartao">
           <h2>Histórico</h2>
-          {c.historicos.length === 0 ? (
-            <p className="secundario mb-0">Nada registrado ainda. Cada alteração, envio e etapa fica aqui, com quem fez e quando.</p>
+          <p className="secundario">
+            Cada alteração, envio e etapa do contrato e dos pedidos dele fica aqui, com quem fez e quando. O registro começa em {data(c.criadoEm)}, quando o contrato entrou na carteira.
+          </p>
+          {historicos.length === 0 && registrouEntrada ? (
+            <p className="secundario mb-0">Nada registrado ainda.</p>
           ) : (
             <ul className="lista-limpa historico">
-              {c.historicos.map((h) => {
+              {historicos.map((h) => {
                 const I = iconeHistorico(h.acao);
                 const d = diasAte(h.criadoEm);
                 return (
@@ -392,6 +409,7 @@ export default async function ContratoPagina({ params, searchParams }: { params:
                     <span style={{ minWidth: 0 }}>
                       <strong style={{ fontWeight: 500 }}>{h.acao}</strong>
                       {h.detalhe ? <span className="secundario"> ({h.detalhe})</span> : null}
+                      {h.pedidoId && h.contratoId !== c.id ? <span className="secundario"> · no pedido</span> : null}
                       <span className="legenda" style={{ display: "block" }}>
                         {h.usuario?.nome ?? "Sistema"} · <time dateTime={h.criadoEm.toISOString()} title={dataHora(h.criadoEm)}>{d === 0 ? `hoje, ${dataHora(h.criadoEm).split(" ")[1]}` : emDias(d)}</time>
                       </span>
@@ -399,6 +417,19 @@ export default async function ContratoPagina({ params, searchParams }: { params:
                   </li>
                 );
               })}
+              {!registrouEntrada && (
+                <li>
+                  <span className="historico-icone" aria-hidden>
+                    <PlusCircle size={16} strokeWidth={1.5} />
+                  </span>
+                  <span style={{ minWidth: 0 }}>
+                    <strong style={{ fontWeight: 500 }}>{c.linkPncp ? "Contrato importado do PNCP" : "Contrato entrou na carteira"}</strong>
+                    <span className="legenda" style={{ display: "block" }}>
+                      Sistema · <time dateTime={c.criadoEm.toISOString()} title={dataHora(c.criadoEm)}>{data(c.criadoEm)}</time>
+                    </span>
+                  </span>
+                </li>
+              )}
             </ul>
           )}
         </div>

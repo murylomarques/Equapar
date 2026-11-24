@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { contratosDoContexto } from "@/lib/consultas";
 import { data, MESES, plural } from "@/lib/format";
 import { NOME_ESTADO } from "@/lib/pedido";
-import { seloSituacao } from "@/lib/prazos";
+import { seloSituacao, type Selo as TSelo, type Tom } from "@/lib/prazos";
 import { Selo, SeloSimples } from "@/components/selo";
 import { CabecalhoPagina } from "@/components/ui/estrutura";
 import { EstadoVazio } from "@/components/ui/apresentacao";
@@ -29,6 +29,17 @@ function Destaque({ texto, termo }: { texto: string; termo: string }) {
   partes.push(texto.slice(i));
   return <>{partes}</>;
 }
+
+/** Mesmos tons e ícones dos selos da Carteira para cada etapa do pedido. */
+const TOM_ESTADO: Record<string, [Tom, TSelo["icone"]]> = {
+  EM_ANALISE: ["ambar", "relogio"],
+  CALCULO_VALIDADO: ["ambar", "relogio"],
+  PROTOCOLADO: ["azul", "ampulheta"],
+  DEFERIDO: ["verde", "carimbo"],
+  FATURADO: ["verde", "cifrao"],
+  RECEBIDO: ["verde", "check"],
+  INDEFERIDO: ["carimbo", "alerta"],
+};
 
 const TIPOS = [
   { id: "", nome: "Tudo" },
@@ -122,7 +133,7 @@ export default async function Busca({ searchParams }: { searchParams: Promise<{ 
                     <strong>
                       Pedido do contrato <Destaque texto={p.contrato.numero} termo={termo} /> · <Destaque texto={p.contrato.orgao} termo={termo} />
                     </strong>
-                    <SeloSimples texto={NOME_ESTADO[p.estado]} tom="neutro" icone="check" />
+                    <SeloSimples texto={NOME_ESTADO[p.estado]} tom={TOM_ESTADO[p.estado]?.[0] ?? "neutro"} icone={TOM_ESTADO[p.estado]?.[1] ?? "check"} />
                   </Link>
                 </li>
               ))}

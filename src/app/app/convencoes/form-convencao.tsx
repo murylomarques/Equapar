@@ -31,18 +31,18 @@ function Campos({ c }: { c?: ConvencaoForm }) {
       </fieldset>
       <fieldset className="grupo-form">
         <legend>Base territorial e data-base</legend>
-        <div className="linha-form" style={{ gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)" }}>
+        <div className="grade-campos g-2">
           <CampoTexto nome="cidade" rotulo="Cidade" opcional valorInicial={c?.cidade} />
           <SelectUF nome="uf" rotulo="UF" valorInicial={c?.uf} />
         </div>
-        <div className="linha-form">
+        <div className="grade-campos g-2 ano-a-esquerda">
           <SelectMes nome="mesDataBase" rotulo="Mês da data-base" valorInicial={c?.mesDataBase} />
-          <CampoInteiro nome="ano" rotulo="Ano" valorInicial={c?.ano ?? new Date().getFullYear()} largura="curto" />
+          <CampoInteiro nome="ano" rotulo="Ano" valorInicial={c?.ano ?? new Date().getFullYear()} />
         </div>
       </fieldset>
       <fieldset className="grupo-form">
         <legend>Registro no Ministério do Trabalho</legend>
-        <div className="linha-form">
+        <div className="grade-campos g-2">
           <CampoData nome="dataDeposito" rotulo="Data do depósito" opcional valorInicial={c?.dataDeposito} mostrarRelativo={false} ajuda="Registro no Mediador. Em branco = convenção ainda pendente." />
           <CampoTexto nome="registroMte" rotulo="Número do registro" opcional valorInicial={c?.registroMte} />
         </div>
@@ -59,7 +59,7 @@ function Campos({ c }: { c?: ConvencaoForm }) {
 
 export function NovaConvencao() {
   return (
-    <FormAcao action={salvarConvencao} limparAoSalvar>
+    <FormAcao action={salvarConvencao} limparAoSalvar className="form-grade">
       <Campos />
       <BotaoEnvio>Cadastrar convenção</BotaoEnvio>
     </FormAcao>
@@ -75,7 +75,7 @@ export function EditarConvencao({ c }: { c: ConvencaoForm }) {
       </button>
       <PainelLateral aberto={aberto} aoFechar={() => setAberto(false)} titulo={`Editar ${c.nome}`}>
         {aberto && (
-          <FormAcao action={salvarConvencao} aoConcluir={(r) => r.ok && setAberto(false)}>
+          <FormAcao action={salvarConvencao} aoConcluir={(r) => r.ok && setAberto(false)} className="form-grade">
             <Campos c={c} />
             <div className="acoes-painel">
               <button type="button" className="btn" onClick={() => setAberto(false)}>
