@@ -42,6 +42,7 @@ describe("4.2: gateway de cobrança", () => {
   it("P0: simulação de pagamento nunca aparece em produção (salvo homologação explícita)", () => {
     vi.stubEnv("ASAAS_API_KEY", "");
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("COBRANCA_SIMULACAO", "");
     expect(simulacaoPermitida()).toBe(false);
     vi.stubEnv("COBRANCA_SIMULACAO", "true");
     expect(simulacaoPermitida()).toBe(true);

@@ -417,6 +417,21 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                 <FormAcao action={mudarPlano} className="mt-16">
                   <input type="hidden" name="plano" value={destino} />
                   <input type="hidden" name="ciclo" value={cicloNovo} />
+                  {destino === "GRATIS" && (
+                    <CampoSelect
+                      nome="motivo"
+                      rotulo="Quer contar o motivo? (opcional)"
+                      valorInicial=""
+                      opcoes={[
+                        { valor: "", rotulo: "Prefiro não dizer" },
+                        { valor: "PRECO", rotulo: "Preço" },
+                        { valor: "POUCO_USO", rotulo: "Uso pouco" },
+                        { valor: "FALTOU_FUNCAO", rotulo: "Faltou alguma função" },
+                        { valor: "TEMPORARIO", rotulo: "Pausa temporária" },
+                        { valor: "OUTRO", rotulo: "Outro motivo" },
+                      ]}
+                    />
+                  )}
                   {previsao.efeito === "IMEDIATO_APOS_PAGAMENTO" && (
                     <CampoSelect
                       nome="metodo"

@@ -1,9 +1,10 @@
 // Gera docs/redesenho/comparacao.html: cada tela, antes e depois lado a lado (computador e celular).
-// Uso: node e2e/comparacao.mjs   (depois de rodar e2e/capturas.mjs para "antes" e "depois")
+// Uso: node e2e/comparacao.mjs [pasta]   (a pasta tem antes/ e depois/ do e2e/capturas.mjs; padrão docs/redesenho)
 import fs from "node:fs";
 import path from "node:path";
 
-const PASTA = path.resolve("docs/redesenho");
+const PASTA = path.resolve(process.argv[2] ?? "docs/redesenho");
+const TAMS = [["desktop", "Computador (1440)"], ["amplo", "Amplo (1920)"], ["tablet", "Tablet (768)"], ["celular", "Celular (390)"], ["compacto", "Compacto (375)"]];
 const ler = (n) => JSON.parse(fs.readFileSync(path.join(PASTA, n, "lista.json"), "utf8"));
 const antes = ler("antes");
 const depois = ler("depois");
@@ -12,7 +13,7 @@ const telas = new Map();
 for (const [lado, lista] of [["antes", antes], ["depois", depois]])
   for (const c of lista) {
     const chave = c.num;
-    if (!telas.has(chave)) telas.set(chave, { num: c.num, titulo: c.titulo.replace(/ \(parte \d+\)$/, ""), desktop: { antes: [], depois: [] }, celular: { antes: [], depois: [] } });
+    if (!telas.has(chave)) telas.set(chave, { num: c.num, titulo: c.titulo.replace(/ \(parte \d+\)$/, ""), ...Object.fromEntries(TAMS.map(([t]) => [t, { antes: [], depois: [] }])) });
     telas.get(chave)[c.tamanho][lado].push(`${lado}/${c.arquivo}`);
   }
 const ordenadas = [...telas.values()].sort((a, b) => a.num.localeCompare(b.num));
@@ -42,8 +43,8 @@ const html = `<!doctype html>
   .par { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; }
   .lado h3 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--cinza); margin:0 0 6px; }
   .lado img { display:block; width:100%; height:auto; border:1px solid var(--linha); border-radius:6px; margin-bottom:8px; background:#fff; }
-  body[data-tam="celular"] .lado img { max-width:390px; }
-  body[data-tam="desktop"] .so-celular, body[data-tam="celular"] .so-desktop { display:none; }
+  body[data-tam="celular"] .lado img, body[data-tam="compacto"] .lado img { max-width:390px; }
+  ${TAMS.map(([t]) => `body:not([data-tam="${t}"]) .so-${t}`).join(", ")} { display:none; }
   .vazio { color:var(--cinza); font-style:italic; }
   @media (max-width:700px) { .par { grid-template-columns:minmax(0,1fr); } }
 </style>
@@ -52,8 +53,7 @@ const html = `<!doctype html>
 <header>
   <h1>Equapar: antes e depois</h1>
   <div class="abas" role="group" aria-label="Tamanho da tela">
-    <button type="button" data-t="desktop" aria-pressed="true">Computador (1440)</button>
-    <button type="button" data-t="celular" aria-pressed="false">Celular (390)</button>
+    ${TAMS.map(([t, n], i) => `<button type="button" data-t="${t}" aria-pressed="${i === 0}">${n}</button>`).join(" ")}
   </div>
   <nav aria-label="Telas">${ordenadas.map((t) => `<a href="#t${t.num}">${t.num}</a>`).join("")}</nav>
 </header>
@@ -63,7 +63,7 @@ ${ordenadas
   .map(
     (t) => `<section id="t${t.num}">
   <h2>${t.num} · ${esc(t.titulo)}</h2>
-  ${["desktop", "celular"]
+  ${TAMS.map(([t]) => t)
     .map(
       (tam) => `<div class="par so-${tam}">
     <div class="lado"><h3>Antes</h3>${imgs(t[tam].antes, `${t.titulo}, antes, ${tam}`)}</div>

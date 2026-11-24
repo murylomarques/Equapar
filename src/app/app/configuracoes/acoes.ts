@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { registrarEvento } from "@/lib/eventos";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Papel, Plano } from "@prisma/client";
@@ -157,6 +158,9 @@ export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado>
     }
     if (plano === "GRATIS") {
       const r = await cancelarRenovacao(conta.id, agora);
+      const informado = texto(fd, "motivo");
+      const motivo = ["PRECO", "POUCO_USO", "FALTOU_FUNCAO", "TEMPORARIO", "OUTRO"].includes(informado) ? informado : "NAO_INFORMADO";
+      await registrarEvento("renovacao_cancelada", { motivo, agendado: r.agendado });
       await registrarHistorico(ctx, r.agendado ? `Cancelou a renovação; o plano pago segue até ${data(r.ate)}` : "Voltou ao plano Grátis");
       revalidatePath("/app", "layout");
       return {
@@ -174,6 +178,7 @@ export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado>
       return { ok: `Mudança agendada para ${data(prev.quando)}. Nada foi cobrado agora.` };
     }
     const r = await abrirCobrancaDoPlano(conta.id, plano, ciclo, metodo, ctx.usuario.email, agora);
+    await registrarEvento("cobranca_aberta", { plano, ciclo });
     await registrarHistorico(ctx, `Escolheu o plano ${plano.toLowerCase()} (${ciclo.toLowerCase()}); cobrança aberta`);
     revalidatePath("/app/configuracoes");
     return { ok: r.modo === "simulacao" ? "Cobrança aberta (simulação). Use Simular pagamento na fatura para testar." : "Cobrança aberta. Pague pelo link da fatura; o plano muda quando o pagamento for confirmado.", dados: { link: r.link } };

@@ -40,7 +40,20 @@ function comEvidencia(linha: LinhaPlanilha, alteracao: Partial<NonNullable<Linha
  * Fonte da alteração (correção 2) numa sub-linha de largura total, com rótulos visíveis.
  * Completa: fica recolhida num resumo de uma linha. Incompleta: abre sozinha e diz o que falta.
  */
-function EvidenciaLinha({ l, postoId, somenteLeitura, mudarLinha }: { l: LinhaPlanilha; postoId: string; somenteLeitura?: boolean; mudarLinha: (pid: string, lid: string, patch: Partial<LinhaPlanilha>) => void }) {
+function EvidenciaLinha({
+  l,
+  postoId,
+  somenteLeitura,
+  mudarLinha,
+  copiarFonte,
+}: {
+  l: LinhaPlanilha;
+  postoId: string;
+  somenteLeitura?: boolean;
+  mudarLinha: (pid: string, lid: string, patch: Partial<LinhaPlanilha>) => void;
+  copiarFonte?: (origem: NonNullable<LinhaPlanilha["evidencia"]>) => number;
+}) {
+  const [copiadas, setCopiadas] = useState<number | null>(null);
   const e = l.evidencia;
   const faltam = [
     !e?.instrumento?.trim() && "instrumento",
@@ -95,6 +108,18 @@ function EvidenciaLinha({ l, postoId, somenteLeitura, mudarLinha }: { l: LinhaPl
               <option value="REVISAO_RESOLVIDA">Revisão resolvida</option>
             </select>
           </div>
+          {!somenteLeitura && copiarFonte && e?.instrumento?.trim() && (
+            <div className="evidencia-motivo fileira" style={{ gap: 8 }}>
+              <button type="button" className="btn btn-pequeno" onClick={() => setCopiadas(copiarFonte(e!))}>
+                Usar esta fonte nas outras linhas sem fonte
+              </button>
+              {copiadas != null && (
+                <span className="legenda" role="status">
+                  {copiadas === 0 ? "Nenhuma outra linha alterada estava sem fonte." : `Fonte copiada para ${copiadas} ${copiadas === 1 ? "linha" : "linhas"}. Confira a parcela de cada uma.`}
+                </span>
+              )}
+            </div>
+          )}
           {revisao && (
             <div className="campo-mini evidencia-motivo">
               <label htmlFor={id("m")}>Motivo e decisão documentada</label>
@@ -226,6 +251,26 @@ export function EditorPlanilha({
         return l.id === lid ? { ...l, ...patch } : l;
       }),
     }));
+  };
+  // a mesma convenção costuma valer para todas as linhas alteradas: copia sem apagar o que já foi preenchido
+  const copiarFonte = (origem: NonNullable<LinhaPlanilha["evidencia"]>) => {
+    let n = 0;
+    const nova: PlanilhaCustos = {
+      tipos: planilha.tipos.map((t) => ({
+        ...t,
+        linhas: t.linhas.map((l) => {
+          if (!mudou.has(`${t.id}:${l.id}`) || l.evidencia?.instrumento?.trim()) return l;
+          n++;
+          return {
+            ...l,
+            fonte: l.fonte || [origem.instrumento, origem.clausula].filter(Boolean).join(", ") || undefined,
+            evidencia: { ...comEvidencia(l, {}), instrumento: origem.instrumento, categoria: origem.categoria, dataBase: origem.dataBase, clausula: origem.clausula, parcela: l.evidencia?.parcela || l.descricao, anualidade: origem.anualidade },
+          };
+        }),
+      })),
+    };
+    setPlanilha(nova);
+    return n;
   };
   const adicionarLinha = (pid: string, m: (typeof MODULOS)[number]) => {
     setSoMudou(false);
@@ -445,6 +490,7 @@ export function EditorPlanilha({
                             valorCalculado={calcPosto?.linhas.find((x) => x.id === l.id)?.valor}
                             somenteLeitura={somenteLeitura}
                             mudarLinha={mudarLinha}
+                            copiarFonte={copiarFonte}
                             remover={() => mudarPosto(posto.id, (x) => ({ ...x, linhas: x.linhas.filter((y) => y.id !== l.id) }))}
                             colar={colar}
                             aoTeclar={aoTeclar}
@@ -586,6 +632,7 @@ function LinhaEditor({
   valorCalculado,
   somenteLeitura,
   mudarLinha,
+  copiarFonte,
   remover,
   colar,
   aoTeclar,
@@ -598,6 +645,7 @@ function LinhaEditor({
   valorCalculado?: string;
   somenteLeitura?: boolean;
   mudarLinha: (pid: string, lid: string, patch: Partial<LinhaPlanilha>) => void;
+  copiarFonte?: (origem: NonNullable<LinhaPlanilha["evidencia"]>) => number;
   remover: () => void;
   colar: (pid: string, lid: string, texto: string) => boolean;
   aoTeclar: (e: React.KeyboardEvent<HTMLElement>) => void;
@@ -715,7 +763,7 @@ function LinhaEditor({
           </button>
         )}
       </span>
-      {alterou && <EvidenciaLinha l={l} postoId={postoId} somenteLeitura={somenteLeitura} mudarLinha={mudarLinha} />}
+      {alterou && <EvidenciaLinha l={l} postoId={postoId} somenteLeitura={somenteLeitura} mudarLinha={mudarLinha} copiarFonte={copiarFonte} />}
     </div>
   );
 }

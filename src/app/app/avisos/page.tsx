@@ -66,7 +66,14 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<{
   );
   const pendentes = itens.filter((x) => x.c.situacao === "PENDENTE" && x.c.categoria !== "INFO");
   const prazos = itens.filter((x) => x.c.categoria === "PRAZO");
-  const lista = visao === "acao" ? pendentes : visao === "prazos" ? prazos : itens;
+  // ocorrências já resolvidas ou informativas idênticas (ex.: vários pagamentos em dia) viram uma linha com a contagem
+  const agrupados: (typeof itens[number] & { iguais: number })[] = [];
+  for (const x of visao === "acao" ? pendentes : visao === "prazos" ? prazos : itens) {
+    const igual = x.c.situacao !== "PENDENTE" ? agrupados.find((y) => y.ev.tipo === x.ev.tipo && y.c.situacao === x.c.situacao && y.c.titulo === x.c.titulo && y.c.resumo === x.c.resumo && y.c.acao?.href === x.c.acao?.href) : undefined;
+    if (igual) igual.iguais++;
+    else agrupados.push({ ...x, iguais: 0 });
+  }
+  const lista = agrupados;
   const semCanal = [!emailAtivo() && "e-mail", !whatsappAtivo() && "WhatsApp"].filter(Boolean) as string[];
   const contagem: Record<Visao, number> = { acao: pendentes.length, prazos: prazos.filter((x) => x.c.situacao === "PENDENTE").length, historico: eventos.length };
 
@@ -149,7 +156,7 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<{
         />
       ) : (
         <ul className="lista-limpa pilha-8" aria-label={VISOES.find(([k]) => k === visao)?.[1]}>
-          {lista.map(({ ev, c }) => (
+          {lista.map(({ ev, c, iguais }) => (
             <li key={ev.chave} className={`cartao aviso-item${c.situacao === "RESOLVIDO" ? " aviso-resolvido" : ""}`}>
               <div className="aviso-corpo">
                 <div className="fileira" style={{ flexWrap: "wrap", gap: 8 }}>
@@ -169,6 +176,7 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<{
                     {quando(ev.ultimoEnvio)}
                   </time>
                   {c.prazo ? ` · prazo ${data(c.prazo)}` : ""} · {plural(ev.envios.length, "envio", "envios")}
+                  {iguais > 0 ? ` · e mais ${plural(iguais, "aviso igual anterior", "avisos iguais anteriores")}` : ""}
                 </p>
                 {visao === "historico" && (
                   <details className="mt-8">

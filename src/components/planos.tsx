@@ -23,7 +23,9 @@ export function TabelaPlanos() {
         </div>
         <div className="plano">
           <h3 className="mb-0">Piloto</h3>
-          <div className="preco">a partir de R$ 1.500</div>
+          <div className="preco">
+            a partir de <span style={{ whiteSpace: "nowrap" }}>R$ 1.500</span>
+          </div>
           <small>por pedido</small>
           {/* C3 */}
           <p className="secundario mb-0">Organização de documentos e prazos, consolidação de dados e geração de memória de cálculo e arquivos editáveis para conferência e protocolo pelo cliente.</p>

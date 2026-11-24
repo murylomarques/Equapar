@@ -245,6 +245,7 @@ export async function criarContrato(_: Resultado, fd: FormData): Promise<Resulta
     if (d.convencaoId && !(await db.convencao.findFirst({ where: { id: d.convencaoId, contaId: ctx.conta.id } }))) return { erro: "Convenção inválida." };
     const c = await db.contrato.create({ data: { ...d, empresaId } });
     await registrarHistorico(ctx, "Cadastrou o contrato à mão", { contratoId: c.id });
+    await registrarEvento("contrato_cadastrado", { origem: "manual" });
     id = c.id;
   });
   if (r.erro) return r;

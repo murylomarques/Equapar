@@ -19,7 +19,12 @@ export type NomeEvento =
   | "diferenca_recebida"
   | "aviso_enviado"
   | "aviso_aberto"
-  | "aviso_clicado";
+  | "aviso_clicado"
+  // funil comercial (auditoria): intenção, pagamento e cancelamento; o motivo é uma categoria, nunca texto livre
+  | "contrato_cadastrado"
+  | "cobranca_aberta"
+  | "pagamento_confirmado"
+  | "renovacao_cancelada";
 
 export async function registrarEvento(nome: NomeEvento, props?: Record<string, string | number | boolean | null>) {
   try {

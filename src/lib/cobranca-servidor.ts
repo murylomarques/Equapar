@@ -8,6 +8,7 @@ import { appUrl, enviar } from "./mensagens";
 import { reais } from "./format";
 import { faturaCancelavel, faturaDevida, fimDoPeriodo, planoEfetivo, transicao, type EventoGateway, type FaturaRegra } from "./assinatura";
 import { registrar } from "./registro";
+import { registrarEvento } from "./eventos";
 
 type Tx = Prisma.TransactionClient;
 
@@ -208,6 +209,7 @@ export async function processarEventoPagamento(opts: {
     { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
   );
   if ("avisar" in r && r.avisar) await avisarDonos(r.contaId, r.avisar, r.valor, r.link, r.carenciaAte);
+  if ("avisar" in r && r.avisar === "pago") await registrarEvento("pagamento_confirmado", {});
   return r.resultado;
 }
 
