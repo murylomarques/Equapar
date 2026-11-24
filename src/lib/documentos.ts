@@ -265,6 +265,25 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
       pdf.texto(`Regra do caso em análise (mês incompleto): dias corridos ${brl(calc.comparacaoMes.DIAS_CORRIDOS)}; mês de 30 dias ${brl(calc.comparacaoMes.MES_30_DIAS)}. O pedido usa ${p.retroMesIncompleto === "MES_30_DIAS" ? "o mês de 30 dias" : "os dias corridos"}.`, { tam: 9, espaco: 10 });
   }
 
+  // evidência de cada linha alterada, com o que foi DECLARADO sobre a anualidade (nada é dito como validado se não foi)
+  const evidencia = new Map(((p.planilhaAgora as unknown as PlanilhaCustos | null)?.tipos ?? []).flatMap((t) => t.linhas.map((l) => [`${t.id}:${l.id}`, l.evidencia] as const)));
+  const textoEvidencia = (postoId: string, linhaId: string) => {
+    const e = evidencia.get(`${postoId}:${linhaId}`);
+    if (!e) return "";
+    const fonte = [e.instrumento, e.categoria && `categoria ${e.categoria}`, e.clausula, e.dataBase && `data-base ${data(new Date(`${e.dataBase}T00:00:00Z`))}`].filter(Boolean).join(", ");
+    const anual =
+      e.anualidade === "VALIDA"
+        ? "anualidade declarada pela empresa (um ano ou mais desde a data-base anterior)"
+        : e.anualidade === "NAO_SE_APLICA"
+          ? `anualidade não se aplica: ${e.motivoRevisao ?? ""}`
+          : e.anualidade === "REVISAO_RESOLVIDA"
+            ? `anualidade revista: ${e.motivoRevisao ?? ""}`
+            : e.anualidade === "REVISAO_NECESSARIA"
+              ? "anualidade em revisão"
+              : "anualidade não respondida";
+    return `\nEvidência: ${fonte}; ${anual}`;
+  };
+
   for (const posto of comp.postos) {
     pdf.titulo(`Linha a linha · ${posto.nome}`, 12);
     let modAtual = "";
@@ -274,7 +293,7 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
         modAtual = l.modulo;
         linhas.push([nomeModulo(l.modulo).toUpperCase(), "", "", "", ""]);
       }
-      linhas.push([`${l.descricao}${l.fonte ? `\nFonte: ${l.fonte}` : ""}`, brl(l.antes), brl(l.agora), brl(l.variacao), l.contaAgora]);
+      linhas.push([`${l.descricao}${l.fonte ? `\nFonte: ${l.fonte}` : ""}${l.antes !== l.agora ? textoEvidencia(l.postoId, l.id) : ""}`, brl(l.antes), brl(l.agora), brl(l.variacao), l.contaAgora]);
     }
     linhas.push([`Total por posto`, brl(posto.porPostoAntes), brl(posto.porPostoAgora), brl(dec(posto.porPostoAgora).minus(dec(posto.porPostoAntes))), ""]);
     pdf.tabela(["Item", "Antes", "Agora", "Variação", "Conta (agora)"], linhas, [0.3, 0.12, 0.12, 0.12, 0.34], ["e", "d", "d", "d", "e"]);

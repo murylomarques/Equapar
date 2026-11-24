@@ -38,7 +38,7 @@ describe("C2: desfazer a aprovação", () => {
 import { linhasSemFonte, pendenciasParaGerar } from "./pedido-regras";
 import type { PlanilhaCustos } from "./calculo/tipos";
 
-const pl = (salario: string, fonte?: string): PlanilhaCustos => ({
+const pl = (salario: string, fonte?: string, anualidade: "VALIDA" | "NAO_SE_APLICA" | null = "VALIDA", motivo?: string): PlanilhaCustos => ({
   tipos: [
     {
       id: "t1",
@@ -53,7 +53,7 @@ const pl = (salario: string, fonte?: string): PlanilhaCustos => ({
           valor: salario,
           salarioBase: true,
           fonte,
-          evidencia: fonte ? { instrumento: "CCT 2026", categoria: "Servente", dataBase: "2026-01-01", clausula: "4ª", parcela: "salário normativo" } : undefined,
+          evidencia: fonte ? { instrumento: "CCT 2026", categoria: "Servente", dataBase: "2026-01-01", clausula: "4ª", parcela: "salário normativo", anualidade: anualidade ?? undefined, motivoRevisao: motivo } : undefined,
         },
         { id: "l2", modulo: "M2_1", descricao: "13º salário", tipo: "PERCENTUAL", valor: "8.33", base: "M1" },
       ],
@@ -75,10 +75,22 @@ describe("C3: pendências para gerar", () => {
   it("linha alterada sem fonte é pendência do passo 3; a que varia por consequência não", () => {
     expect(linhasSemFonte(pl("1740"), pl("1800")).map((l) => l.descricao)).toEqual(["Salário base"]);
     const pend = pendenciasParaGerar({ ...base, planilhaAntes: pl("1740") as never, planilhaAgora: pl("1800") as never }, []);
-    expect(pend).toEqual([expect.objectContaining({ passo: 3, mensagem: expect.stringContaining("Salário base") })]);
+    // sem fonte nenhuma: falta a evidência e falta a resposta da anualidade (nada vem marcado)
+    expect(pend).toEqual([
+      expect.objectContaining({ passo: 3, mensagem: expect.stringContaining("fonte") }),
+      expect.objectContaining({ passo: 3, mensagem: expect.stringContaining("anualidade") }),
+    ]);
   });
-  it("com fonte e aprovado, nada pendente", () => {
+  it("com fonte, anualidade respondida e aprovado, nada pendente", () => {
     expect(pendenciasParaGerar({ ...base, planilhaAntes: pl("1740") as never, planilhaAgora: pl("1800", "CCT cl. 4ª") as never }, [])).toEqual([]);
+  });
+  it("anualidade não respondida é pendência; 'não se aplica' exige motivo", () => {
+    const semResposta = pendenciasParaGerar({ ...base, planilhaAntes: pl("1740") as never, planilhaAgora: pl("1800", "CCT", null) as never }, []);
+    expect(semResposta.map((x) => x.mensagem).join(" ")).toMatch(/Responda a anualidade de: Salário base/);
+    const semMotivo = pendenciasParaGerar({ ...base, planilhaAntes: pl("1740") as never, planilhaAgora: pl("1800", "CCT", "NAO_SE_APLICA") as never }, []);
+    expect(semMotivo).toHaveLength(1);
+    const comMotivo = pendenciasParaGerar({ ...base, planilhaAntes: pl("1740") as never, planilhaAgora: pl("1800", "CCT", "NAO_SE_APLICA", "alteração legal de alíquota") as never }, []);
+    expect(comMotivo).toEqual([]);
   });
   it("sem aumento e sem aprovação: duas pendências, passos 3 e 5; até o passo 3 só a primeira", () => {
     const p = { ...base, memoriaAprovadaEm: null, planilhaAntes: pl("1740") as never, planilhaAgora: pl("1740") as never };

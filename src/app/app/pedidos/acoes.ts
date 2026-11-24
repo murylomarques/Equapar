@@ -260,7 +260,8 @@ const linhaSchema = z.object({
       parcela: z.string().max(160),
       justificativaOutraFonte: z.string().max(500).optional(),
       documentoId: z.string().max(80).optional(),
-      anualidade: z.enum(["VALIDA", "REVISAO_NECESSARIA"]).optional(),
+      // antes só aceitava VALIDA e REVISAO_NECESSARIA: "Revisão resolvida" da tela falhava ao salvar
+      anualidade: z.enum(["VALIDA", "NAO_SE_APLICA", "REVISAO_NECESSARIA", "REVISAO_RESOLVIDA"]).optional(),
       motivoRevisao: z.string().max(500).optional(),
     })
     .optional(),

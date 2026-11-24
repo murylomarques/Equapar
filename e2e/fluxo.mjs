@@ -246,6 +246,8 @@ try {
   await page.getByLabel("Data-base de Salário base").first().fill(`${ano}-01-01`);
   await page.getByLabel("Cláusula de Salário base").first().fill("Cláusula 4ª");
   await page.getByLabel("Parcela de Salário base").first().fill("Mão de obra: salário base");
+  // nada vem marcado: a pessoa responde a anualidade (aqui, um ano desde a data-base anterior)
+  await page.getByLabel("Conclusão da anualidade de Salário base").first().selectOption("VALIDA");
   await page.waitForTimeout(400);
   await page.getByText(/^Salvo/).filter({ visible: true }).first().waitFor({ timeout: 15000 });
   await page.waitForTimeout(1500);

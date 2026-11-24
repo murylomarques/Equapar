@@ -61,8 +61,10 @@ function EvidenciaLinha({
     !/^\d{4}-\d{2}-\d{2}$/.test(e?.dataBase ?? "") && "data-base",
     !e?.clausula?.trim() && "cláusula",
     !e?.parcela?.trim() && "parcela",
+    !e?.anualidade && "anualidade",
+    e?.anualidade === "NAO_SE_APLICA" && !e?.motivoRevisao?.trim() && "motivo da anualidade",
   ].filter(Boolean) as string[];
-  const revisao = e?.anualidade === "REVISAO_NECESSARIA" || e?.anualidade === "REVISAO_RESOLVIDA";
+  const revisao = e?.anualidade === "REVISAO_NECESSARIA" || e?.anualidade === "REVISAO_RESOLVIDA" || e?.anualidade === "NAO_SE_APLICA";
   const muda = (alteracao: Partial<NonNullable<LinhaPlanilha["evidencia"]>>) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, alteracao) });
   const id = (c: string) => `ev-${c}-${l.id}`;
   // decidido uma vez: não fecha sozinho quando a pessoa completa o último campo
@@ -73,6 +75,9 @@ function EvidenciaLinha({
         <summary className={faltam.length ? "evidencia-falta" : undefined}>
           {faltam.length ? `Fonte da alteração: falta ${faltam.join(", ")}` : `Fonte da alteração: ${e!.instrumento}, ${e!.clausula}${e!.anualidade === "REVISAO_NECESSARIA" ? " · revisão necessária" : ""}`}
         </summary>
+        <p className="legenda mt-8 mb-0">
+          Anualidade: a repactuação de mão de obra pede pelo menos um ano desde a data-base anterior desta parcela. Responda para cada linha alterada; nada vem marcado.
+        </p>
         <div className="evidencia-grade">
           <div className="campo-mini">
             <label htmlFor={id("i")}>Instrumento</label>
@@ -99,13 +104,17 @@ function EvidenciaLinha({
             <select
               id={id("a")}
               aria-label={`Conclusão da anualidade de ${l.descricao}`}
-              value={e?.anualidade ?? "VALIDA"}
+              value={e?.anualidade ?? ""}
               disabled={somenteLeitura}
-              onChange={(x) => muda({ anualidade: x.target.value as "VALIDA" | "REVISAO_NECESSARIA" | "REVISAO_RESOLVIDA" })}
+              onChange={(x) => muda({ anualidade: (x.target.value || undefined) as "VALIDA" | "NAO_SE_APLICA" | "REVISAO_NECESSARIA" | "REVISAO_RESOLVIDA" | undefined })}
             >
-              <option value="VALIDA">Conferida</option>
+              <option value="" disabled>
+                Escolha…
+              </option>
+              <option value="VALIDA">Conferida: 1 ano ou mais desde a data-base anterior</option>
+              <option value="NAO_SE_APLICA">Não se aplica (explique)</option>
               <option value="REVISAO_NECESSARIA">Revisão necessária</option>
-              <option value="REVISAO_RESOLVIDA">Revisão resolvida</option>
+              <option value="REVISAO_RESOLVIDA">Revisão resolvida (explique)</option>
             </select>
           </div>
           {!somenteLeitura && copiarFonte && e?.instrumento?.trim() && (
@@ -115,14 +124,14 @@ function EvidenciaLinha({
               </button>
               {copiadas != null && (
                 <span className="legenda" role="status">
-                  {copiadas === 0 ? "Nenhuma outra linha alterada estava sem fonte." : `Fonte copiada para ${copiadas} ${copiadas === 1 ? "linha" : "linhas"}. Confira a parcela de cada uma.`}
+                  {copiadas === 0 ? "Nenhuma outra linha alterada estava sem fonte." : `Fonte e anualidade copiadas para ${copiadas} ${copiadas === 1 ? "linha" : "linhas"}. Confira a parcela e a anualidade de cada uma.`}
                 </span>
               )}
             </div>
           )}
           {revisao && (
             <div className="campo-mini evidencia-motivo">
-              <label htmlFor={id("m")}>Motivo e decisão documentada</label>
+              <label htmlFor={id("m")}>{e?.anualidade === "NAO_SE_APLICA" ? "Por que a anualidade não se aplica a este item" : "Motivo e decisão documentada"}</label>
               <input id={id("m")} aria-label={`Motivo da revisão de ${l.descricao}`} value={e?.motivoRevisao ?? ""} disabled={somenteLeitura} onChange={(x) => mudarLinha(postoId, l.id, { evidencia: { ...comEvidencia(l, {}), motivoRevisao: x.target.value } })} />
             </div>
           )}

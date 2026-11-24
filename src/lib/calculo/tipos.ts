@@ -65,7 +65,13 @@ export interface LinhaPlanilha {
     parcela: string;
     justificativaOutraFonte?: string;
     documentoId?: string;
-    anualidade?: "VALIDA" | "REVISAO_NECESSARIA" | "REVISAO_RESOLVIDA";
+    /**
+     * Conclusão sobre a anualidade, sempre escolhida pela pessoa (nunca vem marcada):
+     * VALIDA = um ano ou mais desde a data-base anterior da parcela (o servidor confere as datas);
+     * NAO_SE_APLICA = a variação não depende da anualidade (ex.: alteração legal de alíquota), com motivo;
+     * REVISAO_NECESSARIA / REVISAO_RESOLVIDA = incerteza registrada e, depois, resolvida com motivo.
+     */
+    anualidade?: "VALIDA" | "NAO_SE_APLICA" | "REVISAO_NECESSARIA" | "REVISAO_RESOLVIDA";
     motivoRevisao?: string;
   };
 }

@@ -67,6 +67,23 @@ export function linhasSemFonte(antes: PlanilhaCustos, agora: PlanilhaCustos): Li
   });
 }
 
+/**
+ * Linhas alteradas cuja anualidade ainda não foi respondida (ou "não se aplica" sem motivo).
+ * A conferência é uma declaração da pessoa: nunca vem marcada por padrão.
+ */
+export function anualidadeSemResposta(antes: PlanilhaCustos, agora: PlanilhaCustos): LinhaPlanilha[] {
+  return agora.tipos.flatMap((t) => {
+    const ta = antes.tipos.find((x) => x.id === t.id);
+    return t.linhas.filter((l) => {
+      const la = ta?.linhas.find((x) => x.id === l.id);
+      const mudou = !la || la.valor !== l.valor || la.tipo !== l.tipo || la.base !== l.base;
+      if (!mudou) return false;
+      const a = l.evidencia?.anualidade;
+      return !a || (a === "NAO_SE_APLICA" && !l.evidencia?.motivoRevisao?.trim());
+    });
+  });
+}
+
 /** Mesma conclusão usada pela tela, aprovação e documentos. */
 export function revisoesAnualidade(antes: PlanilhaCustos, agora: PlanilhaCustos): LinhaPlanilha[] {
   return agora.tipos.flatMap((t) => {
@@ -75,6 +92,7 @@ export function revisoesAnualidade(antes: PlanilhaCustos, agora: PlanilhaCustos)
       const la = ta?.linhas.find((x) => x.id === l.id);
       const mudou = !la || la.valor !== l.valor || la.tipo !== l.tipo || la.base !== l.base;
       if (!mudou || !l.evidencia) return false;
+      if (!l.evidencia.anualidade || l.evidencia.anualidade === "NAO_SE_APLICA") return false; // tratado em anualidadeSemResposta
       if (l.evidencia.anualidade === "REVISAO_NECESSARIA") return true;
       if (l.evidencia.anualidade === "REVISAO_RESOLVIDA" && !l.evidencia.motivoRevisao?.trim()) return true;
       const atual = new Date(`${l.evidencia.dataBase}T00:00:00Z`);
@@ -148,6 +166,15 @@ export function pendenciasParaGerar(p: PedidoPend, documentos: { tipo: string }[
           .slice(0, 5)
           .map((l) => l.descricao || "linha sem nome")
           .join(", ")}${sem.length > 5 ? ` e mais ${sem.length - 5}` : ""}.`,
+      });
+    const semResposta = jornada ? [] : anualidadeSemResposta(antes, agora);
+    if (semResposta.length)
+      r.push({
+        passo: 3,
+        mensagem: `Responda a anualidade de: ${semResposta
+          .slice(0, 5)
+          .map((l) => l.descricao || "linha sem nome")
+          .join(", ")}${semResposta.length > 5 ? ` e mais ${semResposta.length - 5}` : ""}. Escolha "Conferida" se já passou um ano desde a data-base anterior, ou "Não se aplica" com o motivo.`,
       });
     const revisar = jornada ? [] : revisoesAnualidade(antes, agora);
     if (revisar.length)

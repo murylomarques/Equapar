@@ -13,6 +13,7 @@ import { data, dataHora, reais } from "@/lib/format";
 import { navegadorLegivel, plural } from "@/lib/mascaras";
 import { emailAtivo, whatsappAtivo } from "@/lib/mensagens";
 import { FormAcao } from "@/components/form-acao";
+import { Contato } from "@/components/contato";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { SeloSimples } from "@/components/selo";
 import { AreaArquivo } from "@/components/ui/arquivo";
@@ -442,6 +443,11 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                   </ul>
                 )}
               </Alerta>
+              {previsao.efeito === "ANALISE_MANUAL" && (
+                <div className="mt-16">
+                  <Contato agenda={false} />
+                </div>
+              )}
               {previsao.possivel && (
                 <FormAcao action={mudarPlano} className="mt-16">
                   <input type="hidden" name="plano" value={destino} />

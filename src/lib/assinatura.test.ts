@@ -115,11 +115,12 @@ describe("P0: previsão mostrada antes de confirmar", () => {
   it("Grátis sem período pago: imediato", () => {
     expect(preverMudanca(conta({ planoVigenteAte: null }), "GRATIS", agora).efeito).toBe("IMEDIATO");
   });
-  it("downgrade pago: na renovação; upgrade: depois do pagamento, sem crédito automático", () => {
+  it("downgrade pago: na renovação; upgrade com período pago em andamento: análise manual, sem cobrança", () => {
     expect(preverMudanca(conta({ plano: "ASSESSORIA" }), "CARTEIRA", agora).efeito).toBe("AGENDADO");
     const up = preverMudanca(conta(), "ASSESSORIA", agora);
-    expect(up.efeito).toBe("IMEDIATO_APOS_PAGAMENTO");
-    expect(up.linhas.join(" ")).toMatch(/não é convertido em crédito/);
+    expect(up).toMatchObject({ possivel: false, efeito: "ANALISE_MANUAL" });
+    expect(up.linhas.join(" ")).toMatch(/10\/12\/2026.*duas vezes/);
+    expect(preverMudanca(conta({ planoVigenteAte: null, plano: "GRATIS" }), "ASSESSORIA", agora).efeito).toBe("IMEDIATO_APOS_PAGAMENTO");
   });
   it("mesmo plano: bloqueado; com renovação cancelada: reativar; troca de ciclo: na renovação", () => {
     expect(preverMudanca(conta(), "CARTEIRA", agora).possivel).toBe(false);

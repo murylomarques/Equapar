@@ -156,7 +156,7 @@ export function planoEfetivo(conta: ContaRegra, faturas: FaturaRegra[], agora: D
   return { plano: "GRATIS", planoVigenteAte: conta.planoVigenteAte, limparAgendamento: vencida };
 }
 
-export type Previsao = { possivel: boolean; titulo: string; linhas: string[]; efeito: "IMEDIATO_APOS_PAGAMENTO" | "AGENDADO" | "IMEDIATO" | "REATIVAR" | "NENHUM"; quando: Date | null };
+export type Previsao = { possivel: boolean; titulo: string; linhas: string[]; efeito: "IMEDIATO_APOS_PAGAMENTO" | "AGENDADO" | "IMEDIATO" | "REATIVAR" | "ANALISE_MANUAL" | "NENHUM"; quando: Date | null };
 
 /** O que vai acontecer se o cliente confirmar a mudança: mostrado antes do botão de confirmar. */
 export function preverMudanca(conta: ContaRegra & { ciclo?: string }, destino: PlanoId, agora: Date, cicloNovo?: Ciclo): Previsao {
@@ -205,13 +205,24 @@ export function preverMudanca(conta: ContaRegra & { ciclo?: string }, destino: P
       efeito: "AGENDADO",
       quando: conta.planoVigenteAte,
     };
+  // upgrade com período pago em andamento: sem política de crédito aprovada, não há cobrança segura
+  // (cobrar o plano novo inteiro sobreporia períodos; descontar seria um crédito não aprovado). Vai para análise.
+  if (ativo)
+    return {
+      possivel: false,
+      titulo: "Upgrade com período pago em andamento",
+      linhas: [
+        `Seu plano atual está pago até ${dataBr(conta.planoVigenteAte!)}.`,
+        "Para não cobrar o mesmo período duas vezes nem descartar o que você já pagou, o upgrade é combinado com a nossa equipe: fale com a gente e acertamos a data e o valor antes de qualquer cobrança.",
+        "Se preferir, o upgrade também pode valer na próxima renovação.",
+      ],
+      efeito: "ANALISE_MANUAL",
+      quando: null,
+    };
   return {
     possivel: true,
     titulo: "Contratar o plano",
-    linhas: [
-      "Abrimos uma cobrança. O plano passa a valer quando o pagamento for confirmado; o período começa nesse dia.",
-      ...(ativo ? [`O período atual (até ${dataBr(conta.planoVigenteAte!)}) não é convertido em crédito automaticamente; fale com a gente se quiser combinar.`] : []),
-    ],
+    linhas: ["Abrimos uma cobrança. O plano passa a valer quando o pagamento for confirmado; o período começa nesse dia."],
     efeito: "IMEDIATO_APOS_PAGAMENTO",
     quando: null,
   };
