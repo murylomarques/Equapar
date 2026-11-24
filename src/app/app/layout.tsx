@@ -15,6 +15,7 @@ import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { reenviarConfirmacao } from "./acoes";
 import "./app.css";
+import "./pedidos/pedidos.css";
 import { Provedores } from "@/components/ui/provedores";
 import { modoPiloto } from "@/lib/chaves";
 
