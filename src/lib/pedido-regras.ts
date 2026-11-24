@@ -13,6 +13,7 @@ type PedidoBase = {
   passoAtual: number;
   memoriaAprovadaEm: Date | null;
   estado: string;
+  memoriaVersaoAprovadaId?: string | null;
 };
 
 /**
@@ -37,12 +38,12 @@ export function aoTrocarPlanilhaAtual(p: PedidoBase): { precisaConfirmar: boolea
 }
 
 /** Campos gravados ao desfazer a aprovação (servem tanto no update "checked" quanto no "unchecked" do Prisma). */
-export type DadosAprovacaoDesfeita = { memoriaAprovadaEm?: null; memoriaAprovadaPor?: null; estado?: "EM_ANALISE"; geradoEm?: null };
+export type DadosAprovacaoDesfeita = { memoriaAprovadaEm?: null; memoriaAprovadaPor?: null; memoriaVersaoAprovadaId?: null; estado?: "EM_ANALISE"; geradoEm?: null };
 
 /** C2. Campos que desfazem a aprovação da memória (vazio se não havia aprovação nem pedido gerado). */
 export function dadosInvalidarAprovacao(p: Pick<PedidoBase, "memoriaAprovadaEm" | "estado">): DadosAprovacaoDesfeita {
   const data: DadosAprovacaoDesfeita = {};
-  if (p.memoriaAprovadaEm) Object.assign(data, { memoriaAprovadaEm: null, memoriaAprovadaPor: null });
+  if (p.memoriaAprovadaEm) Object.assign(data, { memoriaAprovadaEm: null, memoriaAprovadaPor: null, memoriaVersaoAprovadaId: null });
   if (p.estado === "CALCULO_VALIDADO") Object.assign(data, { estado: "EM_ANALISE", geradoEm: null });
   return data;
 }
@@ -60,7 +61,28 @@ export function linhasSemFonte(antes: PlanilhaCustos, agora: PlanilhaCustos): Li
     return t.linhas.filter((l) => {
       const la = ta?.linhas.find((x) => x.id === l.id);
       const mudou = !la || la.valor !== l.valor || la.tipo !== l.tipo || la.base !== l.base;
-      return mudou && !l.fonte?.trim();
+      const e = l.evidencia;
+      return mudou && (!l.fonte?.trim() || !e?.instrumento?.trim() || !e.categoria?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(e.dataBase ?? "") || !e.clausula?.trim() || !e.parcela?.trim());
+    });
+  });
+}
+
+/** Mesma conclusão usada pela tela, aprovação e documentos. */
+export function revisoesAnualidade(antes: PlanilhaCustos, agora: PlanilhaCustos): LinhaPlanilha[] {
+  return agora.tipos.flatMap((t) => {
+    const ta = antes.tipos.find((x) => x.id === t.id);
+    return t.linhas.filter((l) => {
+      const la = ta?.linhas.find((x) => x.id === l.id);
+      const mudou = !la || la.valor !== l.valor || la.tipo !== l.tipo || la.base !== l.base;
+      if (!mudou || !l.evidencia) return false;
+      if (l.evidencia.anualidade === "REVISAO_NECESSARIA") return true;
+      if (l.evidencia.anualidade === "REVISAO_RESOLVIDA" && !l.evidencia.motivoRevisao?.trim()) return true;
+      const atual = new Date(`${l.evidencia.dataBase}T00:00:00Z`);
+      const anterior = la?.evidencia?.dataBase ? new Date(`${la.evidencia.dataBase}T00:00:00Z`) : null;
+      if (!Number.isFinite(atual.getTime())) return true;
+      if (!anterior || !Number.isFinite(anterior.getTime())) return false; // primeira repactuação: instrumento informado é a base
+      const aniversario = new Date(Date.UTC(anterior.getUTCFullYear() + 1, anterior.getUTCMonth(), anterior.getUTCDate()));
+      return atual < aniversario && l.evidencia.anualidade !== "REVISAO_RESOLVIDA";
     });
   });
 }
@@ -68,7 +90,25 @@ export function linhasSemFonte(antes: PlanilhaCustos, agora: PlanilhaCustos): Li
 type PedidoPend = Pick<
   Pedido,
   "gatilho" | "convencaoId" | "dataBase" | "dataDeposito" | "descricaoGatilho" | "planilhaAntes" | "planilhaAgora" | "dataReferencia" | "checklist" | "memoriaAprovadaEm"
-> & { hashCalculo?: string | null } & Partial<Pick<Pedido, "jornadaAntes" | "jornadaDepois" | "horasCobertura" | "inicioJornada" | "cenarioJornada">>;
+> & { hashCalculo?: string | null } &
+  Partial<
+    Pick<
+      Pedido,
+      | "jornadaAntes"
+      | "jornadaDepois"
+      | "horasCobertura"
+      | "inicioJornada"
+      | "cenarioJornada"
+      | "retroativoCompetencias"
+      | "calculoManual"
+      | "calculoManualJustificativa"
+      | "retroContarAte"
+      | "retroMesIncompleto"
+      | "protocoloData"
+      | "apostiladoEm"
+      | "valoresJaPagos"
+    >
+  >;
 
 /**
  * Tudo o que impede gerar o pedido, em ordem de passo. `ate` limita aos passos já percorridos
@@ -96,17 +136,22 @@ export function pendenciasParaGerar(p: PedidoPend, documentos: { tipo: string }[
     const calc = calcularPedido(p);
     const c = calc.comparacao;
     if (c?.erros.length) r.push({ passo: 3, mensagem: c.erros[0] });
+    if (calc.pendenciaRetroativo) r.push({ passo: 3, mensagem: calc.pendenciaRetroativo });
+    if (p.calculoManual && !p.calculoManualJustificativa?.trim()) r.push({ passo: 3, mensagem: "Cálculo manual exige justificativa registrada." });
     else if (jornada && !p.cenarioJornada) r.push({ passo: 3, mensagem: "Escolha o cenário da jornada: manter ou reduzir as horas de serviço." });
     else if (c && Number(c.diferencaMensal) <= 0 && !(jornada && p.cenarioJornada === "REDUZIR_HORAS")) r.push({ passo: 3, mensagem: "A planilha nova não aumenta o valor mensal." });
-    const sem = linhasSemFonte(antes, agora);
+    const sem = jornada ? [] : linhasSemFonte(antes, agora);
     if (sem.length)
       r.push({
         passo: 3,
-        mensagem: `Falta a fonte (cláusula da convenção) de: ${sem
+        mensagem: `Falta completar a fonte (instrumento, categoria, data-base, cláusula e parcela) de: ${sem
           .slice(0, 5)
           .map((l) => l.descricao || "linha sem nome")
           .join(", ")}${sem.length > 5 ? ` e mais ${sem.length - 5}` : ""}.`,
       });
+    const revisar = jornada ? [] : revisoesAnualidade(antes, agora);
+    if (revisar.length)
+      r.push({ passo: 3, mensagem: `Revisão necessária da anualidade de: ${revisar.slice(0, 5).map((l) => l.descricao).join(", ")}. Registre o motivo e resolva a conclusão antes de fechar.` });
   }
   if (ate >= 4) {
     const faltam = situacaoChecklist(p, documentos).filter((i) => i.situacao === "FALTA");
@@ -132,7 +177,7 @@ export function totaisGravados(p: Pick<Pedido, "planilhaAntes" | "planilhaAgora"
 // ---------------------------------------------------------------------------
 
 /** JSON com chaves em ordem: o mesmo conteúdo gera sempre o mesmo texto. */
-function jsonCanonico(v: unknown): string {
+export function jsonCanonico(v: unknown): string {
   if (v === null || typeof v !== "object") return JSON.stringify(v ?? null);
   if (v instanceof Date) return JSON.stringify(v.toISOString());
   if (Array.isArray(v)) return `[${v.map(jsonCanonico).join(",")}]`;
@@ -144,7 +189,32 @@ function jsonCanonico(v: unknown): string {
     .join(",")}}`;
 }
 
-type BaseCalculo = Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase" | "dataReferencia" | "gatilho"> & Partial<Pick<Pedido, "retroContarAte" | "retroMesIncompleto">>;
+export function snapshotCalculo(p: BaseCalculo & Record<string, unknown>) {
+  const calc = calcularPedido(p as never);
+  return {
+    planilhaAntes: p.planilhaAntes,
+    planilhaAgora: p.planilhaAgora,
+    dataBase: p.dataBase,
+    dataReferencia: p.dataReferencia,
+    gatilho: p.gatilho,
+    retroContarAte: p.retroContarAte ?? "DATA_INFORMADA",
+    retroMesIncompleto: p.retroMesIncompleto ?? "DIAS_CORRIDOS",
+    regraArredondamento: p.regraArredondamento ?? "DECIMAL_2_CASAS_MEIO_PARA_CIMA_POR_LINHA",
+    valoresJaPagos: p.valoresJaPagos == null ? "0" : String(p.valoresJaPagos),
+    retroativoCompetencias: p.retroativoCompetencias ?? null,
+    fontes: (p.planilhaAgora as unknown as PlanilhaCustos | null)?.tipos.flatMap((t) => t.linhas.map((l) => ({ posto: t.nome, linha: l.descricao, fonte: l.fonte, evidencia: l.evidencia }))) ?? [],
+    mensalAntes: calc.comparacao?.mensalAntes ?? null,
+    mensalSolicitado: calc.comparacao?.mensalAgora ?? null,
+    diferencaMensal: calc.comparacao?.diferencaMensal ?? null,
+    retroativoBruto: calc.retroativoBruto ?? calc.retroativo?.total ?? null,
+    abatimentos: calc.jaPago ?? "0.00",
+    retroativoLiquido: calc.retroativo?.total ?? null,
+    versaoRegra: calc.versaoRegra,
+  };
+}
+
+type BaseCalculo = Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase" | "dataReferencia" | "gatilho"> &
+  Partial<Pick<Pedido, "retroContarAte" | "retroMesIncompleto" | "retroativoCompetencias" | "regraArredondamento" | "calculoManual" | "calculoManualJustificativa">>;
 
 /** SHA-256 de {planilhas, data-base, data de referência, gatilho, versão da regra}. */
 export function hashCalculo(p: BaseCalculo): string {
@@ -158,6 +228,14 @@ export function hashCalculo(p: BaseCalculo): string {
   // L11: as opções do retroativo entram só quando diferem do padrão (assinaturas antigas continuam valendo)
   if (p.retroContarAte && p.retroContarAte !== "DATA_INFORMADA") base.retroContarAte = p.retroContarAte;
   if (p.retroMesIncompleto && p.retroMesIncompleto !== "DIAS_CORRIDOS") base.retroMesIncompleto = p.retroMesIncompleto;
+  if (p.retroContarAte === "DATA_PROTOCOLO" && j.protocoloData) base.corteEfetivo = j.protocoloData;
+  if (p.retroContarAte === "DATA_APOSTILAMENTO" && j.apostiladoEm) base.corteEfetivo = j.apostiladoEm;
+  if (p.retroativoCompetencias != null) base.retroativoCompetencias = p.retroativoCompetencias;
+  if (p.regraArredondamento && p.regraArredondamento !== "DECIMAL_2_CASAS_MEIO_PARA_CIMA_POR_LINHA") base.regraArredondamento = p.regraArredondamento;
+  if (p.calculoManual) {
+    base.calculoManual = true;
+    base.calculoManualJustificativa = p.calculoManualJustificativa ?? null;
+  }
   return crypto.createHash("sha256").update(jsonCanonico(base)).digest("hex");
 }
 

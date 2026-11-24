@@ -2,7 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma, type NotaFiscalPedido } from "@prisma/client";
+import Decimal from "decimal.js";
 import { contratoDaConta, exigir, pedidoDaConta, registrarHistorico } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/acao";
@@ -14,12 +15,12 @@ import { validarPlanilha } from "@/lib/calculo/motor";
 import { clonarPlanilha, planilhaModelo } from "@/lib/calculo/modelo";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
 import { lerConvencaoPdf, lerPlanilhaPdf } from "@/lib/ia";
-import { deLeituraIa, importarExcel } from "@/lib/planilha-import";
+import { deLeituraIa, importarExcel, type LinhaNaoLida } from "@/lib/planilha-import";
 import { apagarArquivo, gravarArquivo, lerArquivo, salvarArquivo } from "@/lib/storage";
 import crypto from "node:crypto";
 import path from "node:path";
 import { oportunidade } from "@/lib/prazos";
-import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendenciasParaGerar, totaisGravados, type DadosAprovacaoDesfeita, type Pendencia } from "@/lib/pedido-regras";
+import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendenciasParaGerar, snapshotCalculo, totaisGravados, type DadosAprovacaoDesfeita, type Pendencia } from "@/lib/pedido-regras";
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { limiteDoPlano } from "@/lib/planos";
@@ -30,6 +31,8 @@ import { acaoJornada } from "@/lib/jornada-acesso";
 import { iaPara } from "@/lib/ia-acesso";
 import { contarCpfs, MENSAGEM_CPF } from "@/lib/cpf";
 import { textoDoPdf } from "@/lib/pdf-texto";
+import type { CompetenciaRetroativo } from "@/lib/retroativo-competencias";
+import { resumoFinanceiro, validarLancamento } from "@/lib/financeiro-pedido";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -238,6 +241,29 @@ const linhaSchema = z.object({
   salarioBase: z.boolean().optional(),
   fonte: z.string().max(300).optional(),
   acompanhaEmpregados: z.boolean().optional(),
+  origem: z
+    .object({
+      aba: z.string().max(120),
+      linha: z.number().int().positive(),
+      celula: z.string().max(30),
+      conteudo: z.string().max(500),
+      tipo: z.enum(["NUMERO", "TEXTO", "MOEDA", "PERCENTUAL", "FORMULA_COM_RESULTADO", "MANUAL"]),
+      interpretacao: z.string().max(200),
+    })
+    .optional(),
+  evidencia: z
+    .object({
+      instrumento: z.string().max(200),
+      categoria: z.string().max(160),
+      dataBase: z.string().max(10),
+      clausula: z.string().max(160),
+      parcela: z.string().max(160),
+      justificativaOutraFonte: z.string().max(500).optional(),
+      documentoId: z.string().max(80).optional(),
+      anualidade: z.enum(["VALIDA", "REVISAO_NECESSARIA"]).optional(),
+      motivoRevisao: z.string().max(500).optional(),
+    })
+    .optional(),
 });
 const planilhaSchema = z.object({
   tipos: z.array(z.object({ id: z.string().min(1), nome: z.string().max(100), quantidade: z.number().int().min(0).max(100000), linhas: z.array(linhaSchema).max(200) })).max(30),
@@ -316,17 +342,38 @@ export async function usarModelo(_: Resultado, fd: FormData): Promise<Resultado>
   });
 }
 
+/** Persiste a decisão sobre cada linha que a importação não conseguiu usar. */
+export async function resolverPendenciaPlanilha(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const { ctx, p } = await pedidoEditavel(fd);
+    const id = texto(fd, "pendenciaId");
+    const decisao = texto(fd, "decisao").trim();
+    const status = z.enum(["CORRIGIDA", "JUSTIFICADA"]).safeParse(texto(fd, "status"));
+    if (!status.success || !decisao) return { erro: "Informe se a linha foi corrigida ou justifique por que ela não se aplica." };
+    const atuais = ((p.linhasNaoLidas as unknown as LinhaNaoLida[] | null) ?? []).map((x) =>
+      x.id === id ? { ...x, status: status.data, decisao: decisao.slice(0, 1000) } : x,
+    );
+    if (!atuais.some((x) => x.id === id)) return { erro: "Pendência não encontrada." };
+    await db.pedido.update({ where: { id: p.id }, data: { linhasNaoLidas: json(atuais) } });
+    await registrarHistorico(ctx, `${status.data === "CORRIGIDA" ? "Corrigiu" : "Justificou"} uma linha da importação: ${decisao.slice(0, 200)}`, { pedidoId: p.id, contratoId: p.contratoId });
+    revalidatePath(`/app/pedidos/${p.id}/passo/2`);
+    return { ok: "Decisão registrada." };
+  });
+}
+
 export async function concluirPasso2(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
     const { p } = await pedidoEditavel(fd);
     if (!p.planilhaAntes) return { erro: "Envie a planilha atual ou comece do modelo." };
+    const pendencias = ((p.linhasNaoLidas as unknown as LinhaNaoLida[] | null) ?? []).filter((x) => x.impeditiva !== false && (!x.status || x.status === "PENDENTE"));
+    if (pendencias.length)
+      return { erro: `Resolva as ${pendencias.length} pendências da importação antes de continuar. Corrija a linha ou registre uma justificativa.` };
     const erros = validarPlanilha(p.planilhaAntes as unknown as PlanilhaCustos);
     if (erros.length) return { erro: `Ainda há pendências na planilha: ${erros[0]}` };
     await db.pedido.update({
       where: { id: p.id },
       data: {
         passoAtual: Math.max(p.passoAtual, 3),
-        linhasNaoLidas: json([]),
         planilhaAgora: p.planilhaAgora ? undefined : json(clonarPlanilha(p.planilhaAntes as unknown as PlanilhaCustos)),
       },
     });
@@ -361,8 +408,30 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
       jornadaDados = { cenarioJornada: cen.data, planilhaAntes: json(atual), planilhaAgora: json(planilhaDoCenario(atual, cen.data, p.jornadaAntes, p.jornadaDepois)) };
       p = { ...p, cenarioJornada: cen.data, planilhaAntes: jornadaDados.planilhaAntes as Prisma.JsonValue, planilhaAgora: jornadaDados.planilhaAgora as Prisma.JsonValue };
     }
-    const pend = pendenciasParaGerar({ ...p, dataReferencia: ref }, [], 3);
-    if (pend.length) return recusarPorPendencias(p.id, pend, "Antes de continuar, resolva:");
+    let retroativoCompetencias: CompetenciaRetroativo[] = [];
+    try {
+      const recebido = JSON.parse(texto(fd, "retroativoCompetencias") || "[]") as unknown;
+      if (!Array.isArray(recebido)) throw new Error();
+      retroativoCompetencias = recebido.map((linha) => {
+        const item = linha as Record<string, unknown>;
+        const diferencaMensal = lerDinheiro(String(item.diferencaMensal ?? ""));
+        if (!diferencaMensal) throw new Error();
+        return {
+          competencia: String(item.competencia ?? ""),
+          diferencaMensal,
+          dias: Number(item.dias),
+          divisor: Number(item.divisor),
+          base: String(item.base ?? "") || undefined,
+          periodo: String(item.periodo ?? "") || undefined,
+        };
+      });
+    } catch {
+      return { erro: "Confira as competências do retroativo. Cada linha precisa de competência, valor, dias e divisor válidos." };
+    }
+    const calculoManual = fd.get("calculoManual") === "on";
+    const calculoManualJustificativa = texto(fd, "calculoManualJustificativa") || null;
+    if (calculoManual && !calculoManualJustificativa) return { erro: "Explique por que este caso exige cálculo manual." };
+    p = { ...p, retroativoCompetencias: retroativoCompetencias as unknown as Prisma.JsonValue, calculoManual, calculoManualJustificativa };
     // L11: regra do retroativo escolhida no pedido (padrão = regra original)
     const retroContarAte = z.enum(["DATA_INFORMADA", "DATA_PROTOCOLO", "DATA_APOSTILAMENTO"]).catch(p.retroContarAte).parse(texto(fd, "retroContarAte") || p.retroContarAte);
     const retroMesIncompleto = z.enum(["DIAS_CORRIDOS", "MES_30_DIAS"]).catch(p.retroMesIncompleto).parse(texto(fd, "retroMesIncompleto") || p.retroMesIncompleto);
@@ -374,8 +443,12 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
     if (ultimaTxt && !/^\d{4}-\d{2}$/.test(ultimaTxt)) return { erro: "Confira a última competência paga.", campos: { ultimaCompetenciaPaga: "Use o formato AAAA-MM (ex.: 2026-03)." } };
     const retroCompararMes = fd.get("retroCompararMes") === "on";
     const calc = calcularPedido({ ...p, dataReferencia: ref, retroContarAte, retroMesIncompleto, valoresJaPagos: valoresJaPagos as never, retroCompararMes });
+    const pend = pendenciasParaGerar({ ...p, dataReferencia: ref, retroContarAte, retroMesIncompleto, valoresJaPagos: valoresJaPagos as never }, [], 3);
+    if (pend.length || !calc.pronto) return recusarPorPendencias(p.id, pend.length ? pend : [{ passo: 3, mensagem: calc.pendenciaRetroativo ?? "Confira o cálculo retroativo." }], "Antes de continuar, resolva:");
     const mudouPago = Number(valoresJaPagos) !== Number(p.valoresJaPagos ?? 0);
-    const mudouRegra = retroContarAte !== p.retroContarAte || retroMesIncompleto !== p.retroMesIncompleto || mudouPago || (!!jornadaDados.cenarioJornada && jornadaDados.cenarioJornada !== cenarioAnterior);
+    const mudouCompetencias = JSON.stringify(retroativoCompetencias) !== JSON.stringify(Array.isArray(editavel.p.retroativoCompetencias) ? editavel.p.retroativoCompetencias : []);
+    const mudouManual = calculoManual !== editavel.p.calculoManual || calculoManualJustificativa !== editavel.p.calculoManualJustificativa;
+    const mudouRegra = retroContarAte !== p.retroContarAte || retroMesIncompleto !== p.retroMesIncompleto || mudouPago || mudouCompetencias || mudouManual || (!!jornadaDados.cenarioJornada && jornadaDados.cenarioJornada !== cenarioAnterior);
     const invalidar =
       p.dataReferencia?.getTime() !== ref.getTime() || mudouRegra
         ? await invalidarAprovacao(ctx, p, mudouRegra ? "Alterou a regra da diferença retroativa" : "Alterou a data até onde a diferença é contada")
@@ -388,6 +461,9 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
         retroContarAte,
         retroMesIncompleto,
         retroCompararMes,
+        retroativoCompetencias: json(retroativoCompetencias),
+        calculoManual,
+        calculoManualJustificativa,
         valoresJaPagos,
         ultimaCompetenciaPaga: ultimaTxt || null,
         dataReferencia: ref,
@@ -480,10 +556,24 @@ export async function aprovarMemoria(_: Resultado, fd: FormData): Promise<Result
   return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("aprovar_memoria");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
-    if (!["EM_ANALISE", "CALCULO_VALIDADO"].includes(p.estado)) return { erro: "Este pedido já foi protocolado." };
+    if (!["EM_ANALISE", "CALCULO_VALIDADO", "PROTOCOLADO", "DEFERIDO", "FATURADO"].includes(p.estado)) return { erro: "A memória não pode mais ser aprovada nesta etapa." };
     const pend = pendenciasParaGerar(p, [], 3);
     if (pend.length) return recusarPorPendencias(p.id, pend, "A memória ainda não pode ser aprovada:");
-    await db.pedido.update({ where: { id: p.id }, data: { memoriaAprovadaEm: new Date(), memoriaAprovadaPor: ctx.usuario.nome, hashCalculo: hashCalculo(p) } });
+    const agora = new Date();
+    const hash = hashCalculo(p);
+    const snapshot = snapshotCalculo(p as never);
+    await db.$transaction(async (tx) => {
+      let versao = await tx.memoriaVersao.findUnique({ where: { pedidoId_hash: { pedidoId: p.id, hash } } });
+      if (!versao) {
+        const ultima = await tx.memoriaVersao.aggregate({ where: { pedidoId: p.id }, _max: { numero: true } });
+        versao = await tx.memoriaVersao.create({ data: { pedidoId: p.id, numero: (ultima._max.numero ?? 0) + 1, hash, snapshot: json(snapshot) } });
+      }
+      await tx.memoriaVersao.update({ where: { id: versao.id }, data: { aprovadoPorId: ctx.usuario.id, aprovadoPorNome: ctx.usuario.nome, aprovadoEm: agora } });
+      await tx.pedido.update({
+        where: { id: p.id },
+        data: { memoriaAprovadaEm: agora, memoriaAprovadaPor: ctx.usuario.nome, hashCalculo: hash, memoriaVersaoAtual: versao.numero, memoriaVersaoAprovadaId: versao.id },
+      });
+    });
     await registrarHistorico(ctx, "Aprovou a memória de cálculo", { pedidoId: p.id, contratoId: p.contratoId });
     await registrarEvento("memoria_aprovada");
     revalidatePath(`/app/pedidos/${p.id}`, "layout");
@@ -515,9 +605,36 @@ export async function registrarProtocolo(_: Resultado, fd: FormData): Promise<Re
     if (p.estado !== "CALCULO_VALIDADO") return { erro: "Gere o pedido antes de registrar o protocolo." };
     const numero = texto(fd, "protocoloNumero");
     const dataP = lerData(fd.get("protocoloData"));
+    const documentacaoCompletaEm = lerData(fd.get("documentacaoCompletaEm"));
     if (!numero) return { erro: "Informe o número do protocolo." };
     if (!dataP) return { erro: "Informe a data do protocolo." };
-    await db.pedido.update({ where: { id: p.id }, data: { estado: "PROTOCOLADO", protocoloNumero: numero, protocoloData: dataP } });
+    const proposto = { ...p, protocoloData: dataP, documentacaoCompletaEm };
+    const mudouCalculo = p.retroContarAte === "DATA_PROTOCOLO" && hashCalculo(proposto) !== p.hashCalculo;
+    await db.$transaction(async (tx) => {
+      let novaVersao: number | undefined;
+      if (mudouCalculo) {
+        const hash = hashCalculo(proposto);
+        const ultima = await tx.memoriaVersao.aggregate({ where: { pedidoId: p.id }, _max: { numero: true } });
+        const v = await tx.memoriaVersao.upsert({
+          where: { pedidoId_hash: { pedidoId: p.id, hash } },
+          create: { pedidoId: p.id, numero: (ultima._max.numero ?? 0) + 1, hash, snapshot: json(snapshotCalculo(proposto as never)) },
+          update: {},
+        });
+        novaVersao = v.numero;
+      }
+      await tx.pedido.update({
+        where: { id: p.id },
+        data: {
+          estado: "PROTOCOLADO",
+          protocoloNumero: numero,
+          protocoloData: dataP,
+          documentacaoCompletaEm,
+          documentacaoCompletaOrigem: documentacaoCompletaEm ? "INFORMADA_NO_PROTOCOLO" : null,
+          ...(mudouCalculo ? { memoriaAprovadaEm: null, memoriaAprovadaPor: null, memoriaVersaoAprovadaId: null, memoriaVersaoAtual: novaVersao, hashCalculo: hashCalculo(proposto) } : {}),
+        },
+      });
+    });
+    if (mudouCalculo) await registrarHistorico(ctx, "A data do protocolo alterou o corte: criada nova versão da memória, pendente de revisão", { pedidoId: p.id, contratoId: p.contratoId });
     await registrarHistorico(ctx, `Registrou o protocolo ${numero}`, { pedidoId: p.id, contratoId: p.contratoId });
     await registrarEvento("protocolo_registrado");
     await avisarProtocolo(p.id);
@@ -535,14 +652,48 @@ export async function registrarResposta(_: Resultado, fd: FormData): Promise<Res
     const dataR = lerData(fd.get("respostaData"));
     if (!dataR) return { erro: "Informe a data da resposta." };
     const resumo = texto(fd, "respostaResumo") || null;
+    const evidencia = texto(fd, "decisaoEvidencia") || resumo;
     if (resultado === "INDEFERIDO") {
-      await db.pedido.update({ where: { id: p.id }, data: { estado: "INDEFERIDO", respostaData: dataR, respostaResumo: resumo } });
+      await db.pedido.update({
+        where: { id: p.id },
+        data: { estado: "INDEFERIDO", respostaData: dataR, respostaResumo: resumo, decisaoTipo: "INDEFERIDO", decisaoEvidencia: evidencia, mensalSolicitado: null, mensalAprovado: null, retroativoAprovado: null },
+      });
       await registrarHistorico(ctx, "Registrou o indeferimento", { pedidoId: p.id, contratoId: p.contratoId, detalhe: resumo ?? undefined });
     } else {
-      const valor = lerDinheiro(fd.get("valorDeferido"));
-      if (!valor) return { erro: "Informe o valor deferido (a diferença retroativa reconhecida pelo órgão)." };
-      await db.pedido.update({ where: { id: p.id }, data: { estado: "DEFERIDO", respostaData: dataR, deferidoEm: dataR, valorDeferido: valor, respostaResumo: resumo } });
-      await registrarHistorico(ctx, "Registrou o deferimento", { pedidoId: p.id, contratoId: p.contratoId });
+      const calc = calcularPedido(p);
+      if (!calc.comparacao || !calc.retroativo) return { erro: "O cálculo do pedido não está completo." };
+      const parcial = resultado === "PARCIAL" || resultado === "DEFERIDO_PARCIAL";
+      const solicitadoMensal = new Decimal(calc.comparacao.mensalAgora);
+      const solicitadoRetro = new Decimal(calc.retroativo.total);
+      const mensalTxt = lerDinheiro(fd.get("mensalAprovado"));
+      const retroTxt = lerDinheiro(fd.get("retroativoAprovado")) ?? lerDinheiro(fd.get("valorDeferido"));
+      const mensalAprovado = new Decimal(parcial ? mensalTxt ?? "NaN" : mensalTxt ?? solicitadoMensal);
+      const retroativoAprovado = new Decimal(parcial ? retroTxt ?? "NaN" : retroTxt ?? solicitadoRetro);
+      if (!mensalAprovado.isFinite() || mensalAprovado.isNegative() || mensalAprovado.gt(solicitadoMensal)) return { erro: "O valor mensal aprovado precisa estar entre zero e o valor solicitado." };
+      if (!retroativoAprovado.isFinite() || retroativoAprovado.isNegative() || retroativoAprovado.gt(solicitadoRetro)) return { erro: "O retroativo aprovado precisa estar entre zero e o valor solicitado." };
+      if (parcial && !evidencia) return { erro: "No deferimento parcial, informe o fundamento ou documento da decisão." };
+      await db.pedido.update({
+        where: { id: p.id },
+        data: {
+          estado: "DEFERIDO",
+          respostaData: dataR,
+          deferidoEm: dataR,
+          valorDeferido: retroativoAprovado.toFixed(2),
+          respostaResumo: resumo,
+          decisaoTipo: parcial ? "DEFERIDO_PARCIAL" : "DEFERIDO_TOTAL",
+          decisaoEvidencia: evidencia,
+          mensalSolicitado: solicitadoMensal.toFixed(2),
+          mensalAprovado: mensalAprovado.toFixed(2),
+          mensalVigenteAnterior: p.contrato.valorMensal,
+          retroativoAprovado: retroativoAprovado.toFixed(2),
+          conciliacaoPendente: false,
+        },
+      });
+      await registrarHistorico(ctx, parcial ? "Registrou o deferimento parcial" : "Registrou o deferimento total", {
+        pedidoId: p.id,
+        contratoId: p.contratoId,
+        detalhe: `Mensal solicitado ${solicitadoMensal.toFixed(2)}; aprovado ${mensalAprovado.toFixed(2)}; retroativo aprovado ${retroativoAprovado.toFixed(2)}.`,
+      });
       await avisarDeferido(p.id);
     }
     await registrarEvento("resposta_registrada", { resultado: resultado === "INDEFERIDO" ? "indeferido" : "deferido" });
@@ -558,32 +709,101 @@ export async function registrarApostilamento(_: Resultado, fd: FormData): Promis
     if (p.estado !== "DEFERIDO") return { erro: "O apostilamento vem depois do deferimento." };
     const d = lerData(fd.get("apostiladoEm"));
     if (!d) return { erro: "Informe a data do apostilamento." };
-    await db.pedido.update({ where: { id: p.id }, data: { apostiladoEm: d } });
     const calc = calcularPedido(p);
-    await db.contrato.update({
-      where: { id: p.contratoId },
-      data: { ultimoApostilamento: d, ...(calc.comparacao && !calc.comparacao.erros.length ? { valorMensal: calc.comparacao.mensalAgora } : {}) },
+    const mensalAprovado = p.mensalAprovado?.toString() ?? calc.comparacao?.mensalAgora;
+    if (!mensalAprovado) return { erro: "A decisão não informa o valor mensal aprovado." };
+    const proposto = { ...p, apostiladoEm: d };
+    const mudouCalculo = p.retroContarAte === "DATA_APOSTILAMENTO" && hashCalculo(proposto) !== p.hashCalculo;
+    await db.$transaction(async (tx) => {
+      let novaVersao: number | undefined;
+      if (mudouCalculo) {
+        const hash = hashCalculo(proposto);
+        const ultima = await tx.memoriaVersao.aggregate({ where: { pedidoId: p.id }, _max: { numero: true } });
+        const v = await tx.memoriaVersao.upsert({
+          where: { pedidoId_hash: { pedidoId: p.id, hash } },
+          create: { pedidoId: p.id, numero: (ultima._max.numero ?? 0) + 1, hash, snapshot: json(snapshotCalculo(proposto as never)) },
+          update: {},
+        });
+        novaVersao = v.numero;
+      }
+      await tx.pedido.update({
+        where: { id: p.id },
+        data: {
+          apostiladoEm: d,
+          ...(mudouCalculo ? { memoriaAprovadaEm: null, memoriaAprovadaPor: null, memoriaVersaoAprovadaId: null, memoriaVersaoAtual: novaVersao, hashCalculo: hashCalculo(proposto) } : {}),
+        },
+      });
+      await tx.valorMensalContrato.create({
+        data: {
+          contratoId: p.contratoId,
+          pedidoId: p.id,
+          valorAnterior: p.contrato.valorMensal,
+          valorNovo: mensalAprovado,
+          ato: "APOSTILAMENTO",
+          evidencia: p.decisaoEvidencia,
+          aplicavelEm: d,
+          registradoPor: ctx.usuario.nome,
+        },
+      });
+      await tx.contrato.update({ where: { id: p.contratoId }, data: { ultimoApostilamento: d, valorMensal: mensalAprovado } });
     });
+    if (mudouCalculo) await registrarHistorico(ctx, "A data do apostilamento alterou o corte: criada nova versão da memória, pendente de revisão", { pedidoId: p.id, contratoId: p.contratoId });
     await registrarHistorico(ctx, "Registrou o apostilamento", { pedidoId: p.id, contratoId: p.contratoId });
     revalidatePath("/app", "layout");
     return { ok: "Apostilamento registrado." };
   });
 }
 
-/** "Gerar cobrança da diferença": registra a nota fiscal separada das diferenças retroativas. */
+const atualizouIdentificacao = (e: Prisma.PrismaClientKnownRequestError) => JSON.stringify(e.meta ?? {}).includes("identificacao");
+
+/** "Registrar nota fiscal": registra uma nota já emitida contra o retroativo aprovado (parcial, idempotente). */
 export async function gerarCobranca(_: Resultado, fd: FormData): Promise<Resultado> {
   return tentar(async (): Promise<Resultado | void> => {
     const ctx = await exigir("registrar_financeiro");
     const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
-    if (p.estado !== "DEFERIDO") return { erro: "Só valores deferidos podem ser faturados." };
+    if (!["DEFERIDO", "FATURADO"].includes(p.estado)) return { erro: "Só valores deferidos podem ser faturados." };
     if (!p.apostiladoEm) return { erro: "Registre o apostilamento antes de faturar. Sem ele, o órgão não paga a diferença." };
     const nf = texto(fd, "notaFiscal");
     const d = lerData(fd.get("faturadoEm"));
-    if (!nf || !d) return { erro: "Informe o número da nota fiscal da diferença e a data." };
-    await db.pedido.update({ where: { id: p.id }, data: { estado: "FATURADO", notaFiscal: nf, faturadoEm: d } });
-    await registrarHistorico(ctx, `Faturou a diferença (NF ${nf})`, { pedidoId: p.id, contratoId: p.contratoId });
+    const valor = lerDinheiro(fd.get("valorNota")) ?? lerDinheiro(fd.get("valorDeferido"));
+    const referencia = texto(fd, "referenciaOperacao") || `${nf}:${d?.toISOString() ?? ""}:${valor ?? ""}`;
+    if (!nf || !d || !valor) return { erro: "Informe o número, a data e o valor da nota fiscal da diferença." };
+    const registrar = () =>
+      db.$transaction(async (tx): Promise<{ repetida: boolean; nota: NotaFiscalPedido }> => {
+        const atual = await tx.pedido.findUnique({ where: { id: p.id }, include: { notasFiscais: true, baixas: true } });
+        if (!atual) throw new ErroUsuario("Pedido não encontrado.");
+        const repetida = atual.notasFiscais.find((n) => n.referenciaOperacao === referencia);
+        if (repetida) return { repetida: true, nota: repetida };
+        if (atual.notasFiscais.some((n) => n.identificacao === nf && !n.canceladaEm)) throw new ErroUsuario("Já existe uma nota fiscal ativa com esta identificação.");
+        const resumoAtual = resumoFinanceiro(atual.retroativoAprovado ?? atual.valorDeferido ?? 0, atual.notasFiscais, atual.baixas);
+        const confirmado = validarLancamento(valor, resumoAtual.faltaFaturar, "O valor da nota");
+        const nota = await tx.notaFiscalPedido.create({
+          data: { pedidoId: p.id, identificacao: nf, emitidaEm: d, valor: confirmado, referenciaOperacao: referencia, evidencia: texto(fd, "evidenciaNota") || null, criadoPor: ctx.usuario.nome },
+        });
+        await tx.pedido.update({ where: { id: p.id }, data: { estado: "FATURADO", notaFiscal: nf, faturadoEm: d } });
+        return { repetida: false, nota };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    let resultado: { repetida: boolean; nota: NotaFiscalPedido } | null = null;
+    // Serializable: duas notas concorrentes não passam juntas do saldo; conflito (P2034) tenta de novo
+    for (let tentativa = 0; tentativa < 3 && !resultado; tentativa++) {
+      try {
+        resultado = await registrar();
+      } catch (e) {
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+          const nota = await db.notaFiscalPedido.findUnique({ where: { pedidoId_referenciaOperacao: { pedidoId: p.id, referenciaOperacao: referencia } } });
+          if (nota) {
+            resultado = { repetida: true, nota };
+            break;
+          }
+          if (atualizouIdentificacao(e)) throw new ErroUsuario("Já existe uma nota fiscal com esta identificação.");
+        }
+        if (!(e instanceof Prisma.PrismaClientKnownRequestError) || e.code !== "P2034" || tentativa === 2) throw e;
+      }
+    }
+    if (!resultado) throw new ErroUsuario("Não foi possível registrar a nota agora.");
+    if (!resultado.repetida) await registrarHistorico(ctx, `Faturou R$ ${resultado.nota.valor.toString()} da diferença (NF ${nf})`, { pedidoId: p.id, contratoId: p.contratoId });
     revalidatePath("/app", "layout");
-    return { ok: "Cobrança registrada." };
+    return { ok: resultado.repetida ? "Esta nota já havia sido registrada; nenhum valor foi duplicado." : "Nota fiscal registrada." };
   });
 }
 
@@ -595,11 +815,59 @@ export async function marcarRecebido(_: Resultado, fd: FormData): Promise<Result
     const d = lerData(fd.get("recebidoEm"));
     const valor = lerDinheiro(fd.get("valorRecebido"));
     if (!d || !valor) return { erro: "Informe a data e o valor recebido." };
-    await db.pedido.update({ where: { id: p.id }, data: { estado: "RECEBIDO", recebidoEm: d, valorRecebido: valor } });
-    await registrarHistorico(ctx, "Marcou a diferença como recebida", { pedidoId: p.id, contratoId: p.contratoId });
-    await registrarEvento("diferenca_recebida");
+    const notaInformada = texto(fd, "notaFiscalId");
+    const referencia = texto(fd, "referenciaOperacao") || `${notaInformada}:${d.toISOString()}:${valor}`;
+    let retorno: { repetida: boolean; quitado: boolean; totalPendente: string } | null = null;
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      try {
+        retorno = await db.$transaction(
+          async (tx) => {
+            const atual = await tx.pedido.findUnique({
+              where: { id: p.id },
+              include: { notasFiscais: { where: { canceladaEm: null }, orderBy: { emitidaEm: "asc" } }, baixas: { where: { canceladaEm: null } } },
+            });
+            if (!atual) throw new ErroUsuario("Pedido não encontrado.");
+            const existente = atual.baixas.find((b) => b.referenciaOperacao === referencia);
+            const resumoAntes = resumoFinanceiro(atual.retroativoAprovado ?? atual.valorDeferido ?? 0, atual.notasFiscais, atual.baixas);
+            if (existente) return { repetida: true, quitado: resumoAntes.quitado, totalPendente: resumoAntes.totalPendente };
+            const nota = notaInformada
+              ? atual.notasFiscais.find((n) => n.id === notaInformada)
+              : atual.notasFiscais.find((n) => {
+                  const pago = atual.baixas.filter((b) => b.notaFiscalId === n.id).reduce((s, b) => s.plus(b.valor), new Decimal(0));
+                  return pago.lt(n.valor);
+                });
+            if (!nota) throw new ErroUsuario("Escolha uma nota fiscal com saldo a receber.");
+            const pagoNota = atual.baixas.filter((b) => b.notaFiscalId === nota.id).reduce((s, b) => s.plus(b.valor), new Decimal(0));
+            const confirmado = validarLancamento(valor, new Decimal(nota.valor).minus(pagoNota), "O recebimento");
+            const baixa = await tx.baixaPedido.create({
+              data: { pedidoId: p.id, notaFiscalId: nota.id, recebidoEm: d, valor: confirmado, referenciaOperacao: referencia, autorId: ctx.usuario.id, autorNome: ctx.usuario.nome },
+            });
+            const resumoDepois = resumoFinanceiro(atual.retroativoAprovado ?? atual.valorDeferido ?? 0, atual.notasFiscais, [...atual.baixas, baixa]);
+            await tx.pedido.update({ where: { id: p.id }, data: { estado: resumoDepois.quitado ? "RECEBIDO" : "FATURADO", recebidoEm: d, valorRecebido: resumoDepois.recebido } });
+            return { repetida: false, quitado: resumoDepois.quitado, totalPendente: resumoDepois.totalPendente };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+        break;
+      } catch (e) {
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+          const atual = await db.pedido.findUnique({ where: { id: p.id }, include: { notasFiscais: { where: { canceladaEm: null } }, baixas: { where: { canceladaEm: null } } } });
+          const existente = atual?.baixas.find((b) => b.referenciaOperacao === referencia);
+          if (atual && existente) {
+            const resumo = resumoFinanceiro(atual.retroativoAprovado ?? atual.valorDeferido ?? 0, atual.notasFiscais, atual.baixas);
+            retorno = { repetida: true, quitado: resumo.quitado, totalPendente: resumo.totalPendente };
+            break;
+          }
+        }
+        if (!(e instanceof Prisma.PrismaClientKnownRequestError) || e.code !== "P2034" || tentativa === 2) throw e;
+      }
+    }
+    if (!retorno) throw new ErroUsuario("Não foi possível registrar o recebimento agora.");
+    if (!retorno.repetida)
+      await registrarHistorico(ctx, `Registrou recebimento parcial de R$ ${valor}`, { pedidoId: p.id, contratoId: p.contratoId, detalhe: `Saldo total pendente: R$ ${retorno.totalPendente}.` });
+    if (retorno.quitado && !retorno.repetida) await registrarEvento("diferenca_recebida");
     revalidatePath("/app", "layout");
-    return { ok: "Recebido. O pedido saiu da lista." };
+    return { ok: retorno.repetida ? "Esta baixa já havia sido registrada; nenhum valor foi duplicado." : retorno.quitado ? "Recebido integralmente. O pedido saiu da lista." : `Recebimento parcial registrado. Ainda faltam R$ ${retorno.totalPendente}.` };
   });
 }
 

@@ -14,6 +14,7 @@ export function contratoParaForm(c: Contrato): ContratoForm {
     esfera: c.esfera,
     vigenciaInicio: paraInputData(c.vigenciaInicio),
     vigenciaFim: paraInputData(c.vigenciaFim),
+    prorrogacaoPrevistaEm: c.prorrogacaoPrevistaEm ? paraInputData(c.prorrogacaoPrevistaEm) : null,
     dataProposta: c.dataProposta ? paraInputData(c.dataProposta) : null,
     postos: c.postos,
     valorMensal: c.valorMensal ? c.valorMensal.toFixed(2) : null,

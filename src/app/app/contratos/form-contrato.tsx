@@ -26,6 +26,7 @@ export interface ContratoForm {
   esfera: string | null;
   vigenciaInicio: string;
   vigenciaFim: string;
+  prorrogacaoPrevistaEm: string | null;
   dataProposta: string | null;
   postos: number | null;
   valorMensal: string | null;
@@ -101,6 +102,7 @@ export function FormContrato({
           <CampoData nome="vigenciaInicio" rotulo="Início da vigência" valorInicial={c?.vigenciaInicio} mostrarRelativo={false} />
           <CampoData nome="vigenciaFim" rotulo="Fim da vigência" valorInicial={c?.vigenciaFim} />
         </div>
+        <CampoData nome="prorrogacaoPrevistaEm" rotulo="Prorrogação prevista para" opcional valorInicial={c?.prorrogacaoPrevistaEm} mostrarRelativo={false} ajuda="Previsão operacional; não substitui a data do termo assinado." />
         <CampoData
           nome="dataProposta"
           rotulo="Data da proposta"

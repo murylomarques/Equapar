@@ -28,6 +28,7 @@ describe("C2: desfazer a aprovação", () => {
     expect(dadosInvalidarAprovacao({ memoriaAprovadaEm: new Date(), estado: "CALCULO_VALIDADO" })).toEqual({
       memoriaAprovadaEm: null,
       memoriaAprovadaPor: null,
+      memoriaVersaoAprovadaId: null,
       estado: "EM_ANALISE",
       geradoEm: null,
     });
@@ -44,7 +45,16 @@ const pl = (salario: string, fonte?: string): PlanilhaCustos => ({
       nome: "Servente",
       quantidade: 1,
       linhas: [
-        { id: "l1", modulo: "M1", descricao: "Salário base", tipo: "VALOR", valor: salario, salarioBase: true, fonte },
+        {
+          id: "l1",
+          modulo: "M1",
+          descricao: "Salário base",
+          tipo: "VALOR",
+          valor: salario,
+          salarioBase: true,
+          fonte,
+          evidencia: fonte ? { instrumento: "CCT 2026", categoria: "Servente", dataBase: "2026-01-01", clausula: "4ª", parcela: "salário normativo" } : undefined,
+        },
         { id: "l2", modulo: "M2_1", descricao: "13º salário", tipo: "PERCENTUAL", valor: "8.33", base: "M1" },
       ],
     },
@@ -98,5 +108,11 @@ describe("C2.3: assinatura da base do cálculo", () => {
     expect(aprovacaoValida({ ...aprovado, planilhaAgora: pl("1900", "cl. 4ª") as never })).toBe(false);
     expect(aprovacaoValida({ ...aprovado, memoriaAprovadaEm: null })).toBe(false);
     expect(aprovacaoValida({ ...aprovado, hashCalculo: null })).toBe(true); // aprovação anterior à assinatura
+  });
+  it("invalida a aprovação quando o protocolo ou apostilamento define o corte efetivo", () => {
+    const protocolo = { ...p, retroContarAte: "DATA_PROTOCOLO" as const };
+    expect(hashCalculo({ ...protocolo, protocoloData: new Date(Date.UTC(2026, 10, 13)) } as never)).not.toBe(hashCalculo(protocolo as never));
+    const apostila = { ...p, retroContarAte: "DATA_APOSTILAMENTO" as const };
+    expect(hashCalculo({ ...apostila, apostiladoEm: new Date(Date.UTC(2026, 10, 14)) } as never)).not.toBe(hashCalculo(apostila as never));
   });
 });

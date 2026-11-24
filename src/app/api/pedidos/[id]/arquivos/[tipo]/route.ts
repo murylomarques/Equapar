@@ -3,6 +3,8 @@ import { contexto, pedidoDaConta } from "@/lib/auth";
 import { memoriaPdf, minutaAditivoPdf, oficioDocx, oficioPdf, pacoteZip, planilhaXlsx } from "@/lib/documentos";
 import { cabecalhoAnexo } from "@/lib/arquivo-tipo";
 import { ErroUsuario } from "@/lib/acao";
+import { db } from "@/lib/db";
+import { validarDocumentoFinal } from "@/lib/pedido-final";
 
 const TIPOS = {
   "oficio.docx": { fn: oficioDocx, mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", nome: "oficio" },
@@ -13,7 +15,7 @@ const TIPOS = {
   "pacote.zip": { fn: pacoteZip, mime: "application/zip", nome: "pedido-completo" },
 } as const;
 
-export async function GET(_: Request, { params }: { params: Promise<{ id: string; tipo: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string; tipo: string }> }) {
   const { id, tipo } = await params;
   const t = TIPOS[tipo as keyof typeof TIPOS];
   if (!t) return new NextResponse("Arquivo desconhecido.", { status: 404 });
@@ -21,11 +23,22 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const p = await pedidoDaConta(ctx, id).catch(() => null);
   if (!p) return new NextResponse("Pedido não encontrado.", { status: 404 });
   try {
-    const buf = await t.fn(id, ctx.conta.id);
+    const rascunho = new URL(req.url).searchParams.get("rascunho") === "1";
+    if (!rascunho) {
+      const completo = await db.pedido.findUnique({ where: { id }, include: { documentos: true } });
+      if (!completo) return new NextResponse("Pedido não encontrado.", { status: 404 });
+      await validarDocumentoFinal(completo);
+    }
+    const buf = tipo === "pacote.zip" ? await pacoteZip(id, ctx.conta.id, { rascunho }) : await t.fn(id, ctx.conta.id);
     const ext = tipo.split(".").pop();
     const n = p.contrato.numero.replace(/[^\w.-]+/g, "-");
     return new NextResponse(new Uint8Array(buf), {
-      headers: { "content-type": t.mime, "content-disposition": cabecalhoAnexo(`${t.nome}-contrato-${n}.${ext}`), "cache-control": "no-store" },
+      headers: {
+        "content-type": t.mime,
+        "content-disposition": cabecalhoAnexo(`${rascunho ? "RASCUNHO-" : ""}${t.nome}-contrato-${n}.${ext}`),
+        "cache-control": "no-store",
+        "x-equapar-versao": rascunho ? "RASCUNHO" : "FINAL",
+      },
     });
   } catch (e) {
     // S9: só a mensagem pensada para a pessoa vai na resposta; o detalhe técnico fica no log

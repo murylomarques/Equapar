@@ -47,6 +47,27 @@ export interface LinhaPlanilha {
   fonte?: string;
   /** D2 (só a jornada usa): a linha acompanha o número de empregados por posto. Vazio = padrão do módulo. */
   acompanhaEmpregados?: boolean;
+  /** Rastreabilidade da importação: valor original e como foi interpretado. */
+  origem?: {
+    aba: string;
+    linha: number;
+    celula: string;
+    conteudo: string;
+    tipo: "NUMERO" | "TEXTO" | "MOEDA" | "PERCENTUAL" | "FORMULA_COM_RESULTADO" | "MANUAL";
+    interpretacao: string;
+  };
+  /** Instrumento/parcela aplicável à alteração. */
+  evidencia?: {
+    instrumento: string;
+    categoria: string;
+    dataBase: string;
+    clausula: string;
+    parcela: string;
+    justificativaOutraFonte?: string;
+    documentoId?: string;
+    anualidade?: "VALIDA" | "REVISAO_NECESSARIA" | "REVISAO_RESOLVIDA";
+    motivoRevisao?: string;
+  };
 }
 
 export interface TipoPosto {

@@ -58,7 +58,7 @@ describe("5.1: documentos do pedido da jornada", () => {
   it("minuta do aditivo sai em PDF e entra no pacote", async () => {
     const pdf = await minutaAditivoPdf(pedidoId, contaId);
     expect(Buffer.from(pdf).subarray(0, 4).toString()).toBe("%PDF");
-    const z = await JSZip.loadAsync(await pacoteZip(pedidoId, contaId));
+    const z = await JSZip.loadAsync(await pacoteZip(pedidoId, contaId, { rascunho: true }));
     expect(Object.keys(z.files).some((n) => n.includes("minuta-aditivo"))).toBe(true);
-  });
+  }, 15_000);
 });

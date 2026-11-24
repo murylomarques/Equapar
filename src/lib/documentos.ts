@@ -18,6 +18,7 @@ import { lerArquivo } from "./storage";
 import { ErroUsuario } from "./acao";
 import { fatorTexto, horasReduzidas, planilhaDoCenario, reducaoHorasPct } from "./jornada";
 import { jornadaEmSimulacao, MARCA_SIMULACAO_JORNADA } from "./jornada-acesso";
+import { validarDocumentoFinal } from "./pedido-final";
 
 async function carregar(pedidoId: string, contaId: string) {
   const p = await db.pedido.findFirst({
@@ -386,8 +387,9 @@ export async function planilhaXlsx(pedidoId: string, contaId: string) {
 // Pacote ZIP
 // ---------------------------------------------------------------------------
 
-export async function pacoteZip(pedidoId: string, contaId: string) {
+export async function pacoteZip(pedidoId: string, contaId: string, opcoes: { rascunho?: boolean } = {}) {
   const d = await carregar(pedidoId, contaId);
+  if (!opcoes.rascunho) await validarDocumentoFinal(d.p);
   const n = d.p.contrato.numero.replace(/[^\w.-]+/g, "-");
   const zip = new JSZip();
   zip.file(`01-oficio-contrato-${n}.docx`, await oficioDocx(pedidoId, contaId));
@@ -401,7 +403,7 @@ export async function pacoteZip(pedidoId: string, contaId: string) {
     try {
       zip.file(`${String(i++).padStart(2, "0")}-anexo-${doc.nome}`, await lerArquivo(doc.caminho));
     } catch {
-      /* arquivo removido do disco: segue sem ele */
+      throw new ErroUsuario(`O anexo ${doc.nome} não foi encontrado no armazenamento. Reenvie o arquivo antes de gerar o pacote.`);
     }
   }
   return zip.generateAsync({ type: "nodebuffer" });

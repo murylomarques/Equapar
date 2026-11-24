@@ -58,4 +58,35 @@ describe("importarExcel", () => {
     expect(r.naoLidas.map((n) => n.motivo)).toContain("Tributo sem alíquota (%): informe a alíquota");
     expect(r.planilha.tipos[0].linhas.find((l) => l.descricao === "ISS")).toBeUndefined();
   });
+
+  it("interpreta formatos locais sem multiplicar valores e preserva a célula de origem", async () => {
+    const buf = await planilha([
+      ["", "MÓDULO 1", ""],
+      ["A", "Salário ponto decimal", "1800.00"],
+      ["B", "Salário vírgula decimal", "1800,00"],
+      ["C", "Salário milhar brasileiro", "1.800,00"],
+      ["D", "Valor ambíguo", "1.800"],
+    ]);
+    const r = await importarExcel(buf);
+    const linhas = r.planilha.tipos[0].linhas;
+    expect(linhas.slice(0, 3).map((linha) => linha.valor)).toEqual(["1800", "1800", "1800"]);
+    expect(linhas[0].origem).toMatchObject({ aba: "Servente 44h", linha: 2, celula: "C2", conteudo: "1800.00" });
+    expect(r.naoLidas).toContainEqual(expect.objectContaining({ texto: "Valor ambíguo", impeditiva: true, status: "PENDENTE", celula: "C5" }));
+  });
+
+  it("lê múltiplas abas e fórmulas somente quando há resultado salvo", async () => {
+    const wb = new ExcelJS.Workbook();
+    const a = wb.addWorksheet("Posto A");
+    a.addRow(["", "MÓDULO 1", ""]);
+    a.addRow(["A", "Salário calculado", { formula: "900*2", result: 1800 }]);
+    const b = wb.addWorksheet("Posto B");
+    b.addRow(["", "MÓDULO 1", ""]);
+    b.addRow(["A", "Salário sem cache", { formula: "950*2" }]);
+    b.addRow(["B", "Célula com erro", { error: "#DIV/0!" }]);
+    const r = await importarExcel(Buffer.from(await wb.xlsx.writeBuffer()));
+    expect(r.planilha.tipos.map((tipo) => tipo.nome)).toContain("Posto A");
+    expect(r.planilha.tipos[0].linhas[0]).toMatchObject({ valor: "1800", origem: { tipo: "FORMULA_COM_RESULTADO", aba: "Posto A", celula: "C2" } });
+    expect(r.naoLidas.map((linha) => linha.motivo)).toEqual(expect.arrayContaining(["Fórmula sem resultado salvo utilizável", "Célula com erro #DIV/0!"]));
+    expect(r.naoLidas.every((linha) => linha.impeditiva && linha.status === "PENDENTE")).toBe(true);
+  });
 });

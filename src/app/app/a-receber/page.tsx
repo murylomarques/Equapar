@@ -9,31 +9,33 @@ import { SeloSimples } from "@/components/selo";
 import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
 import { EstadoVazio } from "@/components/ui/apresentacao";
 import { modoPiloto } from "@/lib/chaves";
+import { resumoFinanceiro } from "@/lib/financeiro-pedido";
 
 export const metadata: Metadata = { title: "A receber | Equapar" };
 
 export default async function AReceber() {
   const ctx = await contexto();
-  const pedidos = await db.pedido.findMany({
+  const pedidosDb = await db.pedido.findMany({
     where: { ...escopoPedidos(ctx), estado: { in: ["DEFERIDO", "FATURADO"] } },
-    include: { contrato: { include: { empresa: true } } },
+    include: { contrato: { include: { empresa: true } }, notasFiscais: true, baixas: true },
     orderBy: { deferidoEm: "asc" },
   });
+  const pedidos = pedidosDb.map((p) => ({ ...p, financeiro: resumoFinanceiro(p.retroativoAprovado ?? p.valorDeferido ?? 0, p.notasFiscais, p.baixas) }));
   const recebidos = await db.pedido.findMany({
     where: { ...escopoPedidos(ctx), estado: "RECEBIDO", recebidoEm: { gte: diasAtras(365) } },
     include: { contrato: true },
     orderBy: { recebidoEm: "desc" },
   });
-  const total = somarReais(pedidos.map((p) => p.valorDeferido)); // L10
+  const total = somarReais(pedidos.map((p) => p.financeiro.totalPendente));
   const recebido12 = somarReais(recebidos.map((p) => p.valorRecebido));
   const atrasados = pedidos.filter((p) => !p.apostiladoEm && p.deferidoEm && diasAte(p.deferidoEm) <= -30);
-  const acao = (p: (typeof pedidos)[number]) => (p.estado === "FATURADO" ? "Marcar como recebido" : p.apostiladoEm ? "Gerar cobrança da diferença" : "Registrar apostilamento");
+  const acao = (p: (typeof pedidos)[number]) => (p.estado === "FATURADO" ? "Registrar recebimento" : p.apostiladoEm ? "Registrar nota fiscal" : "Registrar apostilamento");
 
   return (
     <>
       <CabecalhoPagina
         titulo="A receber"
-        subtitulo={pedidos.length ? `${reaisResumo(total)} deferidos e ainda não recebidos` : undefined}
+        subtitulo={pedidos.length ? `${reaisResumo(total)} de saldo aprovado ainda não recebido` : undefined}
         acao={
           modoPiloto() ? undefined : (
             <Link href="/app/recuperado" className="btn">
@@ -100,11 +102,11 @@ export default async function AReceber() {
                           <SeloSimples texto={semApost ? "Falta há mais de 30 dias" : "Falta"} tom={semApost ? "carimbo" : "ambar"} icone="alerta" />
                         )}
                       </td>
-                      <td>{p.faturadoEm ? <SeloSimples texto={`NF ${p.notaFiscal}`} tom="verde" icone="check" /> : <SeloSimples texto="Falta" tom="neutro" icone="relogio" />}</td>
+                      <td>{Number(p.financeiro.faturado) > 0 ? <SeloSimples texto={reais(p.financeiro.faturado)} tom="verde" icone="check" /> : <SeloSimples texto="Falta" tom="neutro" icone="relogio" />}</td>
                       <td>
-                        <SeloSimples texto="Ainda não" tom="neutro" icone="relogio" />
+                        <SeloSimples texto={Number(p.financeiro.recebido) > 0 ? reais(p.financeiro.recebido) : "Ainda não"} tom={Number(p.financeiro.recebido) > 0 ? "verde" : "neutro"} icone={Number(p.financeiro.recebido) > 0 ? "check" : "relogio"} />
                       </td>
-                      <td className="num">{reais(p.valorDeferido)}</td>
+                      <td className="num">{reais(p.financeiro.totalPendente)}</td>
                       <td>
                         <Link href={`/app/pedidos/${p.id}/pronto`} className="btn btn-pequeno acima">
                           {acao(p)}
@@ -130,7 +132,7 @@ export default async function AReceber() {
                 </span>
                 <div className="entre mt-8">
                   <SeloSimples texto={p.estado === "FATURADO" ? "Faturado" : p.apostiladoEm ? "Apostilado" : "Falta apostilar"} tom={p.apostiladoEm ? "verde" : "ambar"} />
-                  <span className="num">{reais(p.valorDeferido)}</span>
+                  <span className="num">{reais(p.financeiro.totalPendente)}</span>
                 </div>
                 <span className="legenda" style={{ display: "block", marginTop: 6 }}>
                   Próximo passo: {acao(p).toLowerCase()}

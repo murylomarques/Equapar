@@ -22,7 +22,7 @@ import { aprovacaoValida } from "@/lib/pedido-regras";
 import { NOME_CONTAR_ATE, NOME_MES_INCOMPLETO } from "@/lib/pedido";
 import { CabecalhoPedido } from "../../cabecalho";
 import { EditorPlanilha } from "../../../editor-planilha";
-import { anexarDocumentoPedido, concluirPasso2, concluirPasso3, concluirPasso4, enviarPlanilha, gerarPedido, marcarItem, salvarPasso1, usarModelo } from "../../../acoes";
+import { anexarDocumentoPedido, concluirPasso2, concluirPasso3, concluirPasso4, enviarPlanilha, gerarPedido, marcarItem, resolverPendenciaPlanilha, salvarPasso1, usarModelo } from "../../../acoes";
 import type { LinhaNaoLida } from "@/lib/planilha-import";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { DICAS_PASSO, mostrarDica } from "@/lib/dicas";
@@ -32,6 +32,8 @@ import { dispensarDica } from "../../../../acoes";
 import { Lightbulb } from "lucide-react";
 import { jornadaEmSimulacao, jornadaVisivelPara, MARCA_SIMULACAO_JORNADA } from "@/lib/jornada-acesso";
 import { iaEmTeste, iaPara } from "@/lib/ia-acesso";
+import { RetroativoCompetenciasEditor } from "../../../retroativo-competencias-editor";
+import type { CompetenciaRetroativo } from "@/lib/retroativo-competencias";
 
 export const metadata: Metadata = { title: "Pedido de repactuação | Equapar" };
 
@@ -273,17 +275,41 @@ function Passo2({ p, leitura, iaPlanilha }: { p: P; leitura: boolean; iaPlanilha
         </div>
       )}
       {naoLidas.length > 0 && (
-        <Alerta tipo="atencao" titulo={naoLidas.length === 1 ? "Confira a linha que não entendemos" : `Confira as ${naoLidas.length} linhas que não entendemos`}>
-          <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+        <Alerta tipo="atencao" titulo="Pendências persistidas da importação">
+          <ul className="lista-limpa pilha-8" style={{ margin: "6px 0 0" }}>
             {naoLidas.map((l) => (
-              <li key={l.id}>
-                <mark>{l.texto}</mark>
-                {l.numero ? ` (${l.numero.replace(".", ",")})` : ""} · {l.motivo}
-                {l.posto !== "—" && <span className="legenda"> · {l.posto}</span>}
+              <li key={l.id} className="cartao-linha">
+                <strong>{l.texto}</strong>
+                <div>{l.numero ? `${l.numero.replace(".", ",")} · ` : ""}{l.motivo}</div>
+                <div className="legenda">
+                  {l.aba ?? l.posto}{l.linha ? ` · linha ${l.linha}` : ""}{l.celula ? ` · célula ${l.celula}` : ""}
+                  {l.conteudoOriginal ? ` · original: ${l.conteudoOriginal}` : ""}
+                  {l.tipoOriginal ? ` · tipo: ${l.tipoOriginal}` : ""}
+                </div>
+                {l.status && l.status !== "PENDENTE" ? (
+                  <p className="mb-0 mt-8"><SeloSimples texto={l.status === "CORRIGIDA" ? "Corrigida" : "Justificada"} tom="verde" icone="check" /> {l.decisao}</p>
+                ) : !leitura ? (
+                  <FormAcao action={resolverPendenciaPlanilha} className="mt-8">
+                    <input type="hidden" name="pedidoId" value={p.id} />
+                    <input type="hidden" name="pendenciaId" value={l.id} />
+                    <label>
+                      Decisão
+                      <select name="status" defaultValue="CORRIGIDA">
+                        <option value="CORRIGIDA">Corrigi na planilha acima</option>
+                        <option value="JUSTIFICADA">Linha inaplicável</option>
+                      </select>
+                    </label>
+                    <label>
+                      Correção ou justificativa
+                      <input name="decisao" required maxLength={1000} placeholder="Explique o que foi corrigido ou por que a linha não se aplica" />
+                    </label>
+                    <BotaoEnvio className="btn btn-pequeno">Registrar decisão</BotaoEnvio>
+                  </FormAcao>
+                ) : null}
               </li>
             ))}
           </ul>
-          <p className="legenda mb-0 mt-8">Inclua ou corrija essas linhas na planilha abaixo. O aviso some quando você continuar.</p>
+          <p className="legenda mb-0 mt-8">Pendências impeditivas precisam de correção ou justificativa antes da aprovação.</p>
         </Alerta>
       )}
       {p.planilhaAntes ? (
@@ -469,6 +495,21 @@ function Passo3({ p, leitura, iaConvencao }: { p: P; leitura: boolean; iaConvenc
               ajuda="Informativo: aparece na memória."
             />
           </div>
+          <RetroativoCompetenciasEditor
+            inicial={Array.isArray(p.retroativoCompetencias) ? (p.retroativoCompetencias as unknown as CompetenciaRetroativo[]) : []}
+            somenteLeitura={leitura}
+          />
+          <label className="check mt-16">
+            <input type="checkbox" name="calculoManual" defaultChecked={p.calculoManual} disabled={leitura} />
+            <span>Este caso exige cálculo manual excepcional</span>
+          </label>
+          <TextoLongo
+            nome="calculoManualJustificativa"
+            rotulo="Justificativa do cálculo manual"
+            opcional={!p.calculoManual}
+            valorInicial={p.calculoManualJustificativa}
+            ajuda="Obrigatória quando a opção de cálculo manual estiver marcada; fica registrada na memória."
+          />
         </details>
         <Rodape voltar={`/app/pedidos/${p.id}/passo/2`} leitura={leitura} salvandoAntes />
       </FormAcao>

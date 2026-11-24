@@ -59,8 +59,8 @@ export function proximaDataBase(conv: Pick<Convencao, "mesDataBase">, hoje = hoj
   return esteAno > hoje ? esteAno : new Date(Date.UTC(ano + 1, conv.mesDataBase - 1, 1));
 }
 
-export function prazoResposta(p: Pick<Pedido, "protocoloData">) {
-  return p.protocoloData ? addMeses(p.protocoloData, 1) : null;
+export function prazoResposta(p: Pick<Pedido, "protocoloData" | "documentacaoCompletaEm">) {
+  return p.documentacaoCompletaEm ? addMeses(p.documentacaoCompletaEm, 1) : null;
 }
 
 /**
@@ -108,6 +108,9 @@ export interface Prazo {
   titulo: string;
   regra?: (typeof FONTES)[keyof typeof FONTES];
   tipo: "pedir" | "fim" | "database" | "resposta" | "recurso";
+  origem?: string;
+  confirmada?: boolean;
+  pendencia?: string;
 }
 
 export function prazosDoContrato(c: ContratoComRel, hoje = hojeUTC()): Prazo[] {
@@ -119,11 +122,17 @@ export function prazosDoContrato(c: ContratoComRel, hoje = hojeUTC()): Prazo[] {
     titulo: "Fim da vigência",
     regra: c.tipoReajuste === "INDICE" ? FONTES.indice : FONTES.preclusao,
     tipo: "fim",
+    origem: c.vigenciaFimOrigem === "PNCP" ? "data publicada no PNCP" : c.vigenciaFimOrigem === "INFORMADA" ? "informada no contrato" : "origem legada a confirmar",
+    confirmada: c.vigenciaFimOrigem === "PNCP" || c.vigenciaFimOrigem === "INFORMADA",
   });
+  if (c.prorrogacaoPrevistaEm)
+    lista.push({ data: c.prorrogacaoPrevistaEm, titulo: "Previsão de assinatura da prorrogação", tipo: "pedir", origem: c.prorrogacaoPrevistaOrigem ?? "estimada", confirmada: false });
+  if (c.prorrogacaoAssinadaEm)
+    lista.push({ data: c.prorrogacaoAssinadaEm, titulo: "Assinatura efetiva da prorrogação", tipo: "fim", origem: c.prorrogacaoAssinadaOrigem ?? "informada", confirmada: true });
   if (c.convencao) lista.push({ data: proximaDataBase(c.convencao, hoje), titulo: `Data-base da convenção (${c.convencao.nome})`, tipo: "database" });
   for (const p of c.pedidos) {
     const r = p.estado === "PROTOCOLADO" ? prazoResposta(p) : null;
-    if (r) lista.push({ data: r, titulo: "Prazo preferencial de resposta do órgão", regra: FONTES.resposta, tipo: "resposta" });
+    if (r) lista.push({ data: r, titulo: "Prazo preferencial de resposta do órgão", regra: FONTES.resposta, tipo: "resposta", origem: "entrega da documentação completa", confirmada: true });
     // 5.5: recurso registrado depois do indeferimento
     if (p.estado === "INDEFERIDO" && p.recursoPrazo)
       lista.push({ data: p.recursoPrazo, titulo: p.recursoData ? "Prazo do recurso (decisão do órgão)" : "Prazo para apresentar o recurso", tipo: "recurso" });

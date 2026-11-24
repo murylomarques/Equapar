@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acoesDoContrato, contratosComPrazoEm, oportunidade, prazosDoContrato } from "./prazos";
+import { acoesDoContrato, contratosComPrazoEm, oportunidade, prazoResposta, prazosDoContrato } from "./prazos";
 
 const hoje = new Date(Date.UTC(2026, 10, 12));
 const dia = (n: number) => new Date(hoje.getTime() + n * 86_400_000);
@@ -41,5 +41,13 @@ describe("5.5: recurso depois do indeferimento", () => {
     expect(acoesDoContrato(c as never, hoje).some((a) => a.chave === "recurso:pr")).toBe(true);
     c.pedidos = [{ id: "pr", estado: "INDEFERIDO", gatilho: "NOVA_CONVENCAO", dataBase: dia(-60), recursoPrazo: dia(10), recursoData: dia(-1) }];
     expect(acoesDoContrato(c as never, hoje).some((a) => a.chave === "recurso:pr")).toBe(false);
+  });
+});
+
+describe("prazo de resposta", () => {
+  it("só começa quando a documentação completa é confirmada, não no protocolo", () => {
+    const protocoloData = new Date(Date.UTC(2026, 0, 5));
+    expect(prazoResposta({ protocoloData, documentacaoCompletaEm: null })).toBeNull();
+    expect(prazoResposta({ protocoloData, documentacaoCompletaEm: new Date(Date.UTC(2026, 0, 20)) })?.toISOString()).toBe("2026-02-20T00:00:00.000Z");
   });
 });

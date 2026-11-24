@@ -11,11 +11,13 @@ import { Carimbo, SeloSimples } from "@/components/selo";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { FonteRegra } from "@/components/fonte-regra";
-import { CampoData, CampoDinheiro, CampoTexto, RadiosCartao, TextoLongo } from "@/components/ui/campos";
+import { CampoData, CampoDinheiro, CampoSelect, CampoTexto, RadiosCartao, TextoLongo } from "@/components/ui/campos";
 import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
-import { gerarCobranca, marcarRecebido, novoPedidoAPartirDe, registrarApostilamento, registrarProtocolo, registrarRecurso, registrarResposta } from "../../acoes";
+import { aprovarMemoria, gerarCobranca, marcarRecebido, novoPedidoAPartirDe, registrarApostilamento, registrarProtocolo, registrarRecurso, registrarResposta } from "../../acoes";
 import { HistoricoOrgao } from "@/components/historico-orgao";
 import { jornadaEmSimulacao, MARCA_SIMULACAO_JORNADA } from "@/lib/jornada-acesso";
+import { resumoFinanceiro } from "@/lib/financeiro-pedido";
+import { aprovacaoValida } from "@/lib/pedido-regras";
 
 export const metadata: Metadata = { title: "Pedido | Equapar" };
 
@@ -32,11 +34,17 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
   const { id } = await params;
   const p = await pedidoDaConta(ctx, id);
   const calc = calcularPedido(p);
-  const historico = await db.historico.findMany({ where: { pedidoId: p.id }, include: { usuario: true }, orderBy: { criadoEm: "desc" } });
+  const [historico, notas, baixas] = await Promise.all([
+    db.historico.findMany({ where: { pedidoId: p.id }, include: { usuario: true }, orderBy: { criadoEm: "desc" } }),
+    db.notaFiscalPedido.findMany({ where: { pedidoId: p.id, canceladaEm: null }, orderBy: { emitidaEm: "asc" } }),
+    db.baixaPedido.findMany({ where: { pedidoId: p.id, canceladaEm: null }, orderBy: { recebidoEm: "asc" } }),
+  ]);
   const idx = ESTADOS.findIndex((e) => e.id === p.estado);
   const fin = pode(ctx.papel, "registrar_financeiro");
   const hoje = paraInputData(hojeUTC());
   const c = calc.comparacao && !calc.comparacao.erros.length ? calc.comparacao : null;
+  const financeiro = resumoFinanceiro(p.retroativoAprovado ?? p.valorDeferido ?? 0, notas, baixas);
+  const versaoFinal = aprovacaoValida(p) && !!p.memoriaVersaoAprovadaId;
 
   if (p.estado === "EM_ANALISE")
     return (
@@ -66,14 +74,40 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
       <ul className="lista-limpa pilha-8">
         {[...ARQUIVOS.slice(0, -1), ...(p.gatilho === "JORNADA_EC141" ? [{ href: "aditivo.pdf", nome: "Minuta do termo aditivo (PDF)", icone: FileText }] : []), ARQUIVOS[ARQUIVOS.length - 1]].map((a) => (
           <li key={a.href}>
-            <a href={`/api/pedidos/${p.id}/arquivos/${a.href}`} className="cartao-linha fileira" style={{ boxShadow: "none" }} download>
-              <a.icone size={18} strokeWidth={1.5} aria-hidden /> {a.nome}
+            <a href={`/api/pedidos/${p.id}/arquivos/${a.href}${versaoFinal ? "" : "?rascunho=1"}`} className="cartao-linha fileira" style={{ boxShadow: "none" }} download>
+              <a.icone size={18} strokeWidth={1.5} aria-hidden /> {a.nome}{versaoFinal ? "" : " · RASCUNHO"}
             </a>
           </li>
         ))}
       </ul>
       <p className="legenda mt-16 mb-0">O ofício é uma minuta: revise com seu jurídico antes de protocolar.</p>
     </section>
+  );
+
+  // Notas fiscais e baixas, com o recebido de cada nota em Decimal (mesma conta do resumo financeiro)
+  const lancamentos = notas.length > 0 && (
+    <div className="mt-16">
+      <h3>Notas fiscais e recebimentos</h3>
+      <ul className="lista-limpa pilha-8">
+        {notas.map((nota) => (
+          <li key={nota.id}>
+            NF {nota.identificacao} de {data(nota.emitidaEm)}: {brl(nota.valor.toString())} faturado · {brl(resumoFinanceiro(nota.valor, [nota], baixas).recebido)} recebido
+            {baixas.filter((b) => b.notaFiscalId === nota.id).length > 0 && (
+              <ul className="legenda">
+                {baixas
+                  .filter((b) => b.notaFiscalId === nota.id)
+                  .map((b) => (
+                    <li key={b.id}>
+                      Baixa de {brl(b.valor.toString())} em {data(b.recebidoEm)} · ref. {b.referenciaOperacao}
+                      {b.autorNome ? ` · ${b.autorNome}` : ""}
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 
   return (
@@ -129,6 +163,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 <div className="linha-form">
                   <CampoTexto nome="protocoloNumero" id="protocoloNumero" rotulo="Número do protocolo" largura="medio" />
                   <CampoData nome="protocoloData" id="protocoloData" rotulo="Data do protocolo" valorInicial={hoje} mostrarRelativo={false} />
+                  <CampoData nome="documentacaoCompletaEm" rotulo="Documentação completa entregue em" opcional valorInicial={hoje} mostrarRelativo={false} ajuda="É desta data confirmada que começa o prazo de resposta." />
                 </div>
                 <BotaoEnvio>Registrar protocolo</BotaoEnvio>
               </FormAcao>
@@ -151,10 +186,26 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
             <h2 id="aguardando" className="mt-16">
               Protocolo {p.protocoloNumero}
             </h2>
-            <p>
-              Protocolado em {data(p.protocoloData)}. Resposta preferencial até <strong>{data(prazoResposta(p))}</strong> ({emDias(diasAte(prazoResposta(p)!))}).
-            </p>
+            <p>Protocolado em {data(p.protocoloData)}.</p>
+            {prazoResposta(p) ? (
+              <p>
+                Documentação completa em {data(p.documentacaoCompletaEm)}. Resposta preferencial até <strong>{data(prazoResposta(p))}</strong> ({emDias(diasAte(prazoResposta(p)!))}).
+              </p>
+            ) : (
+              <Alerta tipo="atencao">O prazo de resposta ainda não começou: falta confirmar a data em que a documentação ficou completa.</Alerta>
+            )}
             <FonteRegra regra={FONTES.resposta} />
+            {!versaoFinal && (
+              <Alerta tipo="atencao" className="mt-16" titulo="A data registrada alterou a memória">
+                Os arquivos finais estão bloqueados até a versão atual ser revisada e aprovada novamente.
+                {pode(ctx.papel, "aprovar_memoria") && (
+                  <FormAcao action={aprovarMemoria} className="mt-8">
+                    <input type="hidden" name="pedidoId" value={p.id} />
+                    <BotaoEnvio className="btn btn-pequeno">Aprovar a versão atual</BotaoEnvio>
+                  </FormAcao>
+                )}
+              </Alerta>
+            )}
             {fin && (
               <FormAcao action={registrarResposta} className="mt-24">
                 <input type="hidden" name="pedidoId" value={p.id} />
@@ -162,23 +213,20 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 <RadiosCartao
                   nome="resultado"
                   legenda="Resultado"
-                  valorInicial="DEFERIDO"
+                  valorInicial="TOTAL"
                   opcoes={[
-                    { valor: "DEFERIDO", titulo: "Deferido", descricao: "O órgão aceitou, no todo ou em parte." },
+                    { valor: "TOTAL", titulo: "Deferido integralmente", descricao: "O órgão aceitou o mensal e o retroativo solicitados." },
+                    { valor: "PARCIAL", titulo: "Deferido parcialmente", descricao: "Registre separadamente o mensal e o retroativo aprovados." },
                     { valor: "INDEFERIDO", titulo: "Indeferido", descricao: "O órgão negou o pedido." },
                   ]}
                 />
                 <div className="linha-form">
                   <CampoData nome="respostaData" id="respostaData" rotulo="Data da resposta" valorInicial={hoje} mostrarRelativo={false} />
-                  <CampoDinheiro
-                    nome="valorDeferido"
-                    id="valorDeferido"
-                    rotulo="Valor deferido"
-                    valorInicial={calc.retroativo?.total}
-                    ajuda="A diferença retroativa reconhecida pelo órgão. Deixe em branco se indeferido."
-                  />
+                  <CampoDinheiro nome="mensalAprovado" rotulo="Valor mensal aprovado" valorInicial={c?.mensalAgora} ajuda="No deferimento parcial, informe o novo valor mensal reconhecido pelo órgão." />
+                  <CampoDinheiro nome="retroativoAprovado" rotulo="Retroativo aprovado" valorInicial={calc.retroativo?.total} ajuda="A diferença retroativa reconhecida pelo órgão." />
                 </div>
                 <TextoLongo nome="respostaResumo" rotulo="Resumo da resposta" opcional limite={1000} />
+                <TextoLongo nome="decisaoEvidencia" rotulo="Fundamento ou documento da decisão" opcional ajuda="Obrigatório para deferimento parcial." limite={1000} />
                 <BotaoEnvio>Registrar resposta</BotaoEnvio>
               </FormAcao>
             )}
@@ -194,12 +242,36 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
             <Carimbo texto="DEFERIDO" grande />
             <dl className="pico-valores mt-16">
               <div>
-                <dt>Valor deferido</dt>
-                <dd>{reais(p.valorDeferido)}</dd>
+                <dt>Mensal solicitado</dt>
+                <dd>{reais(p.mensalSolicitado)}</dd>
               </div>
               <div>
-                <dt>Deferido em</dt>
-                <dd style={{ fontSize: 20 }}>{data(p.deferidoEm)}</dd>
+                <dt>Mensal aprovado</dt>
+                <dd>{reais(p.mensalAprovado)}</dd>
+              </div>
+              <div>
+                <dt>Mensal vigente antes</dt>
+                <dd>{reais(p.mensalVigenteAnterior ?? p.contrato.valorMensal)}</dd>
+              </div>
+              <div>
+                <dt>Retroativo aprovado</dt>
+                <dd>{brl(financeiro.aprovado)}</dd>
+              </div>
+              <div>
+                <dt>Total faturado</dt>
+                <dd>{brl(financeiro.faturado)}</dd>
+              </div>
+              <div>
+                <dt>Falta faturar</dt>
+                <dd>{brl(financeiro.faltaFaturar)}</dd>
+              </div>
+              <div>
+                <dt>Faturado a receber</dt>
+                <dd>{brl(financeiro.faturadoAReceber)}</dd>
+              </div>
+              <div>
+                <dt>Total ainda pendente</dt>
+                <dd>{brl(financeiro.totalPendente)}</dd>
               </div>
             </dl>
             {p.diferencaMensal && p.dataBase && (
@@ -208,6 +280,17 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 Só para informação: com a diferença de {brl(p.diferencaMensal.toString())} por mês, a diferença acumulada desde a data-base até hoje seria de{" "}
                 {brl(calcularRetroativo(p.diferencaMensal.toString(), p.dataBase, hojeUTC(), p.retroMesIncompleto).total)}.
               </p>
+            )}
+            {!versaoFinal && (
+              <Alerta tipo="atencao" className="mt-16" titulo="Versão atual pendente de aprovação">
+                A data efetiva alterou o corte do retroativo. Os arquivos finais continuam bloqueados.
+                {pode(ctx.papel, "aprovar_memoria") && (
+                  <FormAcao action={aprovarMemoria} className="mt-8">
+                    <input type="hidden" name="pedidoId" value={p.id} />
+                    <BotaoEnvio className="btn btn-pequeno">Aprovar a versão atual</BotaoEnvio>
+                  </FormAcao>
+                )}
+              </Alerta>
             )}
             <h2 id="deferido" className="mt-24">
               {p.estado === "FATURADO" ? "Próximo passo: confirmar o recebimento" : p.apostiladoEm ? "Próximo passo: faturar a diferença" : "Próximo passo: o apostilamento"}
@@ -231,30 +314,33 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 )}
               </>
             )}
-            {p.estado === "DEFERIDO" && p.apostiladoEm && fin && (
+            {p.apostiladoEm && fin && Number(financeiro.faltaFaturar) > 0 && (
               <FormAcao action={gerarCobranca}>
                 <input type="hidden" name="pedidoId" value={p.id} />
-                <p className="secundario">Apostilado em {data(p.apostiladoEm)}. Emita a nota fiscal separada das diferenças retroativas e registre aqui.</p>
+                <p className="secundario">Apostilado em {data(p.apostiladoEm)}. Falta faturar {brl(financeiro.faltaFaturar)}; cada nota fica registrada separadamente.</p>
                 <div className="linha-form">
                   <CampoTexto nome="notaFiscal" rotulo="Número da nota fiscal" largura="medio" />
                   <CampoData nome="faturadoEm" rotulo="Data da nota" valorInicial={hoje} mostrarRelativo={false} />
+                  <CampoDinheiro nome="valorNota" rotulo="Valor desta nota" valorInicial={financeiro.faltaFaturar} />
+                  <CampoTexto nome="referenciaOperacao" rotulo="Referência da operação" opcional ajuda="Use a mesma referência ao repetir o envio; assim não duplica." />
                 </div>
-                <BotaoEnvio>Gerar cobrança da diferença</BotaoEnvio>
+                <BotaoEnvio>Registrar nota fiscal</BotaoEnvio>
               </FormAcao>
             )}
             {p.estado === "FATURADO" && fin && (
               <FormAcao action={marcarRecebido}>
                 <input type="hidden" name="pedidoId" value={p.id} />
-                <p className="secundario">
-                  Nota {p.notaFiscal} emitida em {data(p.faturadoEm)}. Quando o pagamento cair, marque aqui.
-                </p>
+                <p className="secundario">Faturado a receber: {brl(financeiro.faturadoAReceber)}. Registre cada pagamento na nota correspondente.</p>
                 <div className="linha-form">
+                  <CampoSelect nome="notaFiscalId" rotulo="Nota fiscal" opcoes={notas.map((nota) => ({ valor: nota.id, rotulo: `${nota.identificacao} · ${brl(nota.valor.toString())}` }))} />
                   <CampoData nome="recebidoEm" rotulo="Data do recebimento" valorInicial={hoje} mostrarRelativo={false} />
-                  <CampoDinheiro nome="valorRecebido" rotulo="Valor recebido" valorInicial={p.valorDeferido?.toFixed(2)} />
+                  <CampoDinheiro nome="valorRecebido" rotulo="Valor recebido" valorInicial={financeiro.faturadoAReceber} />
+                  <CampoTexto nome="referenciaOperacao" rotulo="Referência da baixa" opcional ajuda="Identificador bancário ou contábil; evita baixa duplicada." />
                 </div>
-                <BotaoEnvio>Marcar como recebido</BotaoEnvio>
+                <BotaoEnvio>Registrar recebimento</BotaoEnvio>
               </FormAcao>
             )}
+            {lancamentos}
             {!fin && <p className="legenda">Dono ou Gerente de contratos registram estas etapas.</p>}
           </section>
           {arquivos}
@@ -283,6 +369,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
             <Link href={`/app/contratos/${p.contrato.id}`} className="btn">
               Ver o contrato
             </Link>
+            {lancamentos}
           </section>
           {arquivos}
         </div>

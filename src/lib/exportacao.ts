@@ -9,7 +9,7 @@ export async function montarExportacao(contaId: string) {
     where: { id: contaId },
     include: {
       membros: { include: { usuario: { select: { nome: true, email: true, whatsapp: true, criadoEm: true } } } },
-      empresas: { include: { contratos: { include: { pedidos: { include: { comentarios: true } }, documentos: true } } } },
+      empresas: { include: { contratos: { include: { pedidos: { include: { comentarios: true, memorias: true, notasFiscais: true, baixas: true } }, documentos: true, historicoValores: true } } } },
       convencoes: { include: { documentos: true } },
       historicos: true,
       avisos: true,
@@ -22,13 +22,15 @@ export async function montarExportacao(contaId: string) {
   const docs = await db.documento.findMany({
     where: { OR: [{ contrato: { empresa: { contaId } } }, { pedido: { contrato: { empresa: { contaId } } } }, { convencao: { contaId } }] },
   });
+  const ausentes: { id: string; nome: string; caminho: string }[] = [];
   for (const d of docs) {
     try {
       zip.file(`arquivos/${d.id}-${d.nome}`, await lerArquivo(d.caminho));
     } catch {
-      /* arquivo ausente no armazenamento: segue sem ele */
+      ausentes.push({ id: d.id, nome: d.nome, caminho: d.caminho });
     }
   }
+  zip.file("arquivos-ausentes.json", JSON.stringify({ total: ausentes.length, arquivos: ausentes }, null, 2));
   return zip.generateAsync({ type: "nodebuffer" });
 }
 

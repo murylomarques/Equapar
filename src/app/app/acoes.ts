@@ -91,6 +91,7 @@ async function importar(empresaId: string, contaId: string) {
         vigenciaInicio: new Date(`${c.inicio}T00:00:00Z`),
         vigenciaFim: new Date(`${c.fim}T00:00:00Z`),
         vigenciaFimPncp: new Date(`${c.fim}T00:00:00Z`),
+        vigenciaFimOrigem: "PNCP",
         valorGlobal: c.valorGlobal ?? undefined,
         maoDeObraDedicada: c.sugereMaoDeObra,
         pncpControle: c.controle,
@@ -207,6 +208,9 @@ function dadosContrato(fd: FormData) {
   const apostTxt = texto(fd, "ultimoApostilamento");
   const ultimoApostilamento = lerData(fd.get("ultimoApostilamento"));
   if (apostTxt && !ultimoApostilamento) campos.ultimoApostilamento = "Data do apostilamento inválida. Use dd/mm/aaaa.";
+  const prorrogacaoPrevistaTxt = texto(fd, "prorrogacaoPrevistaEm");
+  const prorrogacaoPrevistaEm = lerData(fd.get("prorrogacaoPrevistaEm"));
+  if (prorrogacaoPrevistaTxt && !prorrogacaoPrevistaEm) campos.prorrogacaoPrevistaEm = "Data prevista inválida. Use dd/mm/aaaa.";
   if (Object.keys(campos).length) throw new ErroCampos(campos);
   return {
     numero,
@@ -217,6 +221,9 @@ function dadosContrato(fd: FormData) {
     esfera: texto(fd, "esfera") || null,
     vigenciaInicio: inicio!,
     vigenciaFim: fim!,
+    vigenciaFimOrigem: "INFORMADA",
+    prorrogacaoPrevistaEm,
+    prorrogacaoPrevistaOrigem: prorrogacaoPrevistaEm ? "INFORMADA" : null,
     valorMensal,
     postos,
     maoDeObraDedicada: fd.get("maoDeObraDedicada") === "on",
@@ -264,7 +271,7 @@ export async function usarVigenciaPncp(_: Resultado, fd: FormData): Promise<Resu
     const ctx = await exigir("editar_contratos");
     const c = await contratoDaConta(ctx, texto(fd, "contratoId"));
     if (!c.vigenciaFimPncp) return { erro: "Este contrato não tem data do PNCP." };
-    await db.contrato.update({ where: { id: c.id }, data: { vigenciaFim: c.vigenciaFimPncp } });
+    await db.contrato.update({ where: { id: c.id }, data: { vigenciaFim: c.vigenciaFimPncp, vigenciaFimOrigem: "PNCP" } });
     await registrarHistorico(ctx, "Trocou o fim da vigência pela data do PNCP", { contratoId: c.id });
     revalidatePath(`/app/contratos/${c.id}`);
     return { ok: "Fim da vigência atualizado com a data do PNCP." };
@@ -290,7 +297,10 @@ export async function registrarProrrogacao(_: Resultado, fd: FormData): Promise<
     if (comRessalva && !textoRessalva) campos.textoRessalva = "Cole o texto da ressalva como ficou no termo aditivo.";
     if (Object.keys(campos).length) throw new ErroCampos(campos);
     await db.prorrogacao.create({ data: { contratoId: c.id, dataTermo: dataTermo!, novoFim: novoFim!, comRessalva, textoRessalva, registradoPor: ctx.usuario.nome } });
-    await db.contrato.update({ where: { id: c.id }, data: { vigenciaFim: novoFim! } });
+    await db.contrato.update({
+      where: { id: c.id },
+      data: { vigenciaFim: novoFim!, vigenciaFimOrigem: "TERMO_ADITIVO", prorrogacaoAssinadaEm: dataTermo!, prorrogacaoAssinadaOrigem: "TERMO_ADITIVO" },
+    });
     await registrarHistorico(ctx, `Registrou a prorrogação até ${data(novoFim)} (termo de ${data(dataTermo)}, ${comRessalva ? "com" : "sem"} ressalva)`, { contratoId: c.id });
     const completo = await db.contrato.findUnique({ where: { id: c.id }, include: { convencao: true, pedidos: true } });
     revalidatePath(`/app/contratos/${c.id}`);

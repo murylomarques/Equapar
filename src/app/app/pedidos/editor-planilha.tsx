@@ -24,6 +24,18 @@ const valido = (v: string) => /^-?\d+(\.\d+)?$/.test(v);
 type EstadoSalvo = { tipo: "ocioso" } | { tipo: "salvando" } | { tipo: "salvo"; texto: string } | { tipo: "erro"; texto: string };
 type Posto = PlanilhaCustos["tipos"][number];
 
+function comEvidencia(linha: LinhaPlanilha, alteracao: Partial<NonNullable<LinhaPlanilha["evidencia"]>>): NonNullable<LinhaPlanilha["evidencia"]> {
+  return {
+    instrumento: linha.evidencia?.instrumento ?? "",
+    categoria: linha.evidencia?.categoria ?? "",
+    dataBase: linha.evidencia?.dataBase ?? "",
+    clausula: linha.evidencia?.clausula ?? "",
+    parcela: linha.evidencia?.parcela ?? "",
+    ...linha.evidencia,
+    ...alteracao,
+  };
+}
+
 export function EditorPlanilha({
   pedidoId,
   qual,
@@ -541,6 +553,64 @@ function LinhaEditor({
           onKeyDown={aoTeclar}
           onChange={(e) => mudarLinha(postoId, l.id, { fonte: e.target.value || undefined })}
         />
+        {alterou && (
+          <div className="grade-2 mt-8" style={{ gridColumn: "1 / -1" }}>
+            <input
+              aria-label={`Instrumento de ${l.descricao}`}
+              value={l.evidencia?.instrumento ?? ""}
+              placeholder="Instrumento: CCT, contrato, proposta ou outra fonte"
+              disabled={somenteLeitura}
+              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { instrumento: e.target.value }) })}
+            />
+            <input
+              aria-label={`Categoria de ${l.descricao}`}
+              value={l.evidencia?.categoria ?? ""}
+              placeholder="Categoria profissional ou custos de mercado"
+              disabled={somenteLeitura}
+              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { categoria: e.target.value }) })}
+            />
+            <input
+              type="date"
+              aria-label={`Data-base de ${l.descricao}`}
+              value={l.evidencia?.dataBase ?? ""}
+              disabled={somenteLeitura}
+              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { dataBase: e.target.value }) })}
+            />
+            <input
+              aria-label={`Cláusula de ${l.descricao}`}
+              value={l.evidencia?.clausula ?? ""}
+              placeholder="Cláusula ou item da fonte"
+              disabled={somenteLeitura}
+              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { clausula: e.target.value }) })}
+            />
+            <input
+              aria-label={`Parcela de ${l.descricao}`}
+              value={l.evidencia?.parcela ?? ""}
+              placeholder="Parcela/item de custo correspondente"
+              disabled={somenteLeitura}
+              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { parcela: e.target.value }) })}
+            />
+            <select
+              aria-label={`Conclusão da anualidade de ${l.descricao}`}
+              value={l.evidencia?.anualidade ?? "VALIDA"}
+              disabled={somenteLeitura}
+              onChange={(e) => mudarLinha(postoId, l.id, { evidencia: comEvidencia(l, { anualidade: e.target.value as "VALIDA" | "REVISAO_NECESSARIA" | "REVISAO_RESOLVIDA" }) })}
+            >
+              <option value="VALIDA">Anualidade conferida</option>
+              <option value="REVISAO_NECESSARIA">Revisão necessária</option>
+              <option value="REVISAO_RESOLVIDA">Revisão resolvida com justificativa</option>
+            </select>
+            {(l.evidencia?.anualidade === "REVISAO_NECESSARIA" || l.evidencia?.anualidade === "REVISAO_RESOLVIDA") && (
+              <input
+                aria-label={`Motivo da revisão de ${l.descricao}`}
+                value={l.evidencia.motivoRevisao ?? ""}
+                placeholder="Motivo da incerteza e decisão documentada"
+                disabled={somenteLeitura}
+                onChange={(e) => mudarLinha(postoId, l.id, { evidencia: { ...l.evidencia!, motivoRevisao: e.target.value } })}
+              />
+            )}
+          </div>
+        )}
         {(m === "M1" && l.tipo === "VALOR") || semFonte ? (
           <span className="fileira" style={{ gap: 8 }}>
             {m === "M1" && l.tipo === "VALOR" && (

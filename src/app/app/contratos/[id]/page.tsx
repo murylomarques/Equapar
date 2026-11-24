@@ -92,7 +92,7 @@ export default async function ContratoPagina({ params, searchParams }: { params:
   const principal = protocolado
     ? { texto: "Registrar resposta do órgão", href: `/app/pedidos/${protocolado.id}/pronto` }
     : aReceber
-      ? { texto: aReceber.estado === "FATURADO" ? "Marcar como recebido" : "Faturar a diferença", href: `/app/pedidos/${aReceber.id}/pronto` }
+      ? { texto: aReceber.estado === "FATURADO" ? "Registrar recebimento" : "Registrar nota fiscal", href: `/app/pedidos/${aReceber.id}/pronto` }
       : op?.pedidoAberto
         ? { texto: "Continuar pedido de repactuação", href: `/app/pedidos/${op.pedidoAberto.id}` }
         : { texto: "Montar pedido de repactuação", href: `/app/pedidos/novo?contrato=${c.id}` };
@@ -174,6 +174,7 @@ export default async function ContratoPagina({ params, searchParams }: { params:
             <dt>Vigência</dt>
             <dd>
               {data(c.vigenciaInicio)} a {data(c.vigenciaFim)} <span className="secundario">({emDias(diasFim)})</span>
+              <span className="legenda" style={{ display: "block" }}>Origem do fim: {c.vigenciaFimOrigem === "PNCP" ? "PNCP" : c.vigenciaFimOrigem === "TERMO_ADITIVO" ? "termo aditivo assinado" : c.vigenciaFimOrigem === "INFORMADA" ? "informada no cadastro" : "legado a confirmar"}.</span>
               {divergenciaPncp(c) && (
                 <span className="legenda" style={{ display: "block" }}>
                   PNCP: {data(c.vigenciaFimPncp)} · você registrou: {data(c.vigenciaFim)}.
@@ -186,6 +187,18 @@ export default async function ContratoPagina({ params, searchParams }: { params:
                 </span>
               )}
             </dd>
+            {c.prorrogacaoPrevistaEm && (
+              <>
+                <dt>Prorrogação prevista</dt>
+                <dd>{data(c.prorrogacaoPrevistaEm)} <span className="legenda">(previsão; origem: {c.prorrogacaoPrevistaOrigem ?? "não informada"})</span></dd>
+              </>
+            )}
+            {c.prorrogacaoAssinadaEm && (
+              <>
+                <dt>Prorrogação assinada</dt>
+                <dd>{data(c.prorrogacaoAssinadaEm)} <span className="legenda">(confirmada; origem: {c.prorrogacaoAssinadaOrigem ?? "termo aditivo"})</span></dd>
+              </>
+            )}
             {c.prorrogacoes.length > 0 && (
               <>
                 <dt>Prorrogações</dt>
