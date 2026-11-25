@@ -68,10 +68,10 @@ SELECT id, "contaId", descricao, valor, vencimento, status FROM "Fatura" WHERE s
 
 `GET /api/cron/avisos` com `Authorization: Bearer <CRON_SECRET>` faz, numa chamada: avisos de prazo, renovação e régua de cobrança (`renovarAssinaturas`) e expiração de reservas de IA.
 
-- [ ] `CRON_SECRET` com 32+ caracteres no ambiente. Evidência: ___
-- [ ] Agendador externo de hora em hora (cron do provedor ou `curl` agendado). Evidência: ___
-- [ ] Sem o cabeçalho → 401. Evidência: ___
-- [ ] A resposta JSON traz `assinaturas` e `reservasIaExpiradas`; anotar uma resposta real. Evidência: ___
+- [x] `CRON_SECRET` com 32+ caracteres no ambiente. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): 64 caracteres, no Parameter Store.
+- [x] Agendador de hora em hora. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): cron do servidor (`/etc/cron.d/equapar`, minuto 7) chamando `rotina-hora.sh`; resultado no journal (`equapar-rotina`).
+- [x] Sem o cabeçalho → 401. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): `https://52-67-1-97.sslip.io/api/cron/avisos` sem cabeçalho → 401.
+- [x] A resposta JSON traz `assinaturas` e `reservasIaExpiradas`. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): `{"prazos":0,"semanais":0,"apostilamento":0,"jornada":0,"assinaturas":{"sincronizadas":0,"renovacoes":0},"reservasIaExpiradas":0}` http=200.
 - [ ] Alerta quando a rotina falhar ou não rodar por mais de 2 horas (monitor de cron/heartbeat). Evidência: ___
 - [ ] Duas chamadas seguidas não criam cobrança duplicada (cenário A6). Evidência: ___
 
@@ -79,17 +79,17 @@ SELECT id, "contaId", descricao, valor, vencimento, status FROM "Fatura" WHERE s
 
 Detalhes em [../SUBIR.md](../SUBIR.md).
 
-- [ ] Banco PostgreSQL gerenciado com backup diário e restauração testada. Evidência: ___
-- [ ] `APP_SECRET` (32+), `APP_URL` com https, `TRUSTED_PROXY_HEADER` do provedor. Evidência: ___
-- [ ] Armazenamento: `ARMAZENAMENTO=s3`, bucket privado com versionamento. Evidência: ___
-- [ ] E-mail: `SMTP_URL`, `EMAIL_FROM`; SPF, DKIM e DMARC válidos (teste com um provedor de verificação). Evidência: ___
+- [ ] Banco PostgreSQL gerenciado com backup diário e restauração testada. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): RDS PostgreSQL 17.9, privado, criptografado, backup diário de 7 dias, proteção contra exclusão. **Falta testar a restauração.**
+- [x] `APP_SECRET` (32+), `APP_URL` com https, `TRUSTED_PROXY_HEADER` do provedor. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): `verificar:producao:imagem` no servidor, 0 falhas; `TRUSTED_PROXY_HEADER=x-real-ip` (o Caddy sobrescreve).
+- [x] Armazenamento: `ARMAZENAMENTO=s3`, bucket privado com versionamento. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): bucket privado, versionado e criptografado; a verificação gravou, leu e apagou um objeto de teste; acesso pelo papel do servidor (sem chave).
+- [ ] E-mail: `SMTP_URL`, `EMAIL_FROM`; SPF, DKIM e DMARC válidos. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): identidade SES `equapar.com.br` e MAIL FROM `envio.equapar.com.br` criados. **Falta: registros no DNS, liberação de produção do SES e as credenciais SMTP.**
 - [ ] Turnstile: `TURNSTILE_SECRET_KEY` e `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (sem eles o captcha fica simulado). Evidência: ___
-- [ ] Domínio e HTTPS; cabeçalhos de segurança conferidos (`e2e/bloqueadoras/s3-cabecalhos.mjs` contra a URL de homologação). Evidência: ___
+- [ ] Domínio e HTTPS; cabeçalhos de segurança conferidos. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): HTTPS (Let's Encrypt via Caddy) no endereço provisório; `e2e:producao` contra ele: home, CSP, HSTS, nosniff, saúde, páginas públicas, demonstração e login, tudo OK. **Falta o domínio `equapar.com.br`.**
 - [ ] Monitor de disponibilidade em `/api/saude`. Evidência: ___
 - [ ] Erros do servidor: `ERROS_WEBHOOK_URL` apontando para um canal acompanhado. Evidência: ___
 - [ ] `PAINEL_EMAILS` só com os e-mails da equipe. Evidência: ___
-- [ ] IA: `IA_ORCAMENTO_*` = 0 e `ANTHROPIC_API_KEY` ausente na homologação, salvo decisão escrita do dono com o orçamento (proposta em [IA.md](IA.md)). Evidência: ___
-- [ ] `MODO_PILOTO` com o valor decidido pelo dono. Evidência: ___
+- [x] IA: `IA_ORCAMENTO_*` = 0 e `ANTHROPIC_API_KEY` ausente na homologação. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): orçamentos 0, sem chave, `IA_DESLIGADA=true`; a verificação confirma "toda a IA desligada".
+- [ ] `MODO_PILOTO` com o valor decidido pelo dono. Evidência: 25/11/2026, homologação na AWS São Paulo (deploy/aws/README.md): ligado (padrão). **Falta a decisão do dono.**
 - [ ] Core Web Vitals de usuários reais (dados de campo) acompanhados nas primeiras semanas. Evidência: ___
 
 ## 5. Dados jurídicos reais da empresa

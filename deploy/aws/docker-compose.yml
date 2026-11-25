@@ -1,0 +1,65 @@
+# Equapar no EC2 (AWS São Paulo): app + worker + Caddy (HTTPS automático).
+# Fica em /opt/equapar no servidor. As variáveis vêm do Parameter Store (/equapar/<ambiente>/env) para /opt/equapar/.env;
+# a imagem, do ECR (IMAGEM, definida por atualizar.sh). Nenhum segredo neste arquivo.
+name: equapar
+x-logs: &logs
+  driver: awslogs
+  options:
+    awslogs-region: sa-east-1
+    awslogs-create-group: "false"
+services:
+  app:
+    image: ${IMAGEM:?defina IMAGEM}
+    restart: always
+    # format raw: valores como "$aact_…" chegam ao app sem interpolação
+    env_file:
+      - path: /opt/equapar/.env
+        format: raw
+    # só para a rotina de hora em hora (cron do servidor); o público entra pelo Caddy
+    ports:
+      - "127.0.0.1:3000:3000"
+    logging:
+      <<: *logs
+      options:
+        awslogs-region: sa-east-1
+        awslogs-group: /equapar/app
+  worker:
+    image: ${IMAGEM:?defina IMAGEM}
+    restart: always
+    command: ["npm", "run", "worker:prod"]
+    env_file:
+      - path: /opt/equapar/.env
+        format: raw
+    healthcheck:
+      disable: true
+    # só depois do app saudável: o app aplica as migrações ao subir; antes disso as tabelas podem não existir
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      <<: *logs
+      options:
+        awslogs-region: sa-east-1
+        awslogs-group: /equapar/worker
+  caddy:
+    image: caddy:2.10
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO:?defina DOMINIO}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-dados:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    logging:
+      <<: *logs
+      options:
+        awslogs-region: sa-east-1
+        awslogs-group: /equapar/caddy
+volumes:
+  caddy-dados:
+  caddy-config:
