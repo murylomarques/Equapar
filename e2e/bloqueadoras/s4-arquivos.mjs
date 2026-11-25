@@ -18,15 +18,17 @@ const ped = await db.pedido.create({
 const b = await navegador();
 try {
   const p = await entrarComoDono(await b.newContext());
-  const enviar = async (arq) => {
+  // espera o servidor terminar (gravou ou recusou) em vez de um tempo fixo, que falhava com a máquina carregada
+  const enviar = async (arq, esperados) => {
     await p.goto(`${BASE}/app/pedidos/${ped.id}/passo/4`);
     await p.locator("li", { hasText: "Convenção coletiva nova" }).locator('input[type="file"]').setInputFiles(arq);
-    await p.waitForTimeout(5000);
+    for (let i = 0; i < 60 && (await db.documento.count({ where: { pedidoId: ped.id } })) < esperados; i++) await p.waitForTimeout(500);
+    await p.waitForTimeout(esperados ? 0 : 5000);
   };
-  await enviar(falso);
+  await enviar(falso, 0);
   let docs = await db.documento.findMany({ where: { pedidoId: ped.id } });
   conferir(docs.length === 0, `HTML disfarçado de PDF é recusado (${docs.length} anexado)`);
-  await enviar(verdadeiro);
+  await enviar(verdadeiro, 1);
   docs = await db.documento.findMany({ where: { pedidoId: ped.id } });
   conferir(docs.length === 1 && docs[0].mime === "application/pdf", "PDF de verdade é aceito e gravado com o tipo detectado");
   if (docs[0]) {

@@ -7,6 +7,9 @@ const bcrypt = require("bcryptjs");
 const email = `s11-${Date.now()}@exemplo.local`;
 const antiga = "uma senha antiga bem comprida";
 const nova = "outra frase nova para entrar";
+// a cota de pedidos de senha nova por IP (10/dia) vale para o localhost também: muitas execuções no mesmo dia a
+// esgotam e o servidor, de propósito, não envia nada; zera só a chave do IP local antes de começar
+await db.tentativaAcesso.deleteMany({ where: { chave: { startsWith: "cota:redefinir:ip:" } } });
 const u = await db.usuario.create({ data: { nome: "Pessoa S11 (fictícia)", email, senhaHash: await bcrypt.hash(antiga, 10), emailVerificadoEm: new Date() } });
 
 const b = await navegador();
