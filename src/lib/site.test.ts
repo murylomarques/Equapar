@@ -3,14 +3,14 @@ import { agentePncp, camposFaltando, contatoSite, dadosEmpresa, identificacaoEmp
 
 // B1/B4/B5/B6: dados da empresa só pelo ambiente. Valores FICTÍCIOS (trava 11).
 const limpar = () => {
-  for (const k of [...VARIAVEIS_SITE, "SITE_AGENDA_URL"]) vi.stubEnv(k, "");
+  for (const k of [...VARIAVEIS_SITE, "SITE_AGENDA_URL", "SITE_FUNDADOR_CPF"]) vi.stubEnv(k, "");
 };
 describe("B1: dados da empresa pelo ambiente", () => {
   afterEach(() => vi.unstubAllEnvs());
-  it("tudo vazio: empresa em constituição, sem CNPJ, sem WhatsApp, e-mail padrão", () => {
+  it("tudo vazio: só o nome comercial (sem selo de constituição), sem CNPJ, sem WhatsApp, e-mail padrão", () => {
     limpar();
     const e = dadosEmpresa();
-    expect(e.razaoSocial).toBe("Equapar (empresa em constituição)");
+    expect(e.razaoSocial).toBe("Equapar");
     expect(e.cnpj).toBeNull();
     expect(e.local).toBeNull();
     expect(contatoSite()).toMatchObject({ email: "contato@equapar.com", whatsappLink: null, agendaUrl: null });
@@ -25,7 +25,7 @@ describe("B1: dados da empresa pelo ambiente", () => {
     limpar();
     vi.stubEnv("SITE_CNPJ", "12abc34501de35");
     vi.stubEnv("SITE_RAZAO_SOCIAL", "Empresa Exemplo Ltda.");
-    expect(dadosEmpresa()).toMatchObject({ cnpj: "12.ABC.345/01DE-35", razaoSocial: "Empresa Exemplo Ltda.", emConstituicao: false });
+    expect(dadosEmpresa()).toMatchObject({ cnpj: "12.ABC.345/01DE-35", razaoSocial: "Empresa Exemplo Ltda." });
     vi.stubEnv("SITE_CNPJ", "12ABC34501DE36");
     expect(dadosEmpresa()).toMatchObject({ cnpj: null, cnpjInvalido: true });
     expect(camposFaltando()).toContain("SITE_CNPJ");
@@ -38,12 +38,17 @@ describe("B1: dados da empresa pelo ambiente", () => {
     expect(c.whatsappLink).toBe("https://wa.me/5511900000000?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Equapar%20e%20quero%20saber%20mais.");
     expect(telefoneFormatado(c.whatsapp!)).toBe("+55 (11) 90000-0000");
   });
-  it("B5: sem CNPJ, termos e privacidade dizem empresa em constituição, com responsável, canal e cidade", () => {
+  it("B5: sem CNPJ, termos e privacidade identificam o responsável (com CPF, se informado), canal e cidade, sem falar em constituição", () => {
     limpar();
     vi.stubEnv("SITE_FUNDADOR_NOME", "Pessoa Exemplo");
     vi.stubEnv("SITE_CIDADE", "Cidade Exemplo/UF");
     vi.stubEnv("SITE_EMAIL_CONTATO", "contato@exemplo.local");
-    expect(identificacaoEmpresa()).toMatchObject({ texto: "Equapar, empresa em constituição, sob a responsabilidade de Pessoa Exemplo, Cidade Exemplo/UF", canal: "contato@exemplo.local" });
+    expect(identificacaoEmpresa()).toMatchObject({ texto: "Equapar, sob a responsabilidade de Pessoa Exemplo, Cidade Exemplo/UF", canal: "contato@exemplo.local" });
+    // CPF fictício de teste; inválido é ignorado
+    vi.stubEnv("SITE_FUNDADOR_CPF", "529.982.247-25");
+    expect(identificacaoEmpresa().texto).toBe("Equapar, sob a responsabilidade de Pessoa Exemplo (CPF 529.982.247-25), Cidade Exemplo/UF");
+    vi.stubEnv("SITE_FUNDADOR_CPF", "52998224726");
+    expect(identificacaoEmpresa().texto).toBe("Equapar, sob a responsabilidade de Pessoa Exemplo, Cidade Exemplo/UF");
     vi.stubEnv("SITE_CNPJ", "11222333000181");
     vi.stubEnv("SITE_RAZAO_SOCIAL", "Empresa Exemplo Ltda.");
     vi.stubEnv("SITE_ENDERECO", "Rua Exemplo, 1, Cidade Exemplo/UF");

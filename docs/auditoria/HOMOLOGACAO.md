@@ -94,12 +94,16 @@ Detalhes em [../SUBIR.md](../SUBIR.md).
 
 ## 5. Dados jurídicos reais da empresa
 
-Não preencher com nada que não esteja no cartão CNPJ ou no contrato social.
+Não preencher com nada que não esteja no cartão CNPJ ou no contrato social. Os valores reais ficam só no ambiente (`.env` local e painel da hospedagem), nunca neste arquivo.
 
-- [ ] `SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, `SITE_ENDERECO`, `SITE_CIDADE`, `SITE_EMAIL_CONTATO` (e `SITE_WHATSAPP`, se houver). Fonte: cartão CNPJ. Evidência: ___
-- [ ] Rodapé sem "empresa em constituição" depois das variáveis (conferir na tela). Evidência: ___
-- [ ] Mesmos dados na conta do Asaas (nome que aparece na cobrança). Evidência: ___
-- [ ] Dados da empresa nos termos, na política de privacidade e nas minutas (controlador, encarregado/DPO, contato). Evidência: ___
+Situação em 25/11/2026: **ainda sem CNPJ**. Decisão do dono: nenhum texto de "em constituição", "em formalização" ou "em desenvolvimento" no site; sem CNPJ, os termos e a privacidade identificam o responsável pessoa física (nome e CPF, publicação autorizada pelo dono), a cidade e o canal de contato. Quando o CNPJ sair, preencher `SITE_RAZAO_SOCIAL`, `SITE_CNPJ` e `SITE_ENDERECO`: o texto troca sozinho para razão social e CNPJ.
+
+- [x] Dados disponíveis preenchidos no `.env` local: `SITE_EMAIL_CONTATO`, `SITE_WHATSAPP`, `SITE_CIDADE`, `SITE_FUNDADOR_NOME`, `SITE_FUNDADOR_CPF`. Evidência: 25/11/2026, informados pelo dono; build local avisa só `SITE_FUNDADOR_FOTO`, `SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, `SITE_ENDERECO` vazias.
+- [x] Rodapé e páginas sem "constituição"/"formalização" (conferido na tela: início, termos, privacidade; rodapé no computador e no celular mostra "© 2026 Equapar · cidade"). Evidência: 25/11/2026, local.
+- [ ] Mesmas variáveis no painel da hospedagem (produção). Evidência: ___
+- [ ] CNPJ: `SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, `SITE_ENDERECO` do cartão CNPJ quando existir. Evidência: ___
+- [ ] Mesmo titular na conta do Asaas de produção (hoje pessoa física; trocar para o CNPJ quando existir). Evidência: ___
+- [ ] Advogado confere a identificação sem CNPJ nos termos, na privacidade e nas minutas (controlador, encarregado/DPO, contato). Evidência: ___
 
 ## 6. Termos e política de privacidade
 

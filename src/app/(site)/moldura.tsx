@@ -48,8 +48,7 @@ export function TopoSite() {
 export function RodapeSite() {
   const empresa = dadosEmpresa();
   const contato = contatoSite();
-  // B5: sem CNPJ no ambiente, a empresa aparece como "em constituição" (o nome vem sem o parêntese e ganha um selo)
-  const nome = empresa.emConstituicao ? empresa.razaoSocial.replace(/\s*\(empresa em constituição\)$/, "") : empresa.razaoSocial;
+  const nome = empresa.razaoSocial;
   return (
     <footer className="site-rodape">
       <div className="site-largura">
@@ -79,7 +78,6 @@ export function RodapeSite() {
           <span>
             © {new Date().getFullYear()} {nome}
           </span>
-          {empresa.emConstituicao && <span className="rodape-selo">empresa em constituição</span>}
           {empresa.cnpj && <span>CNPJ {empresa.cnpj}</span>}
           {empresa.local && <span>{empresa.local}</span>}
         </p>

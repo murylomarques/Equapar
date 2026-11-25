@@ -3,6 +3,7 @@
  * nos testes ou no relatório (trava 11). Cada campo vazio tem um comportamento definido (ver .env.example).
  */
 import { cnpjValido, formatarCnpj, normalizarCnpj } from "./cnpj";
+import { cpfValido } from "./cpf";
 
 const env = (k: string) => process.env[k]?.trim() || "";
 
@@ -20,9 +21,8 @@ export function dadosEmpresa() {
   const cnpj = cnpjBruto && cnpjValido(cnpjBruto) ? formatarCnpj(normalizarCnpj(cnpjBruto)) : null;
   const cidade = env("SITE_CIDADE") || null;
   return {
-    /** sem CNPJ, a empresa aparece como "em constituição" (B5) */
-    razaoSocial: cnpj ? env("SITE_RAZAO_SOCIAL") || "Equapar" : env("SITE_RAZAO_SOCIAL") || "Equapar (empresa em constituição)",
-    emConstituicao: !cnpj,
+    /** sem CNPJ, só o nome comercial (sem selo de "em constituição"); a identificação legal fica nos termos (B5) */
+    razaoSocial: env("SITE_RAZAO_SOCIAL") || "Equapar",
     cnpj,
     cnpjInvalido: !!cnpjBruto && !cnpj,
     endereco: env("SITE_ENDERECO") || null,
@@ -31,7 +31,14 @@ export function dadosEmpresa() {
     local: env("SITE_ENDERECO") || cidade,
     fundadorNome: env("SITE_FUNDADOR_NOME") || null,
     fundadorFoto: env("SITE_FUNDADOR_FOTO") || null,
+    /** CPF do responsável, só usado nos termos e na privacidade enquanto não há CNPJ; inválido é ignorado */
+    responsavelCpf: cpfFormatado(env("SITE_FUNDADOR_CPF")),
   };
+}
+
+function cpfFormatado(v: string) {
+  const d = v.replace(/\D/g, "");
+  return d.length === 11 && cpfValido(d) ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : null;
 }
 
 /** B6: quais SITE_* estão vazias (nomes, nunca valores). CNPJ inválido conta como faltando. */
@@ -71,8 +78,8 @@ export function canaisDeAviso() {
 }
 
 /**
- * B5: como termos e privacidade identificam a empresa. Sem SITE_CNPJ: "Equapar, empresa em constituição",
- * com o fundador como responsável, o e-mail como canal do titular e a cidade como local. Com o CNPJ preenchido,
+ * B5: como termos e privacidade identificam a empresa. Sem SITE_CNPJ: "Equapar, sob a responsabilidade de" o
+ * fundador (com o CPF, se informado), o e-mail como canal do titular e a cidade como local. Com o CNPJ preenchido,
  * razão social, CNPJ e endereço, sem nova programação.
  */
 export function identificacaoEmpresa() {
@@ -86,7 +93,7 @@ export function identificacaoEmpresa() {
       local: e.local,
     };
   return {
-    texto: ["Equapar, empresa em constituição", e.fundadorNome && `sob a responsabilidade de ${e.fundadorNome}`, e.cidade].filter(Boolean).join(", "),
+    texto: ["Equapar", e.fundadorNome && `sob a responsabilidade de ${e.fundadorNome}${e.responsavelCpf ? ` (CPF ${e.responsavelCpf})` : ""}`, e.cidade].filter(Boolean).join(", "),
     responsavel: e.fundadorNome,
     canal: c.email,
     local: e.cidade,

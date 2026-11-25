@@ -651,12 +651,6 @@
   color: #b9b6ae;
   font-size: 13px;
 }
-.rodape-selo {
-  border: 1px solid rgba(244, 241, 234, 0.3);
-  border-radius: 999px;
-  padding: 1px 10px;
-  font-size: 12px;
-}
 
 /* Preços: comparação detalhada sob demanda */
 .comparar-planos > summary {
