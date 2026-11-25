@@ -23,6 +23,17 @@ describe("Central de avisos: eventos de negócio, não mensagens", () => {
     expect(ev).toHaveLength(1);
     expect(ev[0].envios).toHaveLength(3);
   });
+  it("avisos de 30 e de 7 dias do mesmo fim de vigência viram um evento só (com o marco mais recente)", () => {
+    const d30 = { ...envio("D30:c45:2026-12-01", "D30"), enviadoEm: new Date("2026-11-01T12:00:00Z") };
+    const ev = agrupar([envio("D7:c45:2026-12-01", "D7"), envio("D7:c45:2026-12-01", "D7", "WHATSAPP"), d30]);
+    expect(ev).toHaveLength(1);
+    expect([ev[0].tipo, ev[0].chave, ev[0].envios.length]).toEqual(["D7", "D7:c45:2026-12-01", 3]);
+    // vigência diferente (contrato prorrogado) continua sendo outro evento
+    expect(agrupar([envio("D7:c45:2026-12-01", "D7"), envio("D30:c45:2027-12-01", "D30")])).toHaveLength(2);
+    // ordem de chegada não importa: o D7 mais novo vence mesmo vindo depois
+    const inverso = agrupar([d30, envio("D7:c45:2026-12-01", "D7")]);
+    expect([inverso.length, inverso[0].tipo]).toEqual([1, "D7"]);
+  });
   it("pedidoId só sai da chave gerada pelo servidor, nos tipos de pedido", () => {
     expect(pedidoDaChave("DEFERIDO", "DEFERIDO:cmwulp5mu00286ffo52zkjxxp")).toBe("cmwulp5mu00286ffo52zkjxxp");
     expect(pedidoDaChave("D7", "D7:c45:2026-12-01")).toBeNull();

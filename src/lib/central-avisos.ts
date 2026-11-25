@@ -20,14 +20,24 @@ export function pedidoDaChave(tipo: string, chave: string): string | null {
   return id && /^[a-z0-9]{10,40}$/i.test(id) ? id : null;
 }
 
+/** Avisos de prazo do mesmo fim de vigência (60, 30 e 7 dias antes): um evento só, "o contrato X termina em D". */
+const TIPOS_DE_VIGENCIA = new Set(["D60", "D30", "D7"]);
+function grupoDoAviso(a: { chave: string; tipo: string }) {
+  if (!TIPOS_DE_VIGENCIA.has(a.tipo)) return a.chave;
+  const [, contrato, data] = a.chave.split(":");
+  return contrato && data ? `VIGENCIA:${contrato}:${data}` : a.chave;
+}
+
 /** Uma ocorrência por evento de negócio, com o histórico de cada canal. */
 export function agrupar(avisos: (EnvioAviso & { chave: string; tipo: string; contratoId: string | null })[]): EventoAviso[] {
   const m = new Map<string, EventoAviso>();
   for (const a of avisos) {
-    const ev = m.get(a.chave) ?? { chave: a.chave, tipo: a.tipo, contratoId: a.contratoId, pedidoId: pedidoDaChave(a.tipo, a.chave), ultimoEnvio: a.enviadoEm, envios: [] };
+    const grupo = grupoDoAviso(a);
+    const ev = m.get(grupo) ?? { chave: a.chave, tipo: a.tipo, contratoId: a.contratoId, pedidoId: pedidoDaChave(a.tipo, a.chave), ultimoEnvio: a.enviadoEm, envios: [] };
     ev.envios.push({ id: a.id, canal: a.canal, destino: a.destino, status: a.status, erro: a.erro, enviadoEm: a.enviadoEm, corpo: a.corpo, assunto: a.assunto });
-    if (a.enviadoEm > ev.ultimoEnvio) ev.ultimoEnvio = a.enviadoEm;
-    m.set(a.chave, ev);
+    // o evento fica com o marco mais recente (ex.: D7 depois do D30); a data da vigência é a mesma
+    if (a.enviadoEm > ev.ultimoEnvio) Object.assign(ev, { ultimoEnvio: a.enviadoEm, chave: a.chave, tipo: a.tipo });
+    m.set(grupo, ev);
   }
   return [...m.values()].sort((a, b) => b.ultimoEnvio.getTime() - a.ultimoEnvio.getTime());
 }
