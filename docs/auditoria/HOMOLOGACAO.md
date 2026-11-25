@@ -36,7 +36,7 @@ Primeira rodada em 25/11/2026, **local + túnel** (servidor local, webhook real 
 | A11 | Pagamento duplicado | pagar duas cobranças do mesmo período | só um período; a outra marcada para devolução manual | OK (local + túnel, 25/11/2026): segunda cobrança pay_0_7bynvyhygx5k50 com a mesma referência paga no sandbox → revisão PAGAMENTO_DUPLICADO; nenhuma fatura nova, período igual |
 | A12 | Upgrade com período pago | Carteira paga → Assessoria | recusado na tela com contato para análise manual; nenhuma cobrança criada | OK (local + túnel, 25/11/2026): tela "Upgrade com período pago em andamento… fale com a gente"; faturas 1 → 1; cobranças do cliente no Asaas iguais antes e depois |
 
-- [ ] Todas as faturas marcadas (`revisao` preenchida) têm um responsável e um procedimento de devolução manual definido. Evidência: ___
+- [ ] Todas as faturas marcadas (`revisao` preenchida) têm um responsável e um procedimento de devolução manual definido. Evidência: responsável decidido em 25/11/2026: o dono (única pessoa da empresa). Como ele fica sabendo: e-mail "Equapar: fatura para revisar" para `PAINEL_EMAILS` no momento da marca (o que fazer, conta, valor, id no Asaas) e a lista "Faturas para revisar" no topo do painel interno (`/app/interno#revisoes`), com "Marcar como resolvida" depois de devolver ou combinar (teste `revisao-cobranca.db.test.ts`; conferido na tela, computador e celular). Procedimento: devolver pelo painel do Asaas (estorno da cobrança indicada) e então marcar como resolvida. O e-mail só chega com `SMTP_URL` configurada; sem ela, só a lista.
 
 ## 2. Conferência da migração financeira (`20261124120000_protecao_financeira`)
 

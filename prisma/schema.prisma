@@ -500,6 +500,9 @@ model Fatura {
   canceladaEm        DateTime?
   motivoCancelamento String?
   revisao            String? // PAGA_APOS_CANCELAMENTO, ESTORNO_PARCIAL, CHARGEBACK: precisa de olhar humano
+  // revisão tratada pela equipe no painel interno (a marca `revisao` fica: ela muda o direito de acesso)
+  revisaoResolvidaEm  DateTime?
+  revisaoResolvidaPor String?
 
   @@index([contaId, status])
 }

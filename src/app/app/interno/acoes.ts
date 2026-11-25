@@ -7,6 +7,7 @@ import { ErroUsuario, tentar, texto, type Resultado } from "@/lib/acao";
 import { lerData } from "@/lib/format";
 import { podeVerPainel, TIPOS_TEMPO } from "@/lib/metricas";
 import { enviarEmailDeTeste } from "@/lib/mensagens";
+import { resolverRevisao } from "@/lib/cobranca-servidor";
 
 /** Só quem está em PAINEL_EMAILS mexe no painel interno. */
 async function donoDoPainel() {
@@ -60,5 +61,15 @@ export async function enviarEmailTeste(): Promise<Resultado> {
     await donoDoPainel();
     const r = await enviarEmailDeTeste();
     return r.ok ? { ok: `E-mail de teste enviado para ${r.para} endereço(s) de PAINEL_EMAILS.` } : { erro: `O e-mail de teste falhou: ${r.erro}` };
+  });
+}
+
+/** Fatura marcada para revisão: a equipe marca como resolvida depois de devolver o valor ou fechar o acordo. */
+export async function marcarRevisaoResolvida(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await donoDoPainel();
+    const ok = await resolverRevisao(texto(fd, "faturaId"), ctx.usuario.nome);
+    revalidatePath("/app/interno");
+    return ok ? { ok: "Revisão marcada como resolvida." } : { erro: "Essa fatura não está mais pendente de revisão." };
   });
 }

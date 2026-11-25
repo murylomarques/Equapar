@@ -140,11 +140,12 @@ export async function abrirCobrancaDoPlano(
     }
     // a mesma compra ainda pagável: devolve a mesma cobrança (idempotente)
     const igual = abertas.find((f) => !f.renovacao && f.status === "ABERTA" && f.plano === plano && f.ciclo === ciclo && faturaCancelavel(regra(f), agora) && (!f.vencimento || f.vencimento >= agora));
-    if (igual) return { fatura: await garantirCobrancaNoGateway(tx, igual.id, metodo, email), cancelar: [] as { id: string; gatewayId: string | null }[] };
+    if (igual) return { fatura: await garantirCobrancaNoGateway(tx, igual.id, metodo, email), cancelar: [] as { id: string; gatewayId: string | null }[], revisar: [] as string[] };
     // tudo que ainda não começou (compra anterior ou renovação futura) é substituído pela compra nova
     const cancelar = await cancelarNaoIniciadas(tx, contaId, "Substituída por outra escolha de plano", agora);
     // renovação já PAGA para um período futuro: com o upgrade, os períodos se sobrepõem; fica marcada para devolução
-    await tx.fatura.updateMany({ where: { contaId, status: "PAGA", renovacao: true, periodoInicio: { gt: agora }, revisao: null }, data: { revisao: "RENOVACAO_PAGA_SOBREPOSTA" } });
+    const sobrepostas = await tx.fatura.findMany({ where: { contaId, status: "PAGA", renovacao: true, periodoInicio: { gt: agora }, revisao: null }, select: { id: true } });
+    if (sobrepostas.length) await tx.fatura.updateMany({ where: { id: { in: sobrepostas.map((f) => f.id) } }, data: { revisao: "RENOVACAO_PAGA_SOBREPOSTA" } });
     const postos = await postosCobrados(tx, contaId);
     const valor = valorDoPlano(plano, { postos, ciclo });
     const nova = await tx.fatura.create({
@@ -162,9 +163,10 @@ export async function abrirCobrancaDoPlano(
     });
     // planoPendente fica só para leitura das telas antigas; cancelamento/agendamento só caem quando a compra for paga
     await tx.conta.update({ where: { id: contaId }, data: { planoPendente: plano } });
-    return { fatura: await garantirCobrancaNoGateway(tx, nova.id, metodo, email), cancelar };
+    return { fatura: await garantirCobrancaNoGateway(tx, nova.id, metodo, email), cancelar, revisar: sobrepostas.map((f) => f.id) };
   }, TX_COM_GATEWAY);
   await cancelarNoGateway(r.cancelar);
+  await avisarEquipeRevisao(r.revisar);
   return { faturaId: r.fatura.id, link: r.fatura.linkPagamento ?? "", valor: r.fatura.valor.toFixed(2), modo: cobranca().modo };
 }
 
@@ -251,9 +253,10 @@ export async function processarEventoPagamento(opts: {
       // cobrança do gateway que não é a cobrança atual da fatura (ex.: duplicada) paga em cima de fatura já paga:
       // não compra nada; fica marcada para devolução
       if (viaReferencia && opts.evento === "PAGO" && f.gatewayId && f.gatewayId !== opts.gatewayId && f.status === "PAGA") {
-        await tx.fatura.update({ where: { id: f.id }, data: { revisao: "PAGAMENTO_DUPLICADO" } });
+        // revisão já resolvida volta a ficar pendente: é outro pagamento a devolver
+        await tx.fatura.update({ where: { id: f.id }, data: { revisao: "PAGAMENTO_DUPLICADO", revisaoResolvidaEm: null, revisaoResolvidaPor: null } });
         if (opts.eventoId) await tx.eventoCobranca.update({ where: { id: opts.eventoId }, data: { resultado: "pagamento duplicado: devolver", faturaId: f.id } });
-        return { resultado: "processado" as const, motivo: "pagamento duplicado", contaId: f.contaId, valor: f.valor.toString(), link: f.linkPagamento, avisar: null, carenciaAte: null };
+        return { resultado: "processado" as const, motivo: "pagamento duplicado", contaId: f.contaId, valor: f.valor.toString(), link: f.linkPagamento, avisar: null, carenciaAte: null, revisar: f.id };
       }
       const t = transicao(regra(f), opts.evento, agora, { valorEstornado: opts.valorEstornado });
       let avisar: "pago" | "atrasada" | "carencia" | null = null;
@@ -266,7 +269,7 @@ export async function processarEventoPagamento(opts: {
         if (t.status === "ABERTA") Object.assign(dados, { canceladaEm: null, motivoCancelamento: null });
         if (t.periodo) Object.assign(dados, { periodoInicio: t.periodo.inicio, periodoFim: t.periodo.fim });
         if (t.valorEstornado) dados.valorEstornado = t.valorEstornado;
-        if (t.revisao) dados.revisao = t.revisao;
+        if (t.revisao) Object.assign(dados, { revisao: t.revisao, revisaoResolvidaEm: null, revisaoResolvidaPor: null });
         if (t.vencimento) {
           const v = aplicarEvento({ faturaStatus: f.status, tentativas: f.tentativas, situacao: f.conta.situacaoCobranca as SituacaoCobranca, carenciaAte: f.conta.carenciaAte }, "VENCIDO", agora);
           Object.assign(dados, v.fatura, v.novaTentativaEm ? { vencimento: v.novaTentativaEm } : {});
@@ -293,10 +296,11 @@ export async function processarEventoPagamento(opts: {
       }
       await sincronizarPlano(tx, f.contaId, agora);
       if (opts.eventoId) await tx.eventoCobranca.update({ where: { id: opts.eventoId }, data: { resultado: t.motivo, faturaId: f.id } });
-      return { resultado: t.mudou ? ("processado" as const) : ("ignorado" as const), motivo: t.motivo, contaId: f.contaId, valor: f.valor.toString(), link: f.linkPagamento, avisar, carenciaAte };
+      return { resultado: t.mudou ? ("processado" as const) : ("ignorado" as const), motivo: t.motivo, contaId: f.contaId, valor: f.valor.toString(), link: f.linkPagamento, avisar, carenciaAte, revisar: t.mudou && t.revisao ? f.id : null };
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
   );
+  if ("revisar" in r && r.revisar) await avisarEquipeRevisao([r.revisar]);
   if ("avisar" in r && r.avisar) await avisarDonos(r.contaId, r.avisar, r.valor, r.link, r.carenciaAte);
   if ("avisar" in r && r.avisar === "pago") await registrarEvento("pagamento_confirmado", {});
   return r.resultado;
@@ -407,4 +411,56 @@ async function avisarDonos(contaId: string, tipo: "pago" | "atrasada" | "carenci
   }[tipo];
   for (const d of donos)
     await enviar({ contaId, chave: `COBRANCA:${tipo}:${contaId}:${Date.now()}`, tipo: "COBRANCA", canal: "EMAIL", destino: d.usuario.email, assunto: "Equapar: cobrança", corpo: texto });
+}
+
+/** O que a equipe faz com cada fatura marcada para revisão (painel interno e e-mail). */
+export const MOTIVO_REVISAO: Record<string, string> = {
+  PAGA_APOS_CANCELAMENTO: "Pago depois do cancelamento: não reativou o plano. Devolver o valor ao cliente.",
+  PAGAMENTO_DUPLICADO: "Pagamento em dobro do mesmo período: devolver o pagamento a mais.",
+  ESTORNO_PARCIAL: "Estorno parcial feito no gateway: conferir o acordo com o cliente (o acesso foi mantido).",
+  CHARGEBACK: "Contestação no cartão: responder no Asaas (o acesso segue até a decisão).",
+  RENOVACAO_PAGA_SOBREPOSTA: "Renovação já paga ficou sobreposta a um upgrade: combinar devolução ou crédito com o cliente.",
+};
+
+const emailsDaEquipe = () => (process.env.PAINEL_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+
+/**
+ * Avisa a equipe (PAINEL_EMAILS) que uma fatura foi marcada para revisão. Sem conta no aviso: não aparece na
+ * central de avisos do cliente. Falha no envio não desfaz nada (a fatura continua listada no painel interno).
+ */
+async function avisarEquipeRevisao(faturaIds: string[]) {
+  const para = emailsDaEquipe();
+  if (!faturaIds.length || !para.length) return;
+  const faturas = await db.fatura.findMany({ where: { id: { in: faturaIds }, revisao: { not: null } }, include: { conta: { select: { nome: true } } } });
+  for (const f of faturas) {
+    const corpo = [
+      `Fatura marcada para revisão: ${MOTIVO_REVISAO[f.revisao!] ?? f.revisao}`,
+      "",
+      `Conta: ${f.conta.nome}`,
+      `Fatura: ${f.descricao} · ${reais(f.valor.toFixed(2))}${f.valorEstornado.gt(0) ? ` · estornado ${reais(f.valorEstornado.toFixed(2))}` : ""}`,
+      ...(f.gatewayId ? [`Cobrança no Asaas: ${f.gatewayId}`] : []),
+      "",
+      `Lista no painel interno: ${appUrl("/app/interno#revisoes")}`,
+    ].join("\n");
+    for (const destino of para)
+      await enviar({ contaId: null, chave: `REVISAO:${f.id}:${f.revisao}:${Date.now()}`, tipo: "REVISAO_COBRANCA", canal: "EMAIL", destino, assunto: "Equapar: fatura para revisar", corpo }).catch((e) =>
+        registrar("erro", "aviso_revisao_falhou", { faturaId: f.id, erro: e instanceof Error ? e.message : String(e) }),
+      );
+  }
+}
+
+/** Faturas marcadas e ainda não resolvidas, para o painel interno. */
+export function faturasParaRevisar() {
+  return db.fatura.findMany({
+    where: { revisao: { not: null }, revisaoResolvidaEm: null },
+    orderBy: { criadoEm: "asc" },
+    take: 200,
+    include: { conta: { select: { nome: true } } },
+  });
+}
+
+/** Marca a revisão como tratada (devolução feita, acordo fechado). A marca `revisao` fica: ela define o acesso. */
+export async function resolverRevisao(faturaId: string, quem: string, agora = new Date()) {
+  const r = await db.fatura.updateMany({ where: { id: faturaId, revisao: { not: null }, revisaoResolvidaEm: null }, data: { revisaoResolvidaEm: agora, revisaoResolvidaPor: quem.slice(0, 120) } });
+  return r.count === 1;
 }

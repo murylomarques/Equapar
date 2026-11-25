@@ -1203,7 +1203,8 @@ a.pedido-linha {
   border: 1px solid #ecd9a8;
   border-radius: var(--raio);
 }
-#adicionar-cliente {
+#adicionar-cliente,
+#revisoes {
   scroll-margin-top: 76px;
 }
 

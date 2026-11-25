@@ -21,7 +21,8 @@ import { Alerta, CabecalhoPagina } from "@/components/ui/estrutura";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { CampoData, CampoSelect, CampoTexto } from "@/components/ui/campos";
-import { enviarEmailTeste, registrarTempo, salvarMetricaMensal } from "./acoes";
+import { enviarEmailTeste, marcarRevisaoResolvida, registrarTempo, salvarMetricaMensal } from "./acoes";
+import { faturasParaRevisar, MOTIVO_REVISAO } from "@/lib/cobranca-servidor";
 import { avisosOperacao, TEXTO_AVISO } from "@/lib/avisos-operacao";
 
 export const metadata: Metadata = { title: "Painel interno | Equapar" };
@@ -58,6 +59,7 @@ export default async function PainelInterno() {
   const meses = Array.from({ length: 6 }, (_, i) => mesIso(new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - 5 + i, 1))));
   const ret = meses.slice(1).map((m, i) => ({ mes: m, ...retencao(faturas, meses[i], m) }));
   const montagem = medianaDiasMontagem(pedidos);
+  const revisoes = await faturasParaRevisar();
   // 5.4: custo de aquisição e margem (números do dono); 5.5: tempo humano por plano e pesquisa de Sean Ellis
   const metricas = new Map((await db.metricaMensal.findMany({ where: { mes: { in: meses } } })).map((m) => [m.mes, m]));
   const negocio = meses.map((m) => {
@@ -113,6 +115,35 @@ export default async function PainelInterno() {
           </FormAcao>
         }
       />
+      <section className="cartao mb-16" id="revisoes" aria-labelledby="titulo-revisoes">
+        <h2 id="titulo-revisoes">Faturas para revisar{revisoes.length ? ` (${revisoes.length})` : ""}</h2>
+        {revisoes.length === 0 ? (
+          <p className="secundario mb-0">Nenhuma fatura para revisar.</p>
+        ) : (
+          <ul className="lista-limpa pilha-8">
+            {revisoes.map((f) => (
+              <li key={f.id} className="item-doc">
+                <div className="entre">
+                  <div>
+                    <strong style={{ fontWeight: 500 }}>{f.conta.nome}</strong> · {f.descricao} · {reais(f.valor.toFixed(2))}
+                    {f.valorEstornado.gt(0) ? ` · estornado ${reais(f.valorEstornado.toFixed(2))}` : ""}
+                    <span className="legenda" style={{ display: "block" }}>
+                      {MOTIVO_REVISAO[f.revisao!] ?? f.revisao}
+                      {f.gatewayId ? ` Cobrança no Asaas: ${f.gatewayId}.` : ""}
+                    </span>
+                  </div>
+                  <FormAcao action={marcarRevisaoResolvida} okNaPagina>
+                    <input type="hidden" name="faturaId" value={f.id} />
+                    <BotaoEnvio className="btn btn-pequeno" pendente="Salvando…">
+                      Marcar como resolvida
+                    </BotaoEnvio>
+                  </FormAcao>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <div className="grade-2 painel-interno">
         <section className="cartao">
           <h2>Funil (90 dias)</h2>
