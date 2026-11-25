@@ -1,6 +1,6 @@
-# Contrato do piloto (MINUTA, revise com seu jurídico)
+# Contrato do piloto (modelo)
 
-> MINUTA até o advogado aprovar (trava 6). Este texto é só para o dono; nenhuma tela do sistema o usa.
+> Modelo revisado e aprovado pelo advogado em 25/11/2026. Este texto é só para o dono; nenhuma tela do sistema o usa. Mudança no texto pede nova revisão.
 > Descrição do serviço (texto C3): organização de documentos e prazos, consolidação de dados e geração de memória de cálculo e arquivos editáveis para conferência e protocolo pelo cliente.
 
 **Partes e objeto.** [Razão social, CNPJ, sede e representante da Equapar] e [dados da contratante] ajustam um piloto de software e apoio operacional para organizar um pedido referente ao contrato público [número, órgão e objeto].

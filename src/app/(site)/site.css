@@ -757,23 +757,9 @@ a.guia-cartao:focus-visible .guia-cartao-acao {
   }
 }
 
-/* Termos e privacidade: a minuta é anunciada uma vez, de forma clara */
-.minuta {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
+/* Termos e privacidade: data da versão aprovada, logo abaixo do título */
+.documento-data {
   margin-bottom: 32px;
-}
-.minuta-selo {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--selo-ambar-tx);
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  padding: 1px 8px;
 }
 
 /* 404 */

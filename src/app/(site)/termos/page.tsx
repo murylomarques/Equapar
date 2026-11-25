@@ -14,9 +14,7 @@ export default function Termos() {
       {/* mesma margem esquerda das outras páginas: a coluna de leitura fica dentro da largura do site */}
       <div className="guia documento-legal">
         <h1 className="titulo-landing">Termos de uso</h1>
-        <p className="aviso-caixa minuta" role="note">
-          <span className="minuta-selo">Minuta</span> Este texto está em revisão jurídica e pode mudar antes da versão final.
-        </p>
+        <p className="legenda documento-data">Atualizado em 25/11/2026.</p>
         <h2>Quem presta o serviço</h2>
         <p>
           {empresa.texto}. Contato: <a href={`mailto:${empresa.canal}`}>{empresa.canal}</a>.

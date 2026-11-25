@@ -103,15 +103,15 @@ Situação em 25/11/2026: **ainda sem CNPJ**. Decisão do dono: nenhum texto de 
 - [ ] Mesmas variáveis no painel da hospedagem (produção). Evidência: ___
 - [ ] CNPJ: `SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, `SITE_ENDERECO` do cartão CNPJ quando existir. Evidência: ___
 - [ ] Mesmo titular na conta do Asaas de produção (hoje pessoa física; trocar para o CNPJ quando existir). Evidência: ___
-- [ ] Advogado confere a identificação sem CNPJ nos termos, na privacidade e nas minutas (controlador, encarregado/DPO, contato). Evidência: ___
+- [x] Advogado confere a identificação sem CNPJ nos termos, na privacidade e nos modelos (controlador, encarregado/DPO, contato). Evidência: 25/11/2026, informado pelo dono: o advogado revisou nesse dia todos os textos, já com a identificação sem CNPJ, sem pedir mudanças. O registro (e-mail/parecer) fica com o dono, fora do repositório.
 
 ## 6. Termos e política de privacidade
 
-- [ ] Advogado revisou termos de uso, política de privacidade, contrato do piloto (`docs/modelos/`) e os textos do plano Piloto. Evidência: parecer/e-mail com data.
-- [ ] Textos do plano Piloto na página de preços (3 itens, mesmo sentido do texto C3) aprovados. Evidência: ___
-- [ ] Política de cancelamento, devolução manual e upgrade por análise manual ([COBRANCA.md](COBRANCA.md)) refletida nos termos. Evidência: ___
+- [x] Advogado revisou termos de uso, política de privacidade, contrato do piloto e autorização de caso (`docs/modelos/`) e os textos do plano Piloto. Evidência: 25/11/2026, informado pelo dono: o advogado revisou nesse dia todos os textos, já com a identificação sem CNPJ, sem pedir mudanças. O registro (e-mail/parecer) fica com o dono, fora do repositório.
+- [x] Textos do plano Piloto na página de preços (3 itens, mesmo sentido do texto C3) aprovados. Evidência: na mesma revisão de 25/11/2026.
+- [x] Política de cancelamento, devolução manual e upgrade por análise manual ([COBRANCA.md](COBRANCA.md)) refletida nos termos. Evidência: termos aprovados na revisão de 25/11/2026.
 - [ ] Suboperadores listados na política conferidos com o que está ligado (hospedagem, e-mail, S3, Asaas, Turnstile; Anthropic só se a IA for ligada). Evidência: ___
-- [ ] Data de vigência real colocada nos textos aprovados e faixa "Minuta" retirada. Evidência: ___
+- [x] Data colocada nos textos aprovados e faixa "Minuta" retirada. Evidência: termos e privacidade mostram "Atualizado em 25/11/2026"; modelos em `docs/modelos/` marcados como aprovados. Qualquer mudança nesses textos pede nova revisão.
 
 ## Saída da homologação
 

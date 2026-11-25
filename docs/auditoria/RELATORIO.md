@@ -91,7 +91,7 @@ INP real de usuários exige dados de campo (não há em ambiente local).
 - Medição de Core Web Vitals com usuários reais.
 
 **Depende de aprovação comercial ou jurídica**
-- Advogado: termos, privacidade e minutas (até lá, a faixa "Minuta" fica).
+- Advogado: termos, privacidade e modelos revisados e aprovados em 25/11/2026 (faixa "Minuta" retirada; ver HOMOLOGACAO.md, seção 6).
 - Dados da empresa (`SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, endereço).
 - Cotas de IA (proposta em IA.md) e avaliação paga com o gabarito.
 - Política de crédito em upgrade e de devoluções (hoje: análise manual).
