@@ -142,4 +142,7 @@ Duas revisões independentes das capturas finais. Correções conferidas na reca
 | 51 Borda escura no 1º indicador | Estado de foco/hover do mouse na captura | P3 | Não aplicável (artefato) |
 | Histórico "Descartou o pedido", avisos de pedidos apagados | Resto das execuções de teste no banco local | — | Não aplicável (dado de teste, não código) |
 
-Decisões a confirmar com o dono: textos dos 3 itens do Piloto (reescrevem frase já aprovada); valores fictícios "Demais itens" na prévia da memória da landing; a contagem do selo de Avisos faz uma consulta leve a cada página logada (alternativa: só o ponto no sino).
+Decisões do dono, aplicadas no fechamento:
+- **Piloto**: 3 itens com os termos do texto C3, sem promessa nova ("Organização de documentos e prazos"; "Consolidação dos dados e geração da memória de cálculo e dos arquivos editáveis"; "Conferência e protocolo feitos por você"). Aprovação jurídica no [checklist](HOMOLOGACAO.md).
+- **Prévia da memória (landing)**: sem valores inventados. Mostra os dois postos da planilha fictícia da demonstração (`prisma/seed-demo.ts`): Servente 44h × 10 (R$ 5.219,15 → R$ 5.510,17) e Encarregado 44h × 1 (R$ 6.614,16 → R$ 6.968,57); total mensal R$ 58.805,66 → R$ 62.070,27; diferença R$ 3.264,61, a mesma do pedido de exemplo. `src/components/previas.test.ts` confere cada número com o motor de cálculo.
+- **Selo de Avisos**: mantido numérico (conta pendências acionáveis agrupadas por evento de negócio, não mensagens). Consulta com índice `Aviso(contaId, enviadoEm)`, limite 300, filtrada pela conta; destinos por chave primária dentro da conta. Medido com 220 mil avisos sintéticos (transação desfeita): 0,34 ms, "Index Scan Backward".

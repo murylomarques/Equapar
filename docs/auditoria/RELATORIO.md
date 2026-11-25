@@ -2,7 +2,7 @@
 
 Branch `auditoria-total` (base `697711f`), sem merge na `main` e sem deploy. Tudo local, com dados fictícios: nenhuma cobrança real, nenhum cancelamento real no Asaas, nenhuma chamada paga à Anthropic.
 
-Documentos: [MATRIZ-TELAS.md](MATRIZ-TELAS.md) · [COBRANCA.md](COBRANCA.md) · [IA.md](IA.md). Comparação visual: `D:\Equapar\capturas-auditoria\comparacao.html` (antes × depois, 56 telas, 5 resoluções).
+Documentos: [MATRIZ-TELAS.md](MATRIZ-TELAS.md) · [COBRANCA.md](COBRANCA.md) · [IA.md](IA.md) · [HOMOLOGACAO.md](HOMOLOGACAO.md) (checklist executável). Comparação visual: `D:\Equapar\capturas-auditoria\comparacao.html` (antes × depois, 56 telas, 5 resoluções).
 
 ## A. Aplicação
 
@@ -14,7 +14,7 @@ Decisões tomadas nesta rodada (conservadoras, conforme autorizado):
 
 ## B. Comparação visual
 
-- 282 capturas antes (build de `697711f`), 297 na rodada anterior (`depois`) e 264 na recaptura final (`final`; interrompida por falta de memória da máquina perto do fim do roteiro), Playwright/Edge, 1440×900, 1920×1080, 768×1024, 390×844, 375×667.
+- 282 capturas antes (build de `697711f`), 297 na rodada anterior (`depois`) e **297 na recaptura final** (`final`, todas do mesmo build de fechamento, uma resolução por vez para poupar memória), Playwright/Edge, 1440×900, 1920×1080, 768×1024, 390×844, 375×667.
 - Inspeção: quatro revisões visuais independentes na rodada anterior, mais duas na final (site e app), além da minha. A final achou 5 P1 novos (tabelas cortadas no tablet, cartão sem ação no celular, layout do estado vazio de clientes, selo de Avisos com número diferente da página): corrigidos e conferidos nas imagens.
 
 ## C. Matriz
@@ -26,7 +26,7 @@ Decisões tomadas nesta rodada (conservadoras, conforme autorizado):
 | Comando | Resultado |
 |---|---|
 | `npm run lint` · `npm run typecheck` · `npm run build` | ok (0 erros, 0 avisos) |
-| `npm run test:db` (unitários + banco) | **380 ok** (81 arquivos) |
+| `npm run test:db` (unitários + banco) | **383 ok** (82 arquivos; inclui a prévia da memória conferida com o motor) |
 | `npm run e2e` (fluxo completo no computador e no celular, assessoria e 2FA, sem rolagem lateral) | 94 ok |
 | `npm run e2e:auditoria` (aviso → contexto, contratar, cancelar, IA bloqueada) | 12 ok |
 | `npm run e2e:financeiro` (deferimento parcial, notas, baixas, ZIP final bloqueado) | 23 ok |
@@ -35,7 +35,7 @@ Decisões tomadas nesta rodada (conservadoras, conforme autorizado):
 | `npm run e2e:teclado` · `e2e/sem-rolagem-lateral.mjs` | 14 ok · 39 ok |
 | `e2e/fase2.mjs`, `jornada.mjs`, `modo-piloto.mjs`, `demo-limite.mjs`, `bloqueadoras/*` (13 arquivos) | todos ok |
 
-Todos os conjuntos acima rodados de novo no build com as correções da revisão visual final: todos ok.
+Fechamento: os 27 conjuntos acima rodados de novo no build final: todos ok. Nessa rodada o `e2e:auditoria` achou um defeito real, dependente da data: os avisos de 30 e de 7 dias do **mesmo** fim de vigência apareciam como dois itens em "Precisa de você" (e contavam dois no selo). Corrigido em `central-avisos.ts` (um evento por contrato e data de vigência, com o marco mais recente) e coberto por teste. Dois testes instáveis corrigidos: `s11` (cota diária de pedidos de senha por IP esgotada no localhost depois de muitas execuções; zera só a chave local) e `s4` (espera fixa de 5 s trocada por esperar o servidor terminar).
 
 Jornadas pedidas (1 a 20): 1–14 e 20 pelo `e2e` (computador e celular) e `e2e:financeiro`; 14 e 15–16 pelo `e2e:auditoria` e `cobranca-simulada`; 17 (limite de IA) pelos testes de banco do orçamento (inclusive concorrência); 18 (exportar) por `exportacao.db.test.ts`; 19 (permissão restrita) por `e2e/permissoes.mjs` e `seguranca-acoes.test.ts` (toda ação de servidor confere permissão; as públicas listadas com motivo).
 
@@ -74,6 +74,11 @@ CLS 0,000 em todas. O meio da rodada mostra uma regressão causada por mim (a ca
 
 INP real de usuários exige dados de campo (não há em ambiente local).
 
+**Fechamento (build final)**
+- JavaScript carregado: `/` 458 KB em 7 arquivos (sem gzip), `/precos` 459 KB, `/raio-x` 508 KB; 383 KB são o runtime do React/Next. A última rodada não acrescentou código de cliente às páginas públicas.
+- Elemento LCP da landing: o parágrafo de abertura (texto, sem imagem); 2,47 s de "render delay" no modelo simulado contra 0,35 s de pintura observada. Bloqueio por CSS: estimativa de 80–220 ms; a única forma de removê-lo (`inlineCss`) já foi testada e recusada (A5: CSS duplicado na página, pior no celular), então nada foi mudado. Nenhuma otimização pontual medida justificava mexer no código.
+- Lighthouse simulado, mediana de 3, **com a máquina carregada** (índice de CPU do Lighthouse 566–980, contra 1.551 na medição anterior; 1,9 GB livres): `/` nota 69 · LCP 3,39 s · TBT 1.059 ms; `/precos` 87 · 1,71 s · 525 ms; `/raio-x` 83 · 2,92 s · 626 ms; CLS 0 em todas. A piora de TBT acompanha o índice de CPU, não o código (mesmo JS, nenhum componente de cliente novo). Números a repetir em máquina livre e, principalmente, com dados de campo.
+
 ## G. Checklist de produção
 
 **Pronto e verificado**
@@ -99,7 +104,7 @@ INP real de usuários exige dados de campo (não há em ambiente local).
 ## H. Resumo executivo
 
 1. **Funcionalmente completo no escopo?** Sim. A jornada de repactuação, do contrato ao recebimento, funciona e está testada de ponta a ponta.
-2. **Telas principais finalizadas?** Sim. Todas as telas foram revisadas com capturas reais em 5 resoluções e corrigidas, inclusive 5 P1 achados só na revisão final; o que restou está na matriz como não aplicável ou dependente de decisão externa. A recaptura final cobriu 264 das ~298 telas (a máquina ficou sem memória no fim).
+2. **Telas principais finalizadas?** Sim. Todas as telas foram revisadas com capturas reais em 5 resoluções e corrigidas, inclusive 5 P1 achados só na revisão final; o que restou está na matriz como não aplicável ou dependente de decisão externa. A recaptura final cobriu as 297 telas.
 3. **P0 ou P1 abertos?** Não há P0/P1 técnico aberto conhecido. O único P1 que fica é jurídico (faixa "Minuta" até a aprovação dos textos).
 4. **P2/P3 restantes?** Nenhum técnico. Ficaram 2 não aplicáveis (IP das sessões, artefato de captura) e itens dependentes de dados/aprovação (rodapé, minuta, telas escondidas no modo piloto).
 5. **Testes críticos passaram?** Sim: 380 unitários e de banco, 94 do fluxo completo e todos os conjuntos de navegador, acessibilidade e teclado.
