@@ -3,7 +3,7 @@ import { Prisma, type Plano } from "@prisma/client";
 import Decimal from "decimal.js";
 import { db } from "./db";
 import { aplicarEvento, type Ciclo, type SituacaoCobranca, valorDoPlano } from "./planos";
-import { cobranca, type Metodo } from "./cobranca";
+import { cobranca, vencimentoNoGateway, type Metodo } from "./cobranca";
 import { appUrl, enviar } from "./mensagens";
 import { reais } from "./format";
 import { faturaCancelavel, faturaDevida, fimDoPeriodo, planoEfetivo, situacaoPorAtraso, transicao, type EventoGateway, type FaturaRegra } from "./assinatura";
@@ -105,7 +105,7 @@ async function garantirCobrancaNoGateway(tx: Tx, faturaId: string, metodo: Metod
   const g = cobranca();
   const conta = f.conta;
   const clienteId = await g.garantirCliente({ contaId: conta.id, nome: conta.empresas[0]?.razaoSocial ?? conta.nome, cpfCnpj: conta.empresas[0]?.cnpj ?? "", email, clienteIdAtual: conta.gatewayClienteId });
-  const c = await g.criarCobranca({ clienteId, valor: f.valor.toFixed(2), vencimento: (f.vencimento ?? new Date()).toISOString().slice(0, 10), descricao: f.descricao, referenciaExterna: f.id, metodo });
+  const c = await g.criarCobranca({ clienteId, valor: f.valor.toFixed(2), vencimento: vencimentoNoGateway(f.vencimento), descricao: f.descricao, referenciaExterna: f.id, metodo });
   if (conta.gatewayClienteId !== clienteId) await tx.conta.update({ where: { id: conta.id }, data: { gatewayClienteId: clienteId } });
   return tx.fatura.update({ where: { id: f.id }, data: { gatewayId: c.id, linkPagamento: c.link } });
 }

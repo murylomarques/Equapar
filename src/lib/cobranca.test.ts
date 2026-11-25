@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cobranca, CobrancaAsaas, eventoAsaas, simulacaoPermitida, tokenWebhookValido } from "./cobranca";
+import { cobranca, CobrancaAsaas, eventoAsaas, simulacaoPermitida, tokenWebhookValido, vencimentoNoGateway } from "./cobranca";
 
 describe("4.2: gateway de cobrança", () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -26,6 +26,20 @@ describe("4.2: gateway de cobrança", () => {
     expect(r).toEqual({ id: "pay_1", link: "https://asaas/i/pay_1" });
     // cliente já existente não é criado de novo
     expect(await a.garantirCliente({ contaId: "c1", nome: "", cpfCnpj: "", email: "", clienteIdAtual: "cus_9" })).toBe("cus_9");
+  });
+  it("id de cliente guardado em simulação (sim_cus_…) não vai ao Asaas: o cliente é criado de verdade", async () => {
+    const http = vi.fn(async () => new Response(JSON.stringify({ id: "cus_novo" }), { status: 200 }));
+    const a = new CobrancaAsaas("$aact_hmlg_teste", "https://api-sandbox.asaas.com/v3", http as never);
+    expect(await a.garantirCliente({ contaId: "c1", nome: "Empresa Exemplo (fictícia)", cpfCnpj: "11222333000181", email: "f@exemplo.local", clienteIdAtual: "sim_cus_c1" })).toBe("cus_novo");
+    expect(http).toHaveBeenCalledWith("https://api-sandbox.asaas.com/v3/customers", expect.objectContaining({ method: "POST" }));
+  });
+  it("vencimento no passado vai ao gateway como hoje (o Asaas recusa data anterior a hoje)", () => {
+    const agora = new Date("2026-11-25T16:00:00Z"); // 13h em Brasília
+    expect(vencimentoNoGateway(new Date("2026-11-23T16:10:40Z"), agora)).toBe("2026-11-25");
+    expect(vencimentoNoGateway(new Date("2026-11-30T16:10:40Z"), agora)).toBe("2026-11-30");
+    expect(vencimentoNoGateway(null, agora)).toBe("2026-11-25");
+    // 01h UTC do dia 26 ainda é dia 25 em Brasília
+    expect(vencimentoNoGateway(new Date("2026-11-20T00:00:00Z"), new Date("2026-11-26T01:00:00Z"))).toBe("2026-11-25");
   });
   it("eventos do Asaas viram eventos da Equapar", () => {
     expect(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED", "PAYMENT_OVERDUE", "PAYMENT_REFUNDED", "PAYMENT_DELETED", "PAYMENT_CREATED"].map(eventoAsaas)).toEqual(["PAGO", "PAGO", "VENCIDO", "ESTORNADO", "CANCELADO", null]);

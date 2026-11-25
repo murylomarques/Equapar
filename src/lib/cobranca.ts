@@ -72,7 +72,8 @@ export class CobrancaAsaas implements Cobranca {
     return (await r.json()) as T;
   }
   async garantirCliente(c: { contaId: string; nome: string; cpfCnpj: string; email: string; clienteIdAtual: string | null }) {
-    if (c.clienteIdAtual) return c.clienteIdAtual;
+    // id guardado em simulação ("sim_cus_…") não existe no Asaas: cria o cliente de verdade
+    if (c.clienteIdAtual?.startsWith("cus_")) return c.clienteIdAtual;
     const r = await this.chamar<{ id: string }>("/customers", { name: c.nome, cpfCnpj: c.cpfCnpj, email: c.email, externalReference: c.contaId });
     return r.id;
   }
@@ -90,6 +91,17 @@ export class CobrancaAsaas implements Cobranca {
   async cancelarCobranca(id: string) {
     await this.chamar(`/payments/${encodeURIComponent(id)}`, undefined, "DELETE");
   }
+}
+
+/**
+ * Vencimento enviado ao gateway (AAAA-MM-DD). O Asaas recusa data anterior a hoje (horário de Brasília): renovação
+ * gerada com atraso (rotina parada, gateway fora do ar) vai com vencimento hoje. A régua continua contando do
+ * início do período, não desta data.
+ */
+export function vencimentoNoGateway(vencimento: Date | null, agora = new Date()): string {
+  const hoje = agora.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const v = (vencimento ?? agora).toISOString().slice(0, 10);
+  return v < hoje ? hoje : v;
 }
 
 /** O gateway configurado: Asaas com ASAAS_API_KEY; senão, simulação. */
