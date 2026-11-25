@@ -104,51 +104,61 @@ export function PreviaCarteira() {
   );
 }
 
-/** Memória de cálculo de exemplo, em centavos por posto; a diferença e o total do contrato saem da própria tabela. */
-const MEMORIA_EXEMPLO = {
-  postos: 42,
-  linhas: [
-    { item: "Salário base", fonte: "Piso da convenção 2026, cláusula 4ª", antes: 174000, agora: 182000 },
-    { item: "INSS", fonte: "20,00% × Módulo 1 + Submódulo 2.1", antes: 42038, agora: 43970 },
-    { item: "Demais itens", fonte: "FGTS, provisões, benefícios e insumos", antes: 153062, agora: 156160 },
+/**
+ * Memória de cálculo de exemplo: os mesmos números da planilha fictícia da demonstração (prisma/seed-demo.ts),
+ * em centavos. previas.test.ts confere cada valor com o motor de cálculo; total e diferença saem da tabela.
+ */
+export const MEMORIA_EXEMPLO = {
+  fonte: "CCT exemplo, cláusula 4ª",
+  postos: [
+    { nome: "Servente 44h", quantidade: 10, pisoAntes: 174000, pisoAgora: 182000, antes: 521915, agora: 551017 },
+    { nome: "Encarregado 44h", quantidade: 1, pisoAntes: 240000, pisoAgora: 251000, antes: 661416, agora: 696857 },
   ],
 } as const;
+
+export function totaisMemoriaExemplo() {
+  const antes = MEMORIA_EXEMPLO.postos.reduce((t, p) => t + p.antes * p.quantidade, 0);
+  const agora = MEMORIA_EXEMPLO.postos.reduce((t, p) => t + p.agora * p.quantidade, 0);
+  const quantidade = MEMORIA_EXEMPLO.postos.reduce((t, p) => t + p.quantidade, 0);
+  return { antes, agora, diferenca: agora - antes, quantidade };
+}
 
 const centavos = (c: number) => reais((c / 100).toFixed(2));
 
 export function PreviaMemoria() {
-  const { postos, linhas } = MEMORIA_EXEMPLO;
-  const porPosto = linhas.reduce((t, l) => t + l.agora - l.antes, 0);
+  const t = totaisMemoriaExemplo();
   return (
     <Moldura titulo="Equapar · Memória de cálculo">
       <table className="tabela" style={{ background: "var(--branco)" }}>
         <thead>
           <tr>
-            <th>Item, por posto</th>
+            <th>Valor de cada posto</th>
             <th className="num">Antes</th>
             <th className="num">Agora</th>
           </tr>
         </thead>
         <tbody>
-          {linhas.map((l) => (
-            <tr key={l.item}>
+          {MEMORIA_EXEMPLO.postos.map((p) => (
+            <tr key={p.nome}>
               <td>
-                {l.item}
-                <div className="legenda">{l.fonte}</div>
+                {p.nome} × {p.quantidade}
+                <div className="legenda">
+                  Salário base {centavos(p.pisoAntes)} → {centavos(p.pisoAgora)} ({MEMORIA_EXEMPLO.fonte})
+                </div>
               </td>
-              <td className="num">{centavos(l.antes)}</td>
-              <td className="num">{centavos(l.agora)}</td>
+              <td className="num">{centavos(p.antes)}</td>
+              <td className="num">{centavos(p.agora)}</td>
             </tr>
           ))}
           <tr>
-            <td>Diferença por posto, por mês</td>
-            <td className="num" />
-            <td className="num">{centavos(porPosto)}</td>
+            <td>Total mensal do contrato ({t.quantidade} postos)</td>
+            <td className="num">{centavos(t.antes)}</td>
+            <td className="num">{centavos(t.agora)}</td>
           </tr>
           <tr className="total">
-            <td>Diferença por mês no contrato ({postos} postos)</td>
+            <td>Diferença por mês</td>
             <td className="num" />
-            <td className="num">{centavos(porPosto * postos)}</td>
+            <td className="num">{centavos(t.diferenca)}</td>
           </tr>
         </tbody>
       </table>

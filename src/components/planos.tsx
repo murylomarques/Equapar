@@ -49,8 +49,8 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
           {/* C3: os mesmos termos do texto aprovado, em três pontos como nos outros planos */}
           <ul>
             <li>Organização de documentos e prazos</li>
-            <li>Consolidação de dados, memória de cálculo e arquivos editáveis</li>
-            <li>Você confere e protocola</li>
+            <li>Consolidação dos dados e geração da memória de cálculo e dos arquivos editáveis</li>
+            <li>Conferência e protocolo feitos por você</li>
           </ul>
           <div>
             <Contato agenda={false} />
