@@ -318,7 +318,7 @@ try {
 
   // ---------------------------------------------------------------- Configurações de avisos
   await page.goto(`${BASE}/app/configuracoes?aba=avisos`);
-  const prazo = page.getByLabel("Prazos (60, 30 e 7 dias)");
+  const prazo = page.getByLabel("Prazos", { exact: true });
   const opcoes = await prazo.locator("option").evaluateAll((os) => os.map((o) => o.value));
   const atual = await prazo.inputValue();
   const outra = opcoes.find((v) => v !== atual);
@@ -326,7 +326,7 @@ try {
   await page.getByRole("button", { name: "Salvar preferências" }).click();
   await toast("Preferências de aviso salvas.");
   await page.reload();
-  if ((await page.getByLabel("Prazos (60, 30 e 7 dias)").inputValue()) !== outra) throw new Error("preferência de aviso não ficou salva");
+  if ((await page.getByLabel("Prazos", { exact: true }).inputValue()) !== outra) throw new Error("preferência de aviso não ficou salva");
   await semRolagemLateral("configurações de avisos");
   ok(`configurações de avisos: canal de prazos mudou de ${atual} para ${outra} e ficou salvo`);
 
