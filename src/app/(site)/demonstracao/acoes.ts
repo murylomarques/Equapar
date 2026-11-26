@@ -28,7 +28,7 @@ export async function entrarNaDemonstracao(fd?: FormData) {
   if (!(await verificarCaptcha(String(fd?.get("cf-turnstile-response") ?? ""), ip))) redirect(`${voltar}?captcha=1`);
   if (ip && !(await usarCota(`demo:${ip}`, DEMOS_POR_IP, UMA_HORA))) {
     await registrarEvento("demo_limite_ip");
-    redirect(`${voltar}?limite=1`);
+    redirect(`${voltar}?limite=ip`);
   }
   let nova: Awaited<ReturnType<typeof criarContaDemo>>;
   try {
@@ -36,9 +36,10 @@ export async function entrarNaDemonstracao(fd?: FormData) {
   } catch (e) {
     if (!(e instanceof LimiteDemonstracoes)) throw e;
     await registrarEvento("demo_limite_global");
-    redirect(`${voltar}?limite=1`);
+    redirect(`${voltar}?limite=geral`);
   }
-  if (!nova) redirect("/?demo=indisponivel");
+  // sem a conta modelo (seed não rodou): a página explica, em vez de voltar ao início sem mensagem
+  if (!nova) redirect(`${voltar}?indisponivel=1`);
   await criarSessao(nova.usuario.id, { contaId: nova.conta.id, lembrar: false });
   redirect("/app/hoje");
 }

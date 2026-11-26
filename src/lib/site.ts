@@ -3,7 +3,6 @@
  * nos testes ou no relatório (trava 11). Cada campo vazio tem um comportamento definido (ver .env.example).
  */
 import { cnpjValido, formatarCnpj, normalizarCnpj } from "./cnpj";
-import { cpfValido } from "./cpf";
 
 const env = (k: string) => process.env[k]?.trim() || "";
 
@@ -31,14 +30,7 @@ export function dadosEmpresa() {
     local: env("SITE_ENDERECO") || cidade,
     fundadorNome: env("SITE_FUNDADOR_NOME") || null,
     fundadorFoto: env("SITE_FUNDADOR_FOTO") || null,
-    /** CPF do responsável, só usado nos termos e na privacidade enquanto não há CNPJ; inválido é ignorado */
-    responsavelCpf: cpfFormatado(env("SITE_FUNDADOR_CPF")),
   };
-}
-
-function cpfFormatado(v: string) {
-  const d = v.replace(/\D/g, "");
-  return d.length === 11 && cpfValido(d) ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : null;
 }
 
 /** B6: quais SITE_* estão vazias (nomes, nunca valores). CNPJ inválido conta como faltando. */
@@ -61,7 +53,7 @@ export const EMAIL_DEMO_ASSESSORIA = "demonstracao-assessoria@equapar.local";
 /** B4: canais de contato a partir do ambiente (valores reais nunca ficam no código). */
 export const MENSAGEM_WHATSAPP = "Olá! Vim pelo site da Equapar e quero saber mais.";
 export function contatoSite() {
-  const email = process.env.SITE_EMAIL_CONTATO?.trim() || "contato@equapar.com";
+  const email = process.env.SITE_EMAIL_CONTATO?.trim() || "contato@equapar.com.br";
   const whatsapp = (process.env.SITE_WHATSAPP ?? "").replace(/\D/g, "");
   return {
     email,
@@ -79,8 +71,8 @@ export function canaisDeAviso() {
 
 /**
  * B5: como termos e privacidade identificam a empresa. Sem SITE_CNPJ: "Equapar, sob a responsabilidade de" o
- * fundador (com o CPF, se informado), o e-mail como canal do titular e a cidade como local. Com o CNPJ preenchido,
- * razão social, CNPJ e endereço, sem nova programação.
+ * fundador, o e-mail como canal do titular e a cidade como local. Nenhum documento pessoal (CPF) aparece no site.
+ * Com o CNPJ preenchido, razão social, CNPJ e endereço, sem nova programação.
  */
 export function identificacaoEmpresa() {
   const e = dadosEmpresa();
@@ -93,17 +85,17 @@ export function identificacaoEmpresa() {
       local: e.local,
     };
   return {
-    texto: ["Equapar", e.fundadorNome && `sob a responsabilidade de ${e.fundadorNome}${e.responsavelCpf ? ` (CPF ${e.responsavelCpf})` : ""}`, e.cidade].filter(Boolean).join(", "),
+    texto: ["Equapar", e.fundadorNome && `sob a responsabilidade de ${e.fundadorNome}`, e.cidade].filter(Boolean).join(", "),
     responsavel: e.fundadorNome,
     canal: c.email,
     local: e.cidade,
   };
 }
 
-/** B2: domínio público (equapar.com) derivado do ambiente, nunca fixo no código. */
+/** B2: domínio público (equapar.com.br) derivado do ambiente, nunca fixo no código. */
 export function dominioPublico() {
   const email = contatoSite().email;
-  return email.includes("@") ? email.split("@")[1] : "equapar.com";
+  return email.includes("@") ? email.split("@")[1] : "equapar.com.br";
 }
 
 /** Remetente dos e-mails: EMAIL_FROM; sem ele, "Equapar Avisos <avisos@<domínio do contato>>". */

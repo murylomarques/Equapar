@@ -3,7 +3,7 @@ import { agentePncp, camposFaltando, contatoSite, dadosEmpresa, identificacaoEmp
 
 // B1/B4/B5/B6: dados da empresa só pelo ambiente. Valores FICTÍCIOS (trava 11).
 const limpar = () => {
-  for (const k of [...VARIAVEIS_SITE, "SITE_AGENDA_URL", "SITE_FUNDADOR_CPF"]) vi.stubEnv(k, "");
+  for (const k of [...VARIAVEIS_SITE, "SITE_AGENDA_URL"]) vi.stubEnv(k, "");
 };
 describe("B1: dados da empresa pelo ambiente", () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -13,7 +13,7 @@ describe("B1: dados da empresa pelo ambiente", () => {
     expect(e.razaoSocial).toBe("Equapar");
     expect(e.cnpj).toBeNull();
     expect(e.local).toBeNull();
-    expect(contatoSite()).toMatchObject({ email: "contato@equapar.com", whatsappLink: null, agendaUrl: null });
+    expect(contatoSite()).toMatchObject({ email: "contato@equapar.com.br", whatsappLink: null, agendaUrl: null });
     expect(camposFaltando()).toEqual([...VARIAVEIS_SITE]);
   });
   it("sem endereço, mostra só a cidade", () => {
@@ -38,31 +38,30 @@ describe("B1: dados da empresa pelo ambiente", () => {
     expect(c.whatsappLink).toBe("https://wa.me/5511900000000?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Equapar%20e%20quero%20saber%20mais.");
     expect(telefoneFormatado(c.whatsapp!)).toBe("+55 (11) 90000-0000");
   });
-  it("B5: sem CNPJ, termos e privacidade identificam o responsável (com CPF, se informado), canal e cidade, sem falar em constituição", () => {
+  it("B5: sem CNPJ, termos e privacidade identificam o responsável (sem CPF), canal e cidade, sem falar em constituição", () => {
     limpar();
     vi.stubEnv("SITE_FUNDADOR_NOME", "Pessoa Exemplo");
     vi.stubEnv("SITE_CIDADE", "Cidade Exemplo/UF");
     vi.stubEnv("SITE_EMAIL_CONTATO", "contato@exemplo.local");
     expect(identificacaoEmpresa()).toMatchObject({ texto: "Equapar, sob a responsabilidade de Pessoa Exemplo, Cidade Exemplo/UF", canal: "contato@exemplo.local" });
-    // CPF fictício de teste; inválido é ignorado
+    // a variável antiga do CPF (fictício) não tem mais efeito: documento pessoal nunca aparece no site
     vi.stubEnv("SITE_FUNDADOR_CPF", "529.982.247-25");
-    expect(identificacaoEmpresa().texto).toBe("Equapar, sob a responsabilidade de Pessoa Exemplo (CPF 529.982.247-25), Cidade Exemplo/UF");
-    vi.stubEnv("SITE_FUNDADOR_CPF", "52998224726");
     expect(identificacaoEmpresa().texto).toBe("Equapar, sob a responsabilidade de Pessoa Exemplo, Cidade Exemplo/UF");
+    expect(JSON.stringify(dadosEmpresa())).not.toContain("529");
     vi.stubEnv("SITE_CNPJ", "11222333000181");
     vi.stubEnv("SITE_RAZAO_SOCIAL", "Empresa Exemplo Ltda.");
     vi.stubEnv("SITE_ENDERECO", "Rua Exemplo, 1, Cidade Exemplo/UF");
     expect(identificacaoEmpresa().texto).toBe("Empresa Exemplo Ltda., CNPJ 11.222.333/0001-81, Rua Exemplo, 1, Cidade Exemplo/UF");
   });
-  it("B2: domínio equapar.com derivado do ambiente (remetente e identificação no PNCP)", () => {
+  it("B2: domínio equapar.com.br derivado do ambiente (remetente e identificação no PNCP)", () => {
     limpar();
     vi.stubEnv("EMAIL_FROM", "");
-    vi.stubEnv("APP_URL", "https://equapar.com");
-    expect(remetentePadrao()).toBe("Equapar Avisos <avisos@equapar.com>");
+    vi.stubEnv("APP_URL", "https://equapar.com.br");
+    expect(remetentePadrao()).toBe("Equapar Avisos <avisos@equapar.com.br>");
     const agente = agentePncp();
     expect(agente).toMatch(/^Mozilla\/5\.0 .*AppleWebKit\/537\.36 .*Chrome\/\d+/);
     expect(agente).toContain("EquaparBot/1.0");
-    expect(agente).toContain("+https://equapar.com; contato@equapar.com");
+    expect(agente).toContain("+https://equapar.com.br; contato@equapar.com.br");
     vi.stubEnv("EMAIL_FROM", "Equapar Avisos <avisos@exemplo.local>");
     expect(remetentePadrao()).toBe("Equapar Avisos <avisos@exemplo.local>");
   });

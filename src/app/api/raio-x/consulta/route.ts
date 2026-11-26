@@ -5,6 +5,7 @@ import { consultarPncp, PncpIndisponivel } from "@/lib/pncp";
 import { consumirCotas } from "@/lib/cota";
 import { ipConfiavel } from "@/lib/limite";
 import { normalizarCnpj } from "@/lib/mascaras";
+import { comUmPorCento } from "@/lib/raio-x-valor";
 
 /** Consulta do Raio-X para a tela (JSON). Só dados públicos do PNCP; registros de pessoa física já vêm descartados. */
 export async function GET(req: NextRequest) {
@@ -17,7 +18,8 @@ export async function GET(req: NextRequest) {
   try {
     const r = await consultarPncp(cnpj);
     await registrarEvento("raiox_resultado", { contratos: r.contratos.length });
-    return NextResponse.json(r);
+    // com a estimativa de 1% de reajuste por mês, calculada aqui (o navegador não recebe o motor de cálculo)
+    return NextResponse.json(comUmPorCento(r));
   } catch (e) {
     if (e instanceof PncpIndisponivel) return NextResponse.json({ erro: "pncp" }, { status: 503 });
     throw e;

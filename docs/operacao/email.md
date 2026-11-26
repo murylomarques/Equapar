@@ -5,18 +5,18 @@ Sem e-mail, ninguém confirma a conta nem recebe aviso de prazo. Não escolhemos
 ## 1. Provedor e variáveis
 
 1. Contrate um provedor de e-mail transacional (exemplos: Amazon SES, Postmark, Resend, Brevo).
-2. Preencha `SMTP_URL` (formato `smtps://usuario:senha@smtp.exemplo.com:465`) e `EMAIL_FROM` (ex.: `Equapar Avisos <avisos@equapar.com>`).
+2. Preencha `SMTP_URL` (formato `smtps://usuario:senha@smtp.exemplo.com:465`) e `EMAIL_FROM` (ex.: `Equapar Avisos <avisos@equapar.com.br>`).
 3. Rode `npm run verificar:producao`: ele conecta e autentica no SMTP sem enviar nada. Depois use o botão **"Enviar e-mail de teste"** no painel interno (ou `npm run verificar:producao -- --enviar-teste`): a mensagem vai para os endereços de `PAINEL_EMAILS`, e se falhar a tela mostra o erro exato do provedor.
 
 Enquanto `SMTP_URL` ou `EMAIL_FROM` faltarem em produção, o `/api/saude` devolve o aviso `email_nao_configurado` e o painel interno mostra o mesmo aviso no topo. O sistema sobe assim mesmo.
 
-## 2. DNS do domínio equapar.com
+## 2. DNS do domínio equapar.com.br
 
 | Registro | Para quê | Como |
 | --- | --- | --- |
-| **SPF** | Diz quais servidores podem enviar pelo domínio | TXT em `equapar.com`, com o valor que o provedor indicar (ex.: `v=spf1 include:<provedor> ~all`). Um único registro SPF por domínio. |
+| **SPF** | Diz quais servidores podem enviar pelo domínio | TXT em `equapar.com.br`, com o valor que o provedor indicar (ex.: `v=spf1 include:<provedor> ~all`). Um único registro SPF por domínio. |
 | **DKIM** | Assina cada mensagem | Os registros (CNAME ou TXT) que o provedor gerar para o domínio. |
-| **DMARC** | Diz o que fazer quando SPF/DKIM falham | TXT em `_dmarc.equapar.com`. Comece com `v=DMARC1; p=none; rua=mailto:dmarc@equapar.com` (só monitora). Depois de semanas sem falhas, suba para `p=quarantine` e, por fim, `p=reject`. |
+| **DMARC** | Diz o que fazer quando SPF/DKIM falham | TXT em `_dmarc.equapar.com.br`. Comece com `v=DMARC1; p=none; rua=mailto:dmarc@equapar.com.br` (só monitora). Depois de semanas sem falhas, suba para `p=quarantine` e, por fim, `p=reject`. |
 | **DNS reverso (PTR)** | O IP de envio aponta de volta para um nome válido | Normalmente feito pelo provedor; confira na documentação dele. |
 | **TLS** | Conexão cifrada até o servidor de e-mail | Use `smtps://` (porta 465) ou STARTTLS (porta 587). |
 

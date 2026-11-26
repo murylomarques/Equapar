@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { FormEntrar } from "../formularios";
 import { sessaoAtual } from "@/lib/auth";
 import { metaPagina } from "@/app/(site)/seo";
+import { googleAtivo } from "@/lib/chaves";
 
 export const metadata = metaPagina({ titulo: "Entrar | Equapar", caminho: "/entrar" });
 
@@ -24,7 +25,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
           {erro === "google" ? "Não foi possível entrar com o Google. Tente de novo ou use e-mail e senha." : "Sua sessão terminou. Entre de novo."}
         </p>
       )}
-      <FormEntrar destino={destino} google={!!process.env.GOOGLE_CLIENT_ID} />
+      <FormEntrar destino={destino} google={googleAtivo()} />
       <hr className="regua" />
       <p className="mb-0" style={{ fontSize: 14 }}>
         <Link href="/esqueci-senha">Esqueci minha senha</Link>

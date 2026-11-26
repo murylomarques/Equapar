@@ -113,7 +113,7 @@ Medição: `node scripts/lighthouse.mjs http://localhost:3100/ 3` (Lighthouse 12
 
 O que foi feito: o formulário do CNPJ da landing e dos guias é renderizado no servidor e funciona sem JavaScript (a página do Raio-X valida e mantém a máscara); a animação de entrada ao rolar saiu; "Entrar" virou link comum (quem já tem sessão é levado ao app pela própria `/entrar`); o provedor de toasts saiu da landing; o CSS deixou de ser embutido; o menu do celular não usa JavaScript.
 
-**Resultado honesto:** as rodadas boas ficam entre 2,54 e 2,60 s, mas a mediana de 3 rodadas não fica de forma estável abaixo de 2,5 s neste computador. O LCP observado (sem simulação) é 0,5 a 0,8 s. O que sobra no caminho é o próprio React e o roteador do Next (cerca de 390 KB sem compressão, executados antes da primeira pintura porque o servidor local entrega tudo em menos de 100 ms). A máquina de medição é lenta para o fator 4x do Lighthouse (`benchmarkIndex` 687), o que infla a parte de CPU da simulação. Recomendação: repetir `node scripts/lighthouse.mjs https://equapar.com/ 3` contra a produção, com rede real. Não mudei o fator de CPU para melhorar o número.
+**Resultado honesto:** as rodadas boas ficam entre 2,54 e 2,60 s, mas a mediana de 3 rodadas não fica de forma estável abaixo de 2,5 s neste computador. O LCP observado (sem simulação) é 0,5 a 0,8 s. O que sobra no caminho é o próprio React e o roteador do Next (cerca de 390 KB sem compressão, executados antes da primeira pintura porque o servidor local entrega tudo em menos de 100 ms). A máquina de medição é lenta para o fator 4x do Lighthouse (`benchmarkIndex` 687), o que infla a parte de CPU da simulação. Recomendação: repetir `node scripts/lighthouse.mjs https://equapar.com.br/ 3` contra a produção, com rede real. Não mudei o fator de CPU para melhorar o número.
 
 ### A6. Chave única MODO_PILOTO (feito)
 
@@ -176,7 +176,7 @@ Nenhuma das duas recusa o formato novo. Quando houver contratos publicados com C
 ### B1. Variáveis SITE_* (feito)
 
 Antes: `src/lib/site.ts` com `"[PREENCHER] ..."` no código (razão social, CNPJ, endereço, WhatsApp, fundador).
-Depois: `dadosEmpresa()`, `contatoSite()` e `camposFaltando()` leem só `SITE_EMAIL_CONTATO`, `SITE_WHATSAPP`, `SITE_FUNDADOR_NOME`, `SITE_FUNDADOR_FOTO`, `SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, `SITE_ENDERECO`, `SITE_CIDADE` e `SITE_AGENDA_URL`, com o comportamento da tabela do prompt para cada campo vazio (e-mail padrão `contato@equapar.com`; sem WhatsApp, contato por e-mail; sem fundador, o bloco "quem faz" fala só da empresa; sem foto, espaço neutro; sem razão social, "Equapar (empresa em constituição)"; sem CNPJ, nada; sem endereço, só a cidade). `SITE_CNPJ` passa pela validação da B3; inválido não aparece e o build avisa:
+Depois: `dadosEmpresa()`, `contatoSite()` e `camposFaltando()` leem só `SITE_EMAIL_CONTATO`, `SITE_WHATSAPP`, `SITE_FUNDADOR_NOME`, `SITE_FUNDADOR_FOTO`, `SITE_RAZAO_SOCIAL`, `SITE_CNPJ`, `SITE_ENDERECO`, `SITE_CIDADE` e `SITE_AGENDA_URL`, com o comportamento da tabela do prompt para cada campo vazio (e-mail padrão `contato@equapar.com.br`; sem WhatsApp, contato por e-mail; sem fundador, o bloco "quem faz" fala só da empresa; sem foto, espaço neutro; sem razão social, "Equapar (empresa em constituição)"; sem CNPJ, nada; sem endereço, só a cidade). `SITE_CNPJ` passa pela validação da B3; inválido não aparece e o build avisa:
 
 ```
 ⚠ Site: variáveis vazias (o site esconde ou usa o padrão): SITE_EMAIL_CONTATO, SITE_WHATSAPP, ...
@@ -185,10 +185,10 @@ Depois: `dadosEmpresa()`, `contatoSite()` e `camposFaltando()` leem só `SITE_EM
 
 Prova: `src/lib/site.test.ts` (tudo vazio, só a cidade, CNPJ válido numérico e alfanumérico, CNPJ inválido), só com valores fictícios. Capturas com e sem `SITE_WHATSAPP` e `SITE_CNPJ`: na verificação final.
 
-### B2. Domínio equapar.com (feito)
+### B2. Domínio equapar.com.br (feito)
 
 Antes: `equapar.com.br` fixo em `src/lib/mensagens.ts` (remetente), `src/lib/pncp.ts` (User-Agent), `.env.example` e testes.
-Depois: `remetentePadrao()` (`EMAIL_FROM` ou `Equapar Avisos <avisos@<domínio do SITE_EMAIL_CONTATO>>`) e `agentePncp()` (APP_URL e `SITE_EMAIL_CONTATO`). `.env.example`: `EMAIL_FROM="Equapar Avisos <avisos@equapar.com>"`. Testes com domínios fictícios. Prova em `src/lib/site.test.ts` ("B2").
+Depois: `remetentePadrao()` (`EMAIL_FROM` ou `Equapar Avisos <avisos@<domínio do SITE_EMAIL_CONTATO>>`) e `agentePncp()` (APP_URL e `SITE_EMAIL_CONTATO`). `.env.example`: `EMAIL_FROM="Equapar Avisos <avisos@equapar.com.br>"`. Testes com domínios fictícios. Prova em `src/lib/site.test.ts` ("B2").
 
 ### B4. Botão de contato (feito)
 
@@ -282,7 +282,7 @@ No .env.example e não usadas no código:  AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_K
 ```
 
 ### G3. docs/SUBIR.md (feito)
-Passo a passo para quem nunca subiu um sistema, sem escolher provedor: banco PostgreSQL 17 com backup diário de 30 dias; bucket S3 privado com versionamento (e por que o R2 não serve sem uma cópia diária); domínio equapar.com, HTTPS e e-mail com SPF, DKIM e DMARC (regras do Google com a fonte); variáveis só no painel de segredos; os dois processos (app com migrações no CMD e worker com reinício automático); verificação, seed da demonstração, primeiro acesso, monitoramento, teste de restauração, teste final e o que fazer quando sair o CNPJ. Exemplo local: `docker-compose.producao.yml` (app, worker e banco separado do de desenvolvimento).
+Passo a passo para quem nunca subiu um sistema, sem escolher provedor: banco PostgreSQL 17 com backup diário de 30 dias; bucket S3 privado com versionamento (e por que o R2 não serve sem uma cópia diária); domínio equapar.com.br, HTTPS e e-mail com SPF, DKIM e DMARC (regras do Google com a fonte); variáveis só no painel de segredos; os dois processos (app com migrações no CMD e worker com reinício automático); verificação, seed da demonstração, primeiro acesso, monitoramento, teste de restauração, teste final e o que fazer quando sair o CNPJ. Exemplo local: `docker-compose.producao.yml` (app, worker e banco separado do de desenvolvimento).
 
 ### G5. npm run e2e:producao (feito)
 `e2e/producao.mjs`, só leitura, contra `APP_URL`: home 200 com CSP, HSTS e `X-Content-Type-Options`; `/api/saude` OK (e os avisos, se houver); Raio-X, preços, termos, privacidade, método e login abrem; a demonstração abre uma vez. Rodado contra o build de produção local:
@@ -404,7 +404,7 @@ OK    E-mail         SMTP: conectou e autenticou · e-mail de teste enviado para
 OK    Turnstile      as duas chaves preenchidas
 OK    Asaas          ambiente sandbox coerente com o prefixo da chave · token do webhook presente
 OK    Rede           TRUSTED_PROXY_HEADER = x-forwarded-for
-OK    Site           vai aparecer: e-mail contato@equapar.com; WhatsApp; nome do fundador; razão social e CNPJ; endereço
+OK    Site           vai aparecer: e-mail contato@equapar.com.br; WhatsApp; nome do fundador; razão social e CNPJ; endereço
 OK    Chaves         MODO_PILOTO ligada · JORNADA_REGRA_CONFIRMADA desligada · IA desligadas · limpezas desligadas · DEMO_MAX_ATIVAS 300
 0 falha(s), 0 aviso(s).   saída: 0
 ```
@@ -429,14 +429,14 @@ AVISO Site           vazias: SITE_EMAIL_CONTATO, SITE_WHATSAPP, ...
 - No compose, o worker herdava o healthcheck do app (porta 3000); desligado só no worker.
 
 ### Pendências que não dependem só do dono
-1. **LCP no celular** (A5): mediana 2,67 s na máquina de teste (`benchmarkIndex` 687). O que sobra é o React e o roteador do Next executados antes da primeira pintura. Medir de novo contra a produção, com rede real: `node scripts/lighthouse.mjs https://equapar.com/ 3`.
+1. **LCP no celular** (A5): mediana 2,67 s na máquina de teste (`benchmarkIndex` 687). O que sobra é o React e o roteador do Next executados antes da primeira pintura. Medir de novo contra a produção, com rede real: `node scripts/lighthouse.mjs https://equapar.com.br/ 3`.
 2. **Retroativo por competência** (C6): exige guardar planilhas por competência (novo modelo de dados), que o prompt mandou não criar agora.
 3. **Preço completo do posto no caso C1** (D7): `it.todo` até chegar a planilha completa assinada pelo contador.
 
 ## O que só o dono faz
 
 1. Preencher o `.env` (no painel de segredos da hospedagem): as obrigatórias (`DATABASE_URL`, `APP_SECRET`, `APP_URL` em https, `TRUSTED_PROXY_HEADER`, `ARMAZENAMENTO=s3` e o bucket) mais `SITE_WHATSAPP`, `SITE_EMAIL_CONTATO`, `SITE_FUNDADOR_NOME` e `SITE_CIDADE`.
-2. Confirmar o registro do domínio equapar.com, apontar o DNS e ativar o HTTPS.
+2. Confirmar o registro do domínio equapar.com.br, apontar o DNS e ativar o HTTPS.
 3. Contratar hospedagem, banco (PostgreSQL 17 com backup de 30 dias), bucket S3 com versionamento e provedor de e-mail, e configurar SPF, DKIM e DMARC (`docs/SUBIR.md` e `docs/operacao/email.md`).
 4. Criar as chaves do Turnstile e, se quiser, as do login com Google.
 5. Rodar `npm run verificar:producao:imagem` e `npm run e2e:producao` e decidir sobre as limpezas (`LIMPEZA_DEMOS_AUTOMATICA`, `LIMPEZA_CONTAS_CANCELADAS`) depois de ler as simulações (A3 e C8).

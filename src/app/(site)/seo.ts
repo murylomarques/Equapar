@@ -39,7 +39,7 @@ export function jsonLdEquapar() {
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     inLanguage: "pt-BR",
-    description: "Prazos, memória de cálculo e documentos da repactuação de contratos públicos com mão de obra, do pedido ao recebimento.",
+    description: "Controle de repactuação de contratos públicos com mão de obra: prazos, memória de cálculo e documentos, do pedido ao recebimento.",
     publisher: { "@id": `${url}/#organizacao` },
   };
   return JSON.stringify({ "@context": "https://schema.org", "@graph": [organizacao, aplicacao] }).replace(/</g, "\\u003c");

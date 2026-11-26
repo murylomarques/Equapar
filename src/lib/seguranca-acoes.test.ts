@@ -8,7 +8,7 @@ const GUARDAS = /exigir\(|exigirUsuario\(|pedidoEditavel\(|pedidoDaConta\(|contr
 const PUBLICAS: Record<string, string> = {
   "src/app/(auth)/acoes.ts:entrar": "login",
   "src/app/(auth)/acoes.ts:confirmar2fa": "segunda etapa do login (usa a sessão pendente)",
-  "src/app/(auth)/acoes.ts:criarConta": "cadastro",
+  "src/app/(auth)/acoes.ts:criarConta": "cadastro (captcha)",
   "src/app/(auth)/acoes.ts:completarEmpresa": "cadastro (usa a sessão recém-criada)",
   "src/app/(auth)/acoes.ts:sair": "encerra a própria sessão",
   "src/app/(auth)/acoes.ts:pedirRedefinicao": "recuperação de senha (cotas por e-mail e IP)",

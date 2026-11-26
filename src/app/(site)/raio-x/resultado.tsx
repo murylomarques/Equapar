@@ -5,6 +5,7 @@ import { SearchX, WifiOff } from "lucide-react";
 import { Selo } from "@/components/selo";
 import { EstadoVazio } from "@/components/ui/apresentacao";
 import type { ResultadoRaioX } from "@/lib/pncp";
+import type { ComUmPorCento } from "@/lib/raio-x-valor";
 import { seloVigencia } from "@/lib/prazos";
 import { diasAte, data, plural } from "@/lib/datas";
 
@@ -14,7 +15,12 @@ import { tempoAteFim } from "@/lib/mascaras";
 import { formatarCnpj } from "@/lib/cnpj";
 import { FormAvisarDepois, FormRelatorio } from "./formularios";
 
-type Estado = { fase: "consultando"; segundos: number } | { fase: "pronto"; r: ResultadoRaioX } | { fase: "erro" } | { fase: "limite" };
+/** A resposta de /api/raio-x/consulta: o resultado do PNCP com o 1% de reajuste por mês já calculado no servidor. */
+type RaioXTela = ComUmPorCento<ResultadoRaioX>;
+
+const LEGENDA_UM_POR_CENTO = "Estimativa a partir do valor publicado no PNCP. Não é promessa de recuperação.";
+
+type Estado = { fase: "consultando"; segundos: number } | { fase: "pronto"; r: RaioXTela } | { fase: "erro" } | { fase: "limite" };
 
 export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
   const [estado, setEstado] = useState<Estado>({ fase: "consultando", segundos: 0 });
@@ -29,7 +35,7 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
           return;
         }
         if (!res.ok) throw new Error(String(res.status));
-        const r = (await res.json()) as ResultadoRaioX;
+        const r = (await res.json()) as RaioXTela;
         if (!vivo) return;
         // L13: só estados reais (a resposta já vem com os contratos e os prazos calculados no servidor)
         setEstado({ fase: "pronto", r });
@@ -99,6 +105,9 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
   const proximos6 = r.contratos.filter((c) => diasAte(c.fim) <= 183).length;
   // sem nenhum valor publicado, a coluna "Valor global" só teria traços: fica de fora
   const temValor = r.contratos.some((c) => c.valorGlobal != null);
+  // quanto vale 1% de reajuste: só nos contratos com valor e vigência publicados
+  const temUmPorCento = r.umPorCentoMesTotal != null;
+  const comUmPorCento = r.contratos.filter((c) => c.umPorCentoMes != null).length;
   return (
     <div className="pilha" style={{ gap: 32 }}>
       <div>
@@ -109,6 +118,15 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
         <p className="legenda">
           Consulta feita em {data(r.consultadoEm)}. Só dados públicos{temValor ? ": o valor global é o publicado no PNCP" : ""}.
         </p>
+        {temUmPorCento && (
+          <div className="cartao mb-16" style={{ maxWidth: 640 }}>
+            <p className="mb-0" style={{ fontWeight: 600 }}>
+              Cada 1% de reajuste vale cerca de {reais(r.umPorCentoMesTotal)} por mês
+              {comUmPorCento < r.contratos.length ? ` nos ${plural(comUmPorCento, "contrato", "contratos")} com valor e vigência publicados` : ""}.
+            </p>
+            <p className="legenda mb-0">{LEGENDA_UM_POR_CENTO}</p>
+          </div>
+        )}
         <div className="tabela-rolagem so-desktop">
           <table className="tabela">
             <thead>
@@ -118,6 +136,11 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
                 {temValor && (
                   <th scope="col" className="num">
                     Valor global
+                  </th>
+                )}
+                {temUmPorCento && (
+                  <th scope="col" className="num">
+                    Cada 1% de reajuste
                   </th>
                 )}
                 <th scope="col" className="num">
@@ -139,6 +162,7 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
                     </span>
                   </td>
                   {temValor && <td className="num">{c.valorGlobal != null ? reais(c.valorGlobal) : "—"}</td>}
+                  {temUmPorCento && <td className="num">{c.umPorCentoMes != null ? `cerca de ${reais(c.umPorCentoMes)} por mês` : "—"}</td>}
                   <td className="num">
                     {data(c.fim)}
                     <div className="legenda">{tempoAteFim(diasAte(c.fim))}</div>
@@ -159,6 +183,7 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
                 Fim da vigência: {data(c.fim)} ({tempoAteFim(diasAte(c.fim))})
                 {c.valorGlobal != null ? ` · valor global ${reais(c.valorGlobal)}` : ""}
               </span>
+              {c.umPorCentoMes != null && <span className="legenda" style={{ display: "block" }}>Cada 1% de reajuste vale cerca de {reais(c.umPorCentoMes)} por mês.</span>}
               <div className="mt-8">
                 <Selo selo={seloVigencia(c.fim)} />
               </div>
@@ -183,7 +208,9 @@ export function ResultadoRaioXCliente({ cnpj }: { cnpj: string }) {
           <FormRelatorio cnpj={cnpj} />
         </div>
       </div>
-      <p className="legenda leitura">O Raio-X mostra só dados públicos e prazos. Ele não estima valor a recuperar, porque isso depende da planilha de custos e da convenção, que o CNPJ não revela.</p>
+      <p className="legenda leitura">O Raio-X mostra só dados públicos e prazos. Ele não estima valor a recuperar, porque isso depende da planilha de custos e da convenção, que o CNPJ não revela.
+        {temUmPorCento ? " O valor de 1% de reajuste é só uma ordem de grandeza: valor global publicado dividido pelos meses de vigência." : ""}
+      </p>
     </div>
   );
 }

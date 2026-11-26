@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(urlSite()),
   title: "Equapar | Repactuação de contratos públicos no prazo",
   description:
-    "Prazos, memória de cálculo e documentos da repactuação de contratos públicos com mão de obra, do pedido ao recebimento. Raio-X grátis pelo CNPJ com dados do PNCP.",
+    "Controle de repactuação de contratos públicos com mão de obra: prazos, memória de cálculo e documentos, do pedido ao recebimento. Raio-X grátis pelo CNPJ com dados do PNCP.",
   applicationName: "Equapar",
   openGraph: { siteName: "Equapar", locale: "pt_BR", type: "website" },
 };

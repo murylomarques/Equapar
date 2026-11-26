@@ -46,6 +46,7 @@ export default async function RaioX({ searchParams }: { searchParams: Promise<{ 
               <li>Os contratos vigentes da empresa publicados no PNCP, com órgão e valor global.</li>
               <li>Quando termina a vigência de cada um, e quanto tempo falta.</li>
               <li>Quais estão perto da prorrogação, o momento de pedir a repactuação antes de assinar.</li>
+              <li>Quanto vale cada 1% de reajuste por mês, estimado pelo valor publicado no PNCP.</li>
             </ul>
           </div>
           <figure className="cartao exemplo-raiox" style={{ margin: 0 }} aria-label="Exemplo de resultado com dados fictícios">
