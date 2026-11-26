@@ -32,6 +32,7 @@ import { iaPara } from "@/lib/ia-acesso";
 import { contarCpfs, MENSAGEM_CPF } from "@/lib/cpf";
 import { textoDoPdf } from "@/lib/pdf-texto";
 import type { CompetenciaRetroativo } from "@/lib/retroativo-competencias";
+import { lerCompetenciasRetroativo } from "@/lib/previa-retroativo";
 import { resumoFinanceiro, validarLancamento } from "@/lib/financeiro-pedido";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
@@ -411,21 +412,7 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
     }
     let retroativoCompetencias: CompetenciaRetroativo[] = [];
     try {
-      const recebido = JSON.parse(texto(fd, "retroativoCompetencias") || "[]") as unknown;
-      if (!Array.isArray(recebido)) throw new Error();
-      retroativoCompetencias = recebido.map((linha) => {
-        const item = linha as Record<string, unknown>;
-        const diferencaMensal = lerDinheiro(String(item.diferencaMensal ?? ""));
-        if (!diferencaMensal) throw new Error();
-        return {
-          competencia: String(item.competencia ?? ""),
-          diferencaMensal,
-          dias: Number(item.dias),
-          divisor: Number(item.divisor),
-          base: String(item.base ?? "") || undefined,
-          periodo: String(item.periodo ?? "") || undefined,
-        };
-      });
+      retroativoCompetencias = lerCompetenciasRetroativo(texto(fd, "retroativoCompetencias"));
     } catch {
       return { erro: "Confira as competências do retroativo. Cada linha precisa de competência, valor, dias e divisor válidos." };
     }
