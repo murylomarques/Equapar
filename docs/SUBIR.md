@@ -24,15 +24,15 @@ Referência: [PostgreSQL 17: backup e restauração](https://www.postgresql.org/
 
 ## 3. Domínio, HTTPS e e-mail
 
-1. Confirme o registro do domínio **equapar.com** e aponte o DNS para a hospedagem (o painel da hospedagem diz quais registros criar).
+1. Confirme o registro do domínio **equapar.com.br** e aponte o DNS para a hospedagem (o painel da hospedagem diz quais registros criar).
 2. Ative o **HTTPS** (a maioria das hospedagens emite o certificado sozinha). `APP_URL` precisa começar com `https://`.
 3. Contrate um provedor de e-mail transacional (exemplos: Amazon SES, Postmark, Resend, Brevo) e configure no DNS do domínio:
    - **SPF** e **DKIM** (o provedor diz quais registros criar);
-   - **DMARC** começando com `p=none` (só monitorar), por exemplo `v=DMARC1; p=none; rua=mailto:dmarc@equapar.com`;
+   - **DMARC** começando com `p=none` (só monitorar), por exemplo `v=DMARC1; p=none; rua=mailto:dmarc@equapar.com.br`;
    - DNS reverso e TLS, quando o provedor pedir.
 
    O Google exige SPF ou DKIM de qualquer remetente; acima de 5.000 mensagens por dia, SPF, DKIM e DMARC; e taxa de spam abaixo de 0,3%. Fonte: [Google: regras para remetentes de e-mail](https://support.google.com/a/answer/81126). Detalhes em `docs/operacao/email.md`.
-4. Preencha `SMTP_URL` e `EMAIL_FROM` (ex.: `Equapar Avisos <avisos@equapar.com>`).
+4. Preencha `SMTP_URL` e `EMAIL_FROM` (ex.: `Equapar Avisos <avisos@equapar.com.br>`).
 
 ## 4. Variáveis de ambiente
 
@@ -71,7 +71,7 @@ Rode uma vez, na imagem: `npm run db:seed:demo:prod`. Ele cria só dados **fict�
 
 ## 9. Monitoramento
 
-1. Um monitor externo (exemplos: UptimeRobot, Better Stack) chamando `https://equapar.com/api/saude` **a cada minuto**.
+1. Um monitor externo (exemplos: UptimeRobot, Better Stack) chamando `https://equapar.com.br/api/saude` **a cada minuto**.
 2. Alerta de erro em `ERROS_WEBHOOK_URL`. As mensagens não levam dados pessoais nem segredos.
 
 ## 10. Restauração (pelo menos uma vez)
@@ -83,7 +83,7 @@ Restaure o backup mais recente num **banco de teste** (nunca no de produção), 
 Do seu computador, contra o endereço público:
 
 ```
-APP_URL=https://equapar.com npm run e2e:producao
+APP_URL=https://equapar.com.br npm run e2e:producao
 ```
 
 Ele só lê: confere a home e os cabeçalhos de segurança, o `/api/saude`, as páginas públicas, a demonstração (uma vez) e a tela de login. Não cria conta, não envia e-mail e não usa dado real.

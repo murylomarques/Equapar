@@ -1,6 +1,6 @@
 // G5: teste rápido contra APP_URL que SÓ LÊ. Não cria conta, não envia e-mail, não usa dado real.
 // A demonstração é aberta uma vez (cria uma cópia fictícia de 4 horas, como qualquer visitante).
-//   APP_URL=https://equapar.com npm run e2e:producao
+//   APP_URL=https://equapar.com.br npm run e2e:producao
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../package.json", import.meta.url));
 const { chromium } = require("playwright-core");
