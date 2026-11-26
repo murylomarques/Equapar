@@ -17,7 +17,7 @@ import {
   Gavel,
   ChevronRight,
 } from "lucide-react";
-import { contexto, pode } from "@/lib/auth";
+import { contexto, podeNaConta } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { data, dataHora, dataLocal, diasAte, emDias, MESES, plural, reais } from "@/lib/format";
 import { oportunidade, prazosDoContrato, seloSituacao } from "@/lib/prazos";
@@ -110,8 +110,8 @@ export default async function ContratoPagina({ params, searchParams }: { params:
         ? { texto: "Continuar pedido de repactuação", href: `/app/pedidos/${op.pedidoAberto.id}` }
         : { texto: "Montar pedido de repactuação", href: `/app/pedidos/novo?contrato=${c.id}` };
   const elegivelReforma = (c.dataProposta ?? c.vigenciaInicio) < LC214;
-  const podeEditar = pode(ctx.papel, "editar_contratos");
-  const podePedidos = pode(ctx.papel, "editar_pedidos");
+  const podeEditar = podeNaConta(ctx, "editar_contratos");
+  const podePedidos = podeNaConta(ctx, "editar_pedidos");
   const diasFim = diasAte(c.vigenciaFim);
   const abas = [
     ["resumo", "Resumo", null],

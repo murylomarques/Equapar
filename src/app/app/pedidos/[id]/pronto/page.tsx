@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, FileArchive, FileSpreadsheet, FileText } from "lucide-react";
-import { contexto, pedidoDaConta, pode } from "@/lib/auth";
+import { contexto, pedidoDaConta, podeNaConta } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { brl, calcularRetroativo } from "@/lib/calculo/motor";
 import { calcularPedido, ESTADOS } from "@/lib/pedido";
@@ -40,13 +40,13 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
     db.baixaPedido.findMany({ where: { pedidoId: p.id, canceladaEm: null }, orderBy: { recebidoEm: "asc" } }),
   ]);
   const idx = ESTADOS.findIndex((e) => e.id === p.estado);
-  const fin = pode(ctx.papel, "registrar_financeiro");
+  const fin = podeNaConta(ctx, "registrar_financeiro");
   const hoje = paraInputData(hojeUTC());
   const c = calc.comparacao && !calc.comparacao.erros.length ? calc.comparacao : null;
   const financeiro = resumoFinanceiro(p.retroativoAprovado ?? p.valorDeferido ?? 0, notas, baixas);
   const versaoFinal = aprovacaoValida(p) && !!p.memoriaVersaoAprovadaId;
   // com a versão atual pendente, aprovar é a ação principal; as demais ficam secundárias
-  const aprovarPrimeiro = !versaoFinal && pode(ctx.papel, "aprovar_memoria");
+  const aprovarPrimeiro = !versaoFinal && podeNaConta(ctx, "aprovar_memoria");
 
   if (p.estado === "EM_ANALISE")
     return (
@@ -205,7 +205,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 <ol className="passos-pendentes">
                   <li>
                     <strong>Aprovar a versão atual da memória.</strong> A data registrada alterou a memória; os arquivos finais ficam bloqueados até a aprovação.
-                    {pode(ctx.papel, "aprovar_memoria") ? (
+                    {podeNaConta(ctx, "aprovar_memoria") ? (
                       <FormAcao action={aprovarMemoria} className="mt-8">
                         <input type="hidden" name="pedidoId" value={p.id} />
                         <BotaoEnvio>Aprovar a versão atual</BotaoEnvio>
@@ -306,7 +306,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
             {!versaoFinal && (
               <Alerta tipo="atencao" className="mt-16" titulo="Versão atual pendente de aprovação">
                 A data efetiva alterou o corte do retroativo. Os arquivos finais continuam bloqueados.
-                {pode(ctx.papel, "aprovar_memoria") && (
+                {podeNaConta(ctx, "aprovar_memoria") && (
                   <FormAcao action={aprovarMemoria} className="mt-8">
                     <input type="hidden" name="pedidoId" value={p.id} />
                     <BotaoEnvio>Aprovar a versão atual</BotaoEnvio>
@@ -409,7 +409,7 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                 <strong>Recurso:</strong> {p.recursoData ? `apresentado em ${data(p.recursoData)}, ` : "ainda não apresentado, "}prazo {data(p.recursoPrazo)}.
               </p>
             )}
-            {pode(ctx.papel, "editar_pedidos") && (
+            {podeNaConta(ctx, "editar_pedidos") && (
               <>
                 <hr className="regua" />
                 <h3>Registrar recurso</h3>

@@ -6,10 +6,10 @@
  * (contratoId da linha; pedidoId da chave gerada pelo próprio servidor) que a página confere no banco,
  * dentro da conta, antes de passar para cá. Entidade não encontrada = sem link.
  */
-import { diasAte } from "./format";
+import { diasAte, MESES } from "./format";
 
 export type EnvioAviso = { id: string; canal: string; destino: string; status: string; erro: string | null; enviadoEm: Date; corpo: string; assunto: string | null };
-export type EventoAviso = { chave: string; tipo: string; contratoId: string | null; pedidoId: string | null; ultimoEnvio: Date; envios: EnvioAviso[] };
+export type EventoAviso = { chave: string; tipo: string; contratoId: string | null; pedidoId: string | null; convencaoId: string | null; ultimoEnvio: Date; envios: EnvioAviso[] };
 
 /** Tipos cuja chave é "TIPO:<pedidoId>[:...]" (formato escrito em lib/avisos.ts). */
 const TIPOS_DE_PEDIDO = new Set(["RESPOSTA", "DEFERIDO", "APOSTILAMENTO"]);
@@ -20,12 +20,25 @@ export function pedidoDaChave(tipo: string, chave: string): string | null {
   return id && /^[a-z0-9]{10,40}$/i.test(id) ? id : null;
 }
 
-/** Avisos de prazo do mesmo fim de vigência (60, 30 e 7 dias antes): um evento só, "o contrato X termina em D". */
+/** Tipos cuja chave é "TIPO:<convencaoId>:<data-base>" (aviso da data-base, escrito em lib/avisos.ts). */
+const TIPOS_DE_DATA_BASE = new Set(["DB30", "DB7", "DB0"]);
+
+export function convencaoDaChave(tipo: string, chave: string): string | null {
+  if (!TIPOS_DE_DATA_BASE.has(tipo)) return null;
+  const id = chave.split(":")[1];
+  return id && /^[a-z0-9]{10,40}$/i.test(id) ? id : null;
+}
+
+/**
+ * Avisos de prazo do mesmo fim de vigência (60, 30 e 7 dias antes): um evento só, "o contrato X termina em D".
+ * Do mesmo jeito, os avisos da mesma data-base de uma convenção (30 e 7 dias antes, e no dia) viram um evento só.
+ */
 const TIPOS_DE_VIGENCIA = new Set(["D60", "D30", "D7"]);
 function grupoDoAviso(a: { chave: string; tipo: string }) {
-  if (!TIPOS_DE_VIGENCIA.has(a.tipo)) return a.chave;
-  const [, contrato, data] = a.chave.split(":");
-  return contrato && data ? `VIGENCIA:${contrato}:${data}` : a.chave;
+  const grupo = TIPOS_DE_VIGENCIA.has(a.tipo) ? "VIGENCIA" : TIPOS_DE_DATA_BASE.has(a.tipo) ? "DATA_BASE" : null;
+  if (!grupo) return a.chave;
+  const [, id, data] = a.chave.split(":");
+  return id && data ? `${grupo}:${id}:${data}` : a.chave;
 }
 
 /** Uma ocorrência por evento de negócio, com o histórico de cada canal. */
@@ -33,9 +46,9 @@ export function agrupar(avisos: (EnvioAviso & { chave: string; tipo: string; con
   const m = new Map<string, EventoAviso>();
   for (const a of avisos) {
     const grupo = grupoDoAviso(a);
-    const ev = m.get(grupo) ?? { chave: a.chave, tipo: a.tipo, contratoId: a.contratoId, pedidoId: pedidoDaChave(a.tipo, a.chave), ultimoEnvio: a.enviadoEm, envios: [] };
+    const ev = m.get(grupo) ?? { chave: a.chave, tipo: a.tipo, contratoId: a.contratoId, pedidoId: pedidoDaChave(a.tipo, a.chave), convencaoId: convencaoDaChave(a.tipo, a.chave), ultimoEnvio: a.enviadoEm, envios: [] };
     ev.envios.push({ id: a.id, canal: a.canal, destino: a.destino, status: a.status, erro: a.erro, enviadoEm: a.enviadoEm, corpo: a.corpo, assunto: a.assunto });
-    // o evento fica com o marco mais recente (ex.: D7 depois do D30); a data da vigência é a mesma
+    // o evento fica com o marco mais recente (ex.: D7 depois do D30); a data da vigência (ou da data-base) é a mesma
     if (a.enviadoEm > ev.ultimoEnvio) Object.assign(ev, { ultimoEnvio: a.enviadoEm, chave: a.chave, tipo: a.tipo });
     m.set(grupo, ev);
   }
@@ -44,6 +57,8 @@ export function agrupar(avisos: (EnvioAviso & { chave: string; tipo: string; con
 
 export type ContratoAviso = { id: string; numero: string; orgao: string; vigenciaFim: Date; arquivado: boolean };
 export type PedidoAviso = { id: string; estado: string; apostiladoEm: Date | null; contratoId: string };
+/** `contratosAtivos`: contratos não arquivados, de repactuação com mão de obra, que usam a convenção. */
+export type ConvencaoAviso = { id: string; nome: string; mesDataBase: number; dataDeposito: Date | null; contratosAtivos: number };
 export type Situacao = "PENDENTE" | "RESOLVIDO" | "INFORMATIVO";
 export type Prioridade = "ALTA" | "MEDIA" | "BAIXA";
 
@@ -91,7 +106,7 @@ function passoFinanceiro(p: PedidoAviso, c: ContratoAviso | null, base: string):
 
 export function classificar(
   ev: EventoAviso,
-  dados: { contrato: ContratoAviso | null; pedido: PedidoAviso | null; contaEmDia: boolean },
+  dados: { contrato: ContratoAviso | null; pedido: PedidoAviso | null; contaEmDia: boolean; convencao?: ConvencaoAviso | null },
   agora = new Date(),
 ): Classificado {
   const { contrato: c, pedido: p } = dados;
@@ -121,6 +136,10 @@ export function classificar(
         prazo: c.vigenciaFim,
       };
     }
+    case "DB30":
+    case "DB7":
+    case "DB0":
+      return classificarDataBase(ev, dados.convencao ?? null, agora);
     case "RESPOSTA": {
       if (!p) return semDestino(c ? `${nomeContrato(c)}: pedido protocolado` : "Pedido protocolado", "O pedido deste aviso foi excluído da conta.");
       const href = `/app/pedidos/${p.id}/pronto`;
@@ -148,4 +167,40 @@ export function classificar(
     default:
       return semDestino(ev.envios[0]?.assunto ?? "Mensagem", "Mensagem registrada.");
   }
+}
+
+/** Aviso da data-base: pendente até a convenção nova ser registrada (depósito na data-base ou depois). */
+function classificarDataBase(ev: EventoAviso, cv: ConvencaoAviso | null, agora: Date): Classificado {
+  if (!cv) return { categoria: "INFO", situacao: "INFORMATIVO", prioridade: "BAIXA", titulo: "Data-base de convenção", resumo: "A convenção deste aviso foi excluída da conta.", objeto: null, acao: null, prazo: null };
+  const dataBase = new Date(`${ev.chave.split(":")[2]}T00:00:00Z`);
+  const valida = !Number.isNaN(dataBase.getTime());
+  const objeto = `Convenção coletiva · ${cv.contratosAtivos} ${cv.contratosAtivos === 1 ? "contrato" : "contratos"}`;
+  const ver = { rotulo: "Ver a convenção", href: `/app/convencoes#convencao-${cv.id}` };
+  const resolvido = (titulo: string, resumo: string, acao = ver): Classificado => ({ categoria: "PRAZO", situacao: "RESOLVIDO", prioridade: "BAIXA", titulo, resumo, objeto, acao, prazo: valida ? dataBase : null });
+  if (!valida || dataBase.getUTCMonth() + 1 !== cv.mesDataBase) return resolvido(`${cv.nome}: data-base atualizada`, `A data-base agora é em ${MESES[cv.mesDataBase - 1]}.`);
+  if (cv.contratosAtivos === 0) return resolvido(`${cv.nome}: sem contrato ativo`, "Nenhum contrato ativo de repactuação usa esta convenção agora.");
+  if (cv.dataDeposito && cv.dataDeposito >= dataBase)
+    return resolvido(`${cv.nome}: convenção nova registrada`, `Registrada em ${br(cv.dataDeposito)}. Os contratos com repactuação a pedir aparecem em Hoje.`, { rotulo: "Ver o que fazer hoje", href: "/app/hoje" });
+  const dias = diasAte(dataBase, agora);
+  if (dias < 0)
+    return {
+      categoria: "PRAZO",
+      situacao: "PENDENTE",
+      prioridade: "MEDIA",
+      titulo: `${cv.nome}: convenção nova ainda não registrada`,
+      resumo: `A data-base foi em ${br(dataBase)}. Quando a convenção nova sair, informe a data do registro e monte o pedido; se a prorrogação vier antes, ressalve o direito no termo aditivo.`,
+      objeto,
+      acao: ver,
+      prazo: dataBase,
+    };
+  return {
+    categoria: "PRAZO",
+    situacao: "PENDENTE",
+    prioridade: dias <= 7 ? "ALTA" : dias <= 30 ? "MEDIA" : "BAIXA",
+    titulo: `${cv.nome}: data-base ${dias === 0 ? "hoje" : `em ${dias} ${dias === 1 ? "dia" : "dias"}`}`,
+    resumo: `A data-base é ${br(dataBase)}: é nela que nasce o direito à repactuação. Confira se a convenção nova foi registrada e prepare o pedido.`,
+    objeto,
+    acao: ver,
+    prazo: dataBase,
+  };
 }

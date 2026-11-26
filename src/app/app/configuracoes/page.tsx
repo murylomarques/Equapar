@@ -267,7 +267,14 @@ async function AvisosPrefs({ demo }: { demo: boolean }) {
         <fieldset disabled={demo} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <fieldset className="grupo-form">
             <legend>Por onde avisar</legend>
-            <CampoSelect nome="prazo" rotulo="Prazos (60, 30 e 7 dias)" valorInicial={p.prazo} opcoes={canais} largura="medio" />
+            <CampoSelect
+              nome="prazo"
+              rotulo="Prazos"
+              ajuda="Fim da vigência (60, 30 e 7 dias antes) e data-base da convenção (30 e 7 dias antes, e no dia)."
+              valorInicial={p.prazo}
+              opcoes={canais}
+              largura="medio"
+            />
             <CampoSelect nome="resposta" rotulo="Prazo de resposta do órgão" valorInicial={p.resposta} opcoes={canais} largura="medio" />
             <CampoSelect nome="deferido" rotulo="Pedido deferido" valorInicial={p.deferido} opcoes={canais} largura="medio" />
           </fieldset>

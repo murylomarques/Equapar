@@ -26,7 +26,15 @@ export function appUrl(caminho = "") {
 // sempre citam o contrato específico e não misturam propaganda.
 // ---------------------------------------------------------------------------
 
-export type ModeloWhatsapp = "equapar_prazo_60" | "equapar_prazo_30" | "equapar_prazo_7" | "equapar_prazo_resposta" | "equapar_deferido" | "equapar_deferido_valor";
+export type ModeloWhatsapp =
+  | "equapar_prazo_60"
+  | "equapar_prazo_30"
+  | "equapar_prazo_7"
+  | "equapar_prazo_resposta"
+  | "equapar_deferido"
+  | "equapar_deferido_valor"
+  | "equapar_data_base"
+  | "equapar_data_base_chegou";
 
 export const MODELOS: Record<ModeloWhatsapp, (p: Record<string, string>) => string> = {
   equapar_prazo_60: (p) =>
@@ -40,6 +48,11 @@ export const MODELOS: Record<ModeloWhatsapp, (p: Record<string, string>) => stri
   // L16: só quando a conta liga "Mostrar valores em dinheiro no WhatsApp" (modelo próprio, aprovado à parte na Meta)
   equapar_deferido_valor: (p) =>
     `Equapar: o pedido do contrato ${p.numero} foi marcado como deferido, no valor de ${p.valor}. Próximo passo: apostilamento e fatura da diferença. ${p.link}`,
+  // Data-base da convenção (30 e 7 dias antes, e no dia): é dela que nasce o direito à repactuação
+  equapar_data_base: (p) =>
+    `Equapar: em ${p.data} é a data-base da ${p.convencao}. É nela que nasce o direito à repactuação de ${p.contratos}. Acompanhe o registro da convenção nova e prepare a planilha do pedido. Ver a convenção: ${p.link}`,
+  equapar_data_base_chegou: (p) =>
+    `Equapar: a data-base da ${p.convencao} chegou em ${p.data}, e com ela o direito à repactuação de ${p.contratos}. Se a convenção nova já foi registrada, informe a data do registro e monte o pedido; se ainda não saiu, ressalve o direito no termo aditivo antes de assinar a prorrogação. Ver a convenção: ${p.link}`,
 };
 
 /** Ordem dos parâmetros nos modelos aprovados na Meta (corpo com {{1}}, {{2}}, ...). */
@@ -50,6 +63,9 @@ const PARAMS: Record<ModeloWhatsapp, string[]> = {
   equapar_prazo_resposta: ["numero", "dataProtocolo", "dataResposta", "link"],
   equapar_deferido: ["numero", "link"],
   equapar_deferido_valor: ["numero", "valor", "link"],
+  // Modelos novos: precisam ser aprovados na Meta antes de ligar o WhatsApp em produção (sem aprovação, o envio fica com status de erro)
+  equapar_data_base: ["data", "convencao", "contratos", "link"],
+  equapar_data_base_chegou: ["convencao", "data", "contratos", "link"],
 };
 
 // ---------------------------------------------------------------------------

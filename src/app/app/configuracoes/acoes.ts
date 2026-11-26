@@ -296,7 +296,7 @@ export async function rodarAvisosAgora(): Promise<Resultado> {
     const ctx = await exigir("gerenciar_conta");
     const r = await rodarAvisos({ contaId: ctx.conta.id });
     revalidatePath("/app/avisos");
-    return { ok: `Verificação feita nesta conta: ${r.prazos} contratos com prazo, ${r.semanais} resumos semanais, ${r.apostilamento} alertas de apostilamento.` };
+    return { ok: `Verificação feita nesta conta: ${r.prazos} contratos com prazo, ${r.dataBase} datas-base de convenção, ${r.semanais} resumos semanais, ${r.apostilamento} alertas de apostilamento.` };
   });
 }
 

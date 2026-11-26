@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CheckCircle2, FileSpreadsheet, FileText } from "lucide-react";
-import { contexto, pedidoDaConta, pode } from "@/lib/auth";
+import { contexto, pedidoDaConta, podeNaConta } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { brl, pct } from "@/lib/calculo/motor";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
@@ -45,7 +45,7 @@ export default async function Passo({ params }: { params: Promise<{ id: string; 
   const p = await pedidoDaConta(ctx, id);
   if (!["EM_ANALISE", "CALCULO_VALIDADO"].includes(p.estado)) redirect(`/app/pedidos/${p.id}/pronto`);
   if (n > p.passoAtual) redirect(`/app/pedidos/${p.id}/passo/${p.passoAtual}`);
-  const leitura = !pode(ctx.papel, "editar_pedidos");
+  const leitura = !podeNaConta(ctx, "editar_pedidos");
 
   return (
     <>
@@ -63,7 +63,7 @@ export default async function Passo({ params }: { params: Promise<{ id: string; 
         {n === 2 && <Passo2 p={p} leitura={leitura} iaPlanilha={iaPara("PLANILHA", ctx.usuario.email, ctx.conta.plano)} />}
         {n === 3 && <Passo3 p={p} leitura={leitura} iaConvencao={iaPara("CONVENCAO", ctx.usuario.email, ctx.conta.plano)} />}
         {n === 4 && <Passo4 p={p} leitura={leitura} />}
-        {n === 5 && <Passo5 p={p} leitura={leitura} podeAprovar={pode(ctx.papel, "aprovar_memoria")} />}
+        {n === 5 && <Passo5 p={p} leitura={leitura} podeAprovar={podeNaConta(ctx, "aprovar_memoria")} />}
       </div>
     </>
   );
