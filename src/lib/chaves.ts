@@ -35,3 +35,8 @@ export function rotaEscondida(caminho: string): "404" | "hoje" | null {
   if (guia && !guiaNoAr(guia[1])) return "404";
   return null;
 }
+
+/** Login com Google: só com as duas chaves (GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET); sem elas, nenhum botão aparece. */
+export function googleAtivo() {
+  return !!(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim());
+}

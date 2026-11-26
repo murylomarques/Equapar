@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { FormAcao } from "@/components/form-acao";
+import { Captcha } from "@/components/captcha";
 import { CampoCnpj, CampoSenha, CampoTexto, Consentimento, RadiosCartao } from "@/components/ui/campos";
 import { aceitarConvite, completarEmpresa, confirmar2fa, criarConta, entrar, pedirRedefinicao, redefinirSenha } from "./acoes";
 
@@ -10,6 +11,7 @@ export function FormEntrar({ destino, google }: { destino?: string; google: bool
   return (
     <FormAcao action={entrar} semToast>
       <input type="hidden" name="destino" value={destino ?? ""} />
+      {google && <BotaoGoogle>Entrar com Google</BotaoGoogle>}
       <CampoTexto nome="email" rotulo="E-mail de trabalho" tipo="email" autoComplete="email" id="email" />
       <CampoSenha nome="senha" rotulo="Senha" id="senha" />
       <label className="check" style={{ marginBottom: 20 }}>
@@ -21,15 +23,25 @@ export function FormEntrar({ destino, google }: { destino?: string; google: bool
           </span>
         </span>
       </label>
-      <BotaoEnvio className="btn btn-primario" style={{ width: "100%" }}>
+      {/* com o Google em destaque, o botão do e-mail fica secundário (um só botão principal por tela) */}
+      <BotaoEnvio className={google ? "btn" : "btn btn-primario"} style={{ width: "100%" }}>
         Entrar
       </BotaoEnvio>
-      {google && (
-        <a href="/api/auth/google" className="btn" style={{ width: "100%", marginTop: 12 }}>
-          Entrar com Google
-        </a>
-      )}
     </FormAcao>
+  );
+}
+
+/** Login com Google em destaque: primeira opção do formulário, só quando as chaves GOOGLE_* existem. */
+function BotaoGoogle({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <a href="/api/auth/google" className="btn btn-primario" style={{ width: "100%" }}>
+        {children}
+      </a>
+      <p className="ajuda-texto" style={{ textAlign: "center", margin: "16px 0" }}>
+        ou com e-mail e senha
+      </p>
+    </>
   );
 }
 
@@ -58,6 +70,7 @@ export function FormCriarConta({
   const [tipo, setTipo] = useState(tipoInicial);
   return (
     <FormAcao action={criarConta} semToast>
+      {google && <BotaoGoogle>Criar com Google</BotaoGoogle>}
       {!assessoria ? (
         <input type="hidden" name="tipo" value="EMPRESA" />
       ) : (
@@ -94,14 +107,10 @@ export function FormCriarConta({
         Li e aceito os <Link href="/termos">termos de uso</Link> e a <Link href="/privacidade">política de privacidade</Link>.
       </Consentimento>
       <p className="ajuda-texto">A conta grátis mostra sua carteira e os prazos. Montar pedidos faz parte do piloto ou da assinatura.</p>
-      <BotaoEnvio className="btn btn-primario" style={{ width: "100%" }}>
+      <Captcha />
+      <BotaoEnvio className={google ? "btn" : "btn btn-primario"} style={{ width: "100%" }}>
         Criar conta
       </BotaoEnvio>
-      {google && (
-        <a href="/api/auth/google" className="btn" style={{ width: "100%", marginTop: 12 }}>
-          Criar com Google
-        </a>
-      )}
     </FormAcao>
   );
 }

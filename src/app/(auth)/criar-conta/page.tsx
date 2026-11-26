@@ -6,7 +6,7 @@ import { FormCriarConta, FormEmpresa } from "../formularios";
 import { ETAPAS_INICIO } from "@/lib/inicio";
 import { normalizarCnpj } from "@/lib/mascaras";
 import { metaPagina } from "@/app/(site)/seo";
-import { modoPiloto } from "@/lib/chaves";
+import { googleAtivo, modoPiloto } from "@/lib/chaves";
 
 export const metadata = metaPagina({ titulo: "Criar conta | Equapar", descricao: "Crie a conta grátis da sua empresa: a Equapar busca os contratos no PNCP e mostra os prazos de repactuação de cada um.", caminho: "/criar-conta" });
 
@@ -54,7 +54,7 @@ export default async function CriarConta({ searchParams }: { searchParams: Promi
       <Etapas atual={0} />
       <h1>Criar conta</h1>
       <p className="secundario">Leva cerca de 1 minuto. Depois, a Equapar busca seus contratos no PNCP.</p>
-      <FormCriarConta cnpj={sp.cnpj ? normalizarCnpj(sp.cnpj) : undefined} tipoInicial={sp.tipo === "assessoria" ? "ASSESSORIA" : "EMPRESA"} google={!!process.env.GOOGLE_CLIENT_ID} assessoria={assessoria} />
+      <FormCriarConta cnpj={sp.cnpj ? normalizarCnpj(sp.cnpj) : undefined} tipoInicial={sp.tipo === "assessoria" ? "ASSESSORIA" : "EMPRESA"} google={googleAtivo()} assessoria={assessoria} />
       <hr className="regua" />
       <p className="mb-0" style={{ fontSize: 14 }}>
         Já tem conta? <Link href="/entrar">Entrar</Link>
