@@ -28,6 +28,14 @@ export interface LinhaCarteira {
   prazoCurto: string;
   selo: TSelo;
   pedir: boolean; // repactuação a pedir, sem pedido aberto
+  ressalvar: boolean; // a pedir, mas a convenção nova ainda não foi registrada: ressalvar no aditivo
+}
+
+/** Botão da linha: só quem monta pedidos vê "Montar pedido" (papel Leitura, ou conta só para consulta, vê "Abrir"). */
+function acaoDaLinha(l: LinhaCarteira, podePedir: boolean) {
+  if (podePedir && l.ressalvar) return { texto: "Ver o que fazer", href: `/app/contratos/${l.id}/prorrogacao` };
+  if (podePedir && l.pedir) return { texto: "Montar pedido", href: `/app/pedidos/novo?contrato=${l.id}` };
+  return { texto: "Abrir", href: `/app/contratos/${l.id}` };
 }
 
 type Coluna = "numero" | "orgao" | "postos" | "valorMensal" | "convencao" | "fim" | "prazoData";
@@ -163,8 +171,8 @@ export function TabelaCarteira({ linhas, mostrarEmpresa, podeLote }: { linhas: L
                 </td>
                 <td className="num">{l.valorMensalTxt}</td>
                 <td>
-                  <Link className="btn btn-pequeno acima" href={l.pedir ? `/app/pedidos/novo?contrato=${l.id}` : `/app/contratos/${l.id}`}>
-                    {l.pedir ? "Montar pedido" : "Abrir"}
+                  <Link className="btn btn-pequeno acima" href={acaoDaLinha(l, podeLote).href}>
+                    {acaoDaLinha(l, podeLote).texto}
                   </Link>
                 </td>
               </tr>

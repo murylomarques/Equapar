@@ -59,6 +59,29 @@ export function proximaDataBase(conv: Pick<Convencao, "mesDataBase">, hoje = hoj
   return esteAno > hoje ? esteAno : new Date(Date.UTC(ano + 1, conv.mesDataBase - 1, 1));
 }
 
+/**
+ * A convenção nova da data-base já foi registrada? Depósito na data-base ou depois (a mesma regra da Decisão de
+ * prorrogação em lib/prorrogacao.ts). Sem registro, o caminho antes da prorrogação é ressalvar o direito no aditivo.
+ */
+export function convencaoRegistradaPara(conv: Pick<Convencao, "dataDeposito">, dataBase: Date) {
+  return !!conv.dataDeposito && conv.dataDeposito >= dataBase;
+}
+
+/** Marcos do aviso da data-base: 30 e 7 dias antes, e no dia (com até 3 dias de folga se a rotina não rodou no dia). */
+export type MarcoDataBase = "DB30" | "DB7" | "DB0";
+export const FOLGA_AVISO_DATA_BASE = 3;
+
+export function marcoDataBase(conv: Pick<Convencao, "mesDataBase">, hoje = hojeUTC()): { marco: MarcoDataBase; dataBase: Date; dias: number } | null {
+  const ultima = ultimaDataBase(conv, hoje);
+  const desde = Math.round((hoje.getTime() - ultima.getTime()) / 86_400_000);
+  if (desde <= FOLGA_AVISO_DATA_BASE) return { marco: "DB0", dataBase: ultima, dias: desde === 0 ? 0 : -desde };
+  const proxima = proximaDataBase(conv, hoje);
+  const dias = Math.round((proxima.getTime() - hoje.getTime()) / 86_400_000);
+  if (dias <= 7) return { marco: "DB7", dataBase: proxima, dias };
+  if (dias <= 30) return { marco: "DB30", dataBase: proxima, dias };
+  return null;
+}
+
 export function prazoResposta(p: Pick<Pedido, "protocoloData" | "documentacaoCompletaEm">) {
   return p.documentacaoCompletaEm ? addMeses(p.documentacaoCompletaEm, 1) : null;
 }
@@ -77,7 +100,9 @@ export function oportunidade(c: ContratoComRel, hoje = hojeUTC()) {
   const pedidoCobre = daConvencao.some((p) => p.estado !== "INDEFERIDO" && p.dataBase && p.dataBase >= db);
   const pedidoAberto = daConvencao.find((p) => (ABERTOS as readonly string[]).includes(p.estado) && (!p.dataBase || p.dataBase >= db));
   if (pedidoCobre && !pedidoAberto) return null;
-  return { dataBase: db, pedirAte: c.vigenciaFim, pedidoAberto: pedidoAberto ?? null };
+  // Com a convenção nova ainda pendente, o "pedir até" vira "ressalvar até": o pedido completo depende do registro,
+  // e a prorrogação assinada sem ressalva encerra o direito (lib/prorrogacao.ts, caso "A convenção ainda não saiu").
+  return { dataBase: db, pedirAte: c.vigenciaFim, pedidoAberto: pedidoAberto ?? null, convencaoRegistrada: convencaoRegistradaPara(c.convencao, db) };
 }
 
 export function seloSituacao(c: ContratoComRel, hoje = hojeUTC()): Selo {
@@ -90,7 +115,7 @@ export function seloSituacao(c: ContratoComRel, hoje = hojeUTC()): Selo {
   const op = oportunidade(c, hoje);
   if (op) {
     const d = diasAte(op.pedirAte);
-    return { texto: `Pedir até ${data(op.pedirAte)}`, tom: d <= 30 ? "carimbo" : "ambar", icone: "relogio" };
+    return { texto: `${op.convencaoRegistrada ? "Pedir" : "Ressalvar"} até ${data(op.pedirAte)}`, tom: d <= 30 ? "carimbo" : "ambar", icone: "relogio" };
   }
   return { texto: "Em dia", tom: "verde", icone: "check" };
 }
@@ -116,7 +141,12 @@ export interface Prazo {
 export function prazosDoContrato(c: ContratoComRel, hoje = hojeUTC()): Prazo[] {
   const lista: Prazo[] = [];
   const op = oportunidade(c, hoje);
-  if (op) lista.push({ data: op.pedirAte, titulo: "Data-limite para pedir a repactuação (antes da prorrogação)", regra: FONTES.preclusao, tipo: "pedir" });
+  if (op)
+    lista.push(
+      op.convencaoRegistrada
+        ? { data: op.pedirAte, titulo: "Data-limite para pedir a repactuação (antes da prorrogação)", regra: FONTES.preclusao, tipo: "pedir" }
+        : { data: op.pedirAte, titulo: "Data-limite para ressalvar a repactuação no termo aditivo (convenção nova pendente)", regra: FONTES.ressalva, tipo: "pedir", pendencia: "convenção nova ainda não registrada" },
+    );
   lista.push({
     data: c.vigenciaFim,
     titulo: "Fim da vigência",
@@ -167,16 +197,21 @@ export function acoesDoContrato(c: ContratoComRel, hoje = hojeUTC()): Acao[] {
   const diasFim = diasAte(c.vigenciaFim);
   const op = oportunidade(c, hoje);
   if (op) {
-    out.push({
-      ...base,
-      chave: `pedir:${c.id}`,
-      titulo: "Pedir repactuação",
-      limite: op.pedirAte,
-      detalhe: `prorrogação ${emDias(diasFim)}`,
-      botao: op.pedidoAberto ? "Continuar pedido" : "Montar pedido",
-      href: op.pedidoAberto ? `/app/pedidos/${op.pedidoAberto.id}` : `/app/pedidos/novo?contrato=${c.id}`,
-      tom: diasFim <= 30 ? "carimbo" : "ambar",
-    });
+    const tom: Tom = diasFim <= 30 ? "carimbo" : "ambar";
+    if (op.convencaoRegistrada || op.pedidoAberto)
+      out.push({
+        ...base,
+        chave: `pedir:${c.id}`,
+        titulo: "Pedir repactuação",
+        limite: op.pedirAte,
+        detalhe: `prorrogação ${emDias(diasFim)}`,
+        botao: op.pedidoAberto ? "Continuar pedido" : "Montar pedido",
+        href: op.pedidoAberto ? `/app/pedidos/${op.pedidoAberto.id}` : `/app/pedidos/novo?contrato=${c.id}`,
+        tom,
+      });
+    // convenção nova pendente e sem pedido aberto: antes de assinar a prorrogação, ressalvar o direito no aditivo
+    else
+      out.push({ ...base, chave: `pedir:${c.id}`, titulo: "Ressalvar a repactuação no aditivo", limite: op.pedirAte, detalhe: `convenção nova pendente · prorrogação ${emDias(diasFim)}`, botao: "Ver o que fazer", href: `/app/contratos/${c.id}/prorrogacao`, tom });
   } else if (diasFim >= 0 && diasFim <= 60) {
     out.push({
       ...base,

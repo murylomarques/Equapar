@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FolderOpen, Layers, SearchX } from "lucide-react";
-import { contexto, pode } from "@/lib/auth";
+import { contexto, podeNaConta } from "@/lib/auth";
 import { contratosDoContexto, type ContratoCompleto } from "@/lib/consultas";
 import { contratosComPrazoEm, oportunidade, proximoPrazo, seloSituacao } from "@/lib/prazos";
 import { data, MESES, plural, reais } from "@/lib/format";
@@ -67,8 +67,8 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
     const s = p.toString();
     return `/app/carteira${s ? `?${s}` : ""}`;
   };
-  const podeEditar = pode(ctx.papel, "editar_contratos");
-  const podeLote = pode(ctx.papel, "editar_pedidos");
+  const podeEditar = podeNaConta(ctx, "editar_contratos");
+  const podeLote = podeNaConta(ctx, "editar_pedidos");
   const linhas: LinhaCarteira[] = contratos.map((c) => {
     const pp = proximoPrazo(c);
     const op = oportunidade(c);
@@ -91,6 +91,7 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
       prazoCurto: pp ? rotuloCurtoPrazo(pp.titulo) : "",
       selo: seloSituacao(c),
       pedir: !!op && !op.pedidoAberto,
+      ressalvar: !!op && !op.pedidoAberto && !op.convencaoRegistrada,
     };
   });
   const n = (f: (c: ContratoCompleto) => boolean) => todos.filter(f).length;
@@ -250,6 +251,7 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
 /** Rótulo curto do próximo prazo para a coluna da tabela (o título completo fica no title). */
 function rotuloCurtoPrazo(titulo: string) {
   if (titulo.startsWith("Data-limite para pedir a repactuação")) return "Pedir repactuação";
+  if (titulo.startsWith("Data-limite para ressalvar")) return "Ressalvar no aditivo";
   if (titulo.startsWith("Data-base da convenção")) return "Data-base CCT";
   if (titulo.startsWith("Previsão de assinatura da prorrogação")) return "Prorrogação prevista";
   if (titulo.startsWith("Assinatura efetiva da prorrogação")) return "Prorrogação assinada";
