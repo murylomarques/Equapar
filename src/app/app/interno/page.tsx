@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { contexto } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hojeUTC, paraInputData, reais, somarReais } from "@/lib/format";
+import { PRECOS } from "@/lib/precos";
 import {
   ativacaoDoMes,
   custoPorAquisicao,
@@ -106,7 +107,7 @@ export default async function PainelInterno() {
       ))}
       <CabecalhoPagina
         titulo="Painel interno"
-        subtitulo="Só para o dono. Contagens e valores, sem dado pessoal. Funil dos últimos 90 dias."
+        subtitulo="Só para o dono. Contagens, valores e o nome das contas; a lista Para ligar mostra também o e-mail do dono de cada conta. Funil dos últimos 90 dias."
         acao={
           <FormAcao action={enviarEmailTeste} okNaPagina>
             <BotaoEnvio className="btn" pendente="Enviando o e-mail de teste…">
@@ -303,7 +304,7 @@ export default async function PainelInterno() {
           ) : (
             <p className="secundario">Nenhum minuto registrado neste mês.</p>
           )}
-          <p className="legenda">Meta do dossiê: até 49 minutos por cliente por mês no plano de R$ 497.</p>
+          <p className="legenda">Meta do dossiê: até 49 minutos por cliente por mês no plano Carteira mínimo ({reais(PRECOS.carteiraMinimo)} por mês).</p>
           <FormAcao action={registrarTempo} className="pilha-8" limparAoSalvar>
             <CampoSelect nome="contaId" rotulo="Cliente" opcoes={contas.map((c) => ({ valor: c.id, rotulo: c.nome }))} vazio="Escolha o cliente" />
             <div className="linha-form">

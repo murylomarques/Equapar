@@ -102,7 +102,7 @@ export function margemEmReais(receita: Decimal.Value, margemPct: Decimal.Value |
 
 export const TIPOS_TEMPO = { COLETA: "Coleta", CALCULO: "Cálculo", REVISAO: "Revisão", RETRABALHO: "Retrabalho", SUPORTE: "Suporte" } as const;
 
-/** Por plano: clientes com registro, minutos no mês, minutos por cliente e por tipo. Meta do dossiê: até 49 min/mês no plano de R$ 497. */
+/** Por plano: clientes com registro, minutos no mês, minutos por cliente e por tipo. Meta do dossiê: até 49 min/mês por cliente no plano Carteira mínimo (PRECOS.carteiraMinimo). */
 export function tempoPorPlano(registros: { contaId: string; tipo: string; minutos: number; data: Date }[], planoDe: Map<string, string>, m: string) {
   const out = new Map<string, { plano: string; contas: Set<string>; minutos: number; porTipo: Record<string, number> }>();
   for (const r of registros) {

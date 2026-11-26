@@ -3,7 +3,7 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { RESPOSTAS_PESQUISA } from "@/lib/metricas";
 import { responderPesquisa } from "../acoes";
 
-/** 5.5: pesquisa de Sean Ellis, uma vez por conta ativa há mais de 30 dias. Pode ser dispensada. */
+/** 5.5: pesquisa de Sean Ellis, uma vez por conta, 7 dias depois do primeiro dossiê gerado (regra em mostrarPesquisa, lib/metricas). Pode ser dispensada. */
 export function PesquisaEncaixe() {
   return (
     <section className="cartao mb-16" aria-labelledby="pesquisa-titulo">
