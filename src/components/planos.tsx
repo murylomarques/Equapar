@@ -57,7 +57,10 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
           </div>
         </div>
         <div className="plano plano-destaque">
-          <h3 className="mb-0">Carteira</h3>
+          <div className="entre">
+            <h3 className="mb-0">Carteira</h3>
+            <span className="selo selo-verde">Preço de lançamento</span>
+          </div>
           <p className="plano-para">Para manter todos os contratos no prazo, todo mês.</p>
           <div className="preco">
             {r$(porPosto)} <span className="preco-de">por posto</span>
@@ -113,7 +116,7 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
           </div>
         )}
       </div>
-      <p className="legenda mt-16 mb-0">Preços em teste. A página mostra sempre o preço que estiver valendo.</p>
+      <p className="legenda mt-16 mb-0">Preço de lançamento: a página mostra sempre o preço que estiver valendo.</p>
 
       {comparar && (
         <details className="comparar-planos mt-24">
