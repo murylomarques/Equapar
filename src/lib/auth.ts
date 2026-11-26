@@ -10,7 +10,6 @@ import { cifrar, decifrar, sha256, tokenAleatorio } from "./cripto";
 import { EMAIL_DEMO } from "./site";
 import { opcoesCookieSessao } from "./cookie-sessao";
 import { ErroUsuario } from "./acao";
-import { situacaoEfetiva } from "./planos";
 import { jornadaLiberada } from "./chaves";
 import { podeVerPainel } from "./metricas";
 
@@ -113,8 +112,8 @@ export async function idSessaoAtual() {
 // Contexto e permissões
 // ---------------------------------------------------------------------------
 
-export { NOME_PAPEL, pode, type Acao } from "./auth-papeis";
-import { pode, type Acao } from "./auth-papeis";
+export { contaSoConsulta, NOME_PAPEL, pode, podeNaConta, type Acao } from "./auth-papeis";
+import { contaSoConsulta, pode, type Acao } from "./auth-papeis";
 
 export const contexto = cache(async () => {
   const s = await sessaoAtual();
@@ -159,7 +158,7 @@ export async function exigir(acao: Acao) {
   if (acao !== "ver" && ctx.usuario.email === EMAIL_DEMO) throw new ErroUsuario(SO_VER);
   if (acao === "gerenciar_conta" && ehDemo(ctx)) throw new ErroUsuario("Na demonstração, isso fica desligado. Crie sua conta para usar.");
   // 4.2: passada a carência sem pagamento, a conta fica só para consulta (os dados continuam; dá para pagar ou exportar)
-  if (acao !== "ver" && acao !== "gerenciar_conta" && situacaoEfetiva(ctx.conta.situacaoCobranca, ctx.conta.carenciaAte) === "SOMENTE_LEITURA")
+  if (acao !== "ver" && acao !== "gerenciar_conta" && contaSoConsulta(ctx.conta))
     throw new ErroUsuario("A conta está só para consulta porque o pagamento não foi identificado. Regularize em Configurações › Cobrança; nenhum dado foi apagado.");
   if (!pode(ctx.papel, acao)) throw new ErroUsuario("Seu papel nesta conta não permite esta ação.");
   return ctx;

@@ -2,7 +2,7 @@ import { Bell, CalendarClock, DollarSign, FileText, LayoutList, Menu, Scale, Sea
 import { Suspense } from "react";
 import { RolarAbaAtiva } from "@/components/rolar-aba-ativa";
 import Link from "next/link";
-import { contexto, ehDemo, escopoContratos } from "@/lib/auth";
+import { contaSoConsulta, contexto, ehDemo, escopoContratos, pode } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Logo } from "@/components/logo";
 import { MenuSuspenso } from "@/components/ui/estrutura";
@@ -148,6 +148,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <RolarAbaAtiva />
         </Suspense>
         <main id="conteudo" className="app-conteudo">
+          {/* 4.2: passada a carência sem pagamento, a conta fica só para consulta; os botões de edição somem (podeNaConta) */}
+          {!demo && contaSoConsulta(ctx.conta) && (
+            <div className="faixa-confirmar" role="status">
+              <span>
+                <strong>Conta só para consulta.</strong> O pagamento da assinatura não foi identificado: dá para ver tudo e exportar os dados, mas não para editar. Nenhum dado foi
+                apagado. {pode(ctx.papel, "gerenciar_conta") ? "Regularize em Configurações › Cobrança." : "Peça a um Dono da conta para regularizar em Configurações › Cobrança."}
+              </span>
+              <Link href="/app/configuracoes?aba=cobranca" className="btn btn-pequeno">
+                Ver a cobrança
+              </Link>
+            </div>
+          )}
           {!demo && !ctx.usuario.emailVerificadoEm && (
             <div className="faixa-confirmar" role="status">
               <span>

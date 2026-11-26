@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
-import { contexto, pedidoDaConta, pode } from "@/lib/auth";
+import { contexto, pedidoDaConta, podeNaConta } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { brl, pct } from "@/lib/calculo/motor";
 import { calcularPedido } from "@/lib/pedido";
@@ -25,7 +25,7 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
   const comentarios = await db.comentarioLinha.findMany({ where: { pedidoId: p.id }, include: { usuario: true }, orderBy: { criadoEm: "asc" } });
   const docConvencao = p.convencaoId ? await db.documento.findFirst({ where: { convencaoId: p.convencaoId }, orderBy: { criadoEm: "desc" } }) : null;
   const editavel = ["EM_ANALISE", "CALCULO_VALIDADO"].includes(p.estado);
-  const podeAprovar = pode(ctx.papel, "aprovar_memoria");
+  const podeAprovar = podeNaConta(ctx, "aprovar_memoria");
 
   return (
     <>

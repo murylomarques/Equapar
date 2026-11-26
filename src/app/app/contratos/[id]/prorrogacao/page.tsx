@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { contexto, pode } from "@/lib/auth";
+import { contexto, podeNaConta } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { diasAte, hojeUTC, plural } from "@/lib/format";
 import { FONTES } from "@/lib/prazos";
@@ -43,8 +43,8 @@ export default async function Prorrogacao({ params }: { params: Promise<{ id: st
       {alerta && <AlertaDeProrrogacao alerta={alerta} fonte={FONTES.preclusao} />}
       {/* D6: jornada (só para quem pode ver a jornada) */}
       {alertaJornada && <AlertaDeProrrogacao alerta={alertaJornada} fonte={JORNADA.fonte} />}
-      <Decisao contratoId={c.id} ressalva={ressalva} clausula={c.clausulaReajuste} inicial={inicial} podePedir={pode(ctx.papel, "editar_pedidos")} />
-      {pode(ctx.papel, "editar_contratos") && <RegistrarProrrogacao contratoId={c.id} ressalvaSugerida={ressalva} fonte={FONTES.preclusao} />}
+      <Decisao contratoId={c.id} ressalva={ressalva} clausula={c.clausulaReajuste} inicial={inicial} podePedir={podeNaConta(ctx, "editar_pedidos")} />
+      {podeNaConta(ctx, "editar_contratos") && <RegistrarProrrogacao contratoId={c.id} ressalvaSugerida={ressalva} fonte={FONTES.preclusao} />}
       <footer className="pilha-8 mt-32">
         <FonteRegra regra={FONTES.preclusao} />
         <FonteRegra regra={FONTES.ressalva} />
