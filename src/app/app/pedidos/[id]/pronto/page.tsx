@@ -13,7 +13,7 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { FonteRegra } from "@/components/fonte-regra";
 import { CampoData, CampoDinheiro, CampoSelect, CampoTexto, RadiosCartao, TextoLongo } from "@/components/ui/campos";
 import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
-import { aprovarMemoria, gerarCobranca, marcarRecebido, novoPedidoAPartirDe, registrarApostilamento, registrarProtocolo, registrarRecurso, registrarResposta } from "../../acoes";
+import { aprovarMemoria, cancelarLancamento, gerarCobranca, marcarRecebido, novoPedidoAPartirDe, registrarApostilamento, registrarProtocolo, registrarRecurso, registrarResposta } from "../../acoes";
 import { HistoricoOrgao } from "@/components/historico-orgao";
 import { jornadaEmSimulacao, MARCA_SIMULACAO_JORNADA } from "@/lib/jornada-acesso";
 import { resumoFinanceiro } from "@/lib/financeiro-pedido";
@@ -34,11 +34,16 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
   const { id } = await params;
   const p = await pedidoDaConta(ctx, id);
   const calc = calcularPedido(p);
-  const [historico, notas, baixas] = await Promise.all([
+  const [historico, todasNotas, todasBaixas] = await Promise.all([
     db.historico.findMany({ where: { pedidoId: p.id }, include: { usuario: true }, orderBy: { criadoEm: "desc" } }),
-    db.notaFiscalPedido.findMany({ where: { pedidoId: p.id, canceladaEm: null }, orderBy: { emitidaEm: "asc" } }),
-    db.baixaPedido.findMany({ where: { pedidoId: p.id, canceladaEm: null }, orderBy: { recebidoEm: "asc" } }),
+    db.notaFiscalPedido.findMany({ where: { pedidoId: p.id }, orderBy: { emitidaEm: "asc" } }),
+    db.baixaPedido.findMany({ where: { pedidoId: p.id }, orderBy: { recebidoEm: "asc" } }),
   ]);
+  // lançamentos cancelados não entram em nenhuma conta; aparecem à parte, só para registro
+  const notas = todasNotas.filter((n) => !n.canceladaEm);
+  const baixas = todasBaixas.filter((b) => !b.canceladaEm);
+  const notasCanceladas = todasNotas.filter((n) => n.canceladaEm);
+  const baixasCanceladas = todasBaixas.filter((b) => b.canceladaEm);
   const idx = ESTADOS.findIndex((e) => e.id === p.estado);
   const fin = pode(ctx.papel, "registrar_financeiro");
   const hoje = paraInputData(hojeUTC());
@@ -90,8 +95,30 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
     </section>
   );
 
+  // "Cancelar lançamento" (Dono ou Gerente): motivo obrigatório, confirmação e registro no histórico
+  const cancelar = (tipo: "nota" | "baixa", lancamentoId: string, descricao: string, aviso: string) =>
+    fin && (
+      <details className="mt-8">
+        <summary style={{ cursor: "pointer" }} className="legenda">
+          Cancelar lançamento
+        </summary>
+        <FormAcao
+          action={cancelarLancamento}
+          className="pilha-8 mt-8"
+          confirmar={{ titulo: `Cancelar ${descricao}?`, texto: `${aviso} O lançamento fica registrado como cancelado, com o motivo no histórico.`, confirmar: "Cancelar lançamento", perigo: true }}
+        >
+          <input type="hidden" name="pedidoId" value={p.id} />
+          <input type="hidden" name="tipo" value={tipo} />
+          <input type="hidden" name="lancamentoId" value={lancamentoId} />
+          <CampoTexto nome="motivo" rotulo="Motivo do cancelamento" maxLength={300} ajuda="Ex.: valor digitado errado. Fica no histórico do pedido." />
+          <BotaoEnvio className="btn">Cancelar lançamento</BotaoEnvio>
+        </FormAcao>
+      </details>
+    );
+  const temCancelados = notasCanceladas.length + baixasCanceladas.length > 0;
+
   // Notas fiscais e baixas, com o recebido de cada nota em Decimal (mesma conta do resumo financeiro)
-  const lancamentos = notas.length > 0 && (
+  const lancamentos = (notas.length > 0 || temCancelados) && (
     <div className="mt-16">
       <h3>Notas fiscais e recebimentos</h3>
       <ul className="lista-limpa pilha-8">
@@ -106,13 +133,42 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                     <li key={b.id}>
                       Baixa de {brl(b.valor.toString())} em {data(b.recebidoEm)} · ref. {b.referenciaOperacao}
                       {b.autorNome ? ` · ${b.autorNome}` : ""}
+                      {cancelar("baixa", b.id, `o recebimento de ${brl(b.valor.toString())}`, "O valor volta a constar como a receber.")}
                     </li>
                   ))}
               </ul>
             )}
+            {!baixas.some((b) => b.notaFiscalId === nota.id) &&
+              cancelar("nota", nota.id, `a nota fiscal ${nota.identificacao}`, "O valor volta a constar como a faturar.")}
           </li>
         ))}
       </ul>
+      {temCancelados && (
+        <details className="mt-16">
+          <summary style={{ cursor: "pointer" }} className="legenda">
+            Lançamentos cancelados ({notasCanceladas.length + baixasCanceladas.length})
+          </summary>
+          <ul className="legenda">
+            {notasCanceladas.map((n) => (
+              <li key={n.id}>
+                <s>
+                  NF {n.identificacao} de {data(n.emitidaEm)}: {brl(n.valor.toString())}
+                </s>{" "}
+                · cancelada em {data(n.canceladaEm)}
+              </li>
+            ))}
+            {baixasCanceladas.map((b) => (
+              <li key={b.id}>
+                <s>
+                  Baixa de {brl(b.valor.toString())} em {data(b.recebidoEm)}
+                </s>{" "}
+                · cancelada em {data(b.canceladaEm)}
+              </li>
+            ))}
+          </ul>
+          <p className="legenda mb-0">O motivo de cada cancelamento está no histórico do pedido. Cancelados não entram em nenhum total.</p>
+        </details>
+      )}
     </div>
   );
 

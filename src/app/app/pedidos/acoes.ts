@@ -10,7 +10,7 @@ import { ErroCampos, tentar, texto, type Resultado, ErroUsuario } from "@/lib/ac
 import { registrarEvento } from "@/lib/eventos";
 import { data, hora, hojeUTC, lerData, lerDinheiro, dataLocal } from "@/lib/format";
 import { avisarDeferido, avisarProtocolo } from "@/lib/avisos";
-import { calcularPedido } from "@/lib/pedido";
+import { calcularPedido, NOME_ESTADO } from "@/lib/pedido";
 import { validarPlanilha } from "@/lib/calculo/motor";
 import { clonarPlanilha, planilhaModelo } from "@/lib/calculo/modelo";
 import type { PlanilhaCustos } from "@/lib/calculo/tipos";
@@ -33,7 +33,7 @@ import { contarCpfs, MENSAGEM_CPF } from "@/lib/cpf";
 import { textoDoPdf } from "@/lib/pdf-texto";
 import type { CompetenciaRetroativo } from "@/lib/retroativo-competencias";
 import { lerCompetenciasRetroativo } from "@/lib/previa-retroativo";
-import { resumoFinanceiro, validarLancamento } from "@/lib/financeiro-pedido";
+import { marcaCancelado, MOTIVO_CANCELAMENTO_MIN, resumoFinanceiro, situacaoAposLancamentos, validarCancelamento, validarLancamento } from "@/lib/financeiro-pedido";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -856,6 +856,71 @@ export async function marcarRecebido(_: Resultado, fd: FormData): Promise<Result
     if (retorno.quitado && !retorno.repetida) await registrarEvento("diferenca_recebida");
     revalidatePath("/app", "layout");
     return { ok: retorno.repetida ? "Esta baixa já havia sido registrada; nenhum valor foi duplicado." : retorno.quitado ? "Recebido integralmente. O pedido saiu da lista." : `Recebimento parcial registrado. Ainda faltam R$ ${retorno.totalPendente}.` };
+  });
+}
+
+/**
+ * "Cancelar lançamento": cancela uma nota fiscal ou um recebimento lançado por engano (fica no banco com a
+ * data do cancelamento e o motivo no histórico) e recalcula a situação do pedido só com o que vale.
+ */
+export async function cancelarLancamento(_: Resultado, fd: FormData): Promise<Resultado> {
+  return tentar(async (): Promise<Resultado | void> => {
+    const ctx = await exigir("registrar_financeiro");
+    const p = await pedidoDaConta(ctx, texto(fd, "pedidoId"));
+    if (!["DEFERIDO", "FATURADO", "RECEBIDO"].includes(p.estado)) return { erro: "Este pedido não tem lançamentos financeiros para cancelar." };
+    const tipo = z.enum(["nota", "baixa"]).safeParse(texto(fd, "tipo"));
+    if (!tipo.success) return { erro: "Escolha o lançamento a cancelar." };
+    const itemId = texto(fd, "lancamentoId");
+    const motivo = texto(fd, "motivo");
+    if (motivo.length < MOTIVO_CANCELAMENTO_MIN) return { erro: "Explique o motivo do cancelamento.", campos: { motivo: "Escreva o motivo; ele fica no histórico do pedido." } };
+    let feito: { descricao: string; situacao: ReturnType<typeof situacaoAposLancamentos> } | null = null;
+    for (let tentativa = 0; tentativa < 3 && !feito; tentativa++) {
+      try {
+        feito = await db.$transaction(
+          async (tx) => {
+            const atual = await tx.pedido.findUnique({ where: { id: p.id }, include: { notasFiscais: true, baixas: true } });
+            if (!atual) throw new ErroUsuario("Pedido não encontrado.");
+            const agora = new Date();
+            let descricao: string;
+            if (tipo.data === "nota") {
+              const nota = atual.notasFiscais.find((n) => n.id === itemId);
+              validarCancelamento("nota", nota, atual.baixas, motivo);
+              await tx.notaFiscalPedido.update({
+                where: { id: nota!.id },
+                data: { canceladaEm: agora, identificacao: marcaCancelado(nota!.identificacao, nota!.id), referenciaOperacao: marcaCancelado(nota!.referenciaOperacao, nota!.id) },
+              });
+              nota!.canceladaEm = agora;
+              descricao = `Cancelou a nota fiscal ${nota!.identificacao} de R$ ${nota!.valor.toString()}`;
+            } else {
+              const baixa = atual.baixas.find((b) => b.id === itemId);
+              validarCancelamento("baixa", baixa, atual.baixas, motivo);
+              await tx.baixaPedido.update({ where: { id: baixa!.id }, data: { canceladaEm: agora, referenciaOperacao: marcaCancelado(baixa!.referenciaOperacao, baixa!.id) } });
+              baixa!.canceladaEm = agora;
+              const nota = atual.notasFiscais.find((n) => n.id === baixa!.notaFiscalId);
+              descricao = `Cancelou o recebimento de R$ ${baixa!.valor.toString()} de ${data(baixa!.recebidoEm)}${nota ? ` (NF ${nota.identificacao})` : ""}`;
+            }
+            const situacao = situacaoAposLancamentos(atual.retroativoAprovado ?? atual.valorDeferido ?? 0, atual.notasFiscais, atual.baixas);
+            await tx.pedido.update({
+              where: { id: p.id },
+              data: { estado: situacao.estado, faturadoEm: situacao.faturadoEm, notaFiscal: situacao.notaFiscal, recebidoEm: situacao.recebidoEm, valorRecebido: situacao.valorRecebido },
+            });
+            return { descricao, situacao };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (e) {
+        if (!(e instanceof Prisma.PrismaClientKnownRequestError) || e.code !== "P2034" || tentativa === 2) throw e;
+      }
+    }
+    if (!feito) throw new ErroUsuario("Não foi possível cancelar agora. Tente de novo.");
+    await registrarHistorico(ctx, feito.descricao, {
+      pedidoId: p.id,
+      contratoId: p.contratoId,
+      detalhe: `Motivo: ${motivo}. Saldo total pendente: R$ ${feito.situacao.resumo.totalPendente}.`,
+    });
+    revalidatePath("/app", "layout");
+    const volta = feito.situacao.estado !== p.estado ? ` O pedido voltou para "${NOME_ESTADO[feito.situacao.estado]}".` : "";
+    return { ok: `Lançamento cancelado.${volta}` };
   });
 }
 

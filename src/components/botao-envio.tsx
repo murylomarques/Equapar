@@ -56,6 +56,7 @@ const GERUNDIOS: [RegExp, string][] = [
   [/^Cadastrar/i, "Cadastrando…"],
   [/^Gerar/i, "Gerando…"],
   [/^Registrar/i, "Registrando…"],
+  [/^Cancelar/i, "Cancelando…"],
   [/^Continuar/i, "Conferindo…"],
   [/^Adicionar/i, "Adicionando…"],
   [/^Importar/i, "Importando…"],
