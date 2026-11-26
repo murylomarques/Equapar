@@ -11,6 +11,8 @@ import { BotaoEnvio } from "@/components/botao-envio";
 import { Alerta, CabecalhoPagina } from "@/components/ui/estrutura";
 import { aprovarMemoria } from "../../acoes";
 import { MemoriaView } from "./memoria-view";
+import { ConferenciaLink } from "./conferencia-link";
+import { ACAO_LINK_CRIADO, ACAO_LINK_REVOGADO, linkAindaValido } from "@/lib/conferencia";
 import { aprovacaoValida } from "@/lib/pedido-regras";
 import { jornadaEmSimulacao, MARCA_SIMULACAO_JORNADA } from "@/lib/jornada-acesso";
 
@@ -26,6 +28,12 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
   const docConvencao = p.convencaoId ? await db.documento.findFirst({ where: { convencaoId: p.convencaoId }, orderBy: { criadoEm: "desc" } }) : null;
   const editavel = ["EM_ANALISE", "CALCULO_VALIDADO"].includes(p.estado);
   const podeAprovar = pode(ctx.papel, "aprovar_memoria");
+  // link de conferência para o contador externo: quem monta pedidos cria e desativa
+  const podeEnviar = pode(ctx.papel, "editar_pedidos") && p.gatilho !== "JORNADA_EC141";
+  const linksConferencia = podeEnviar
+    ? await db.historico.findMany({ where: { pedidoId: p.id, acao: { in: [ACAO_LINK_CRIADO, ACAO_LINK_REVOGADO] } }, orderBy: { criadoEm: "desc" }, take: 1, select: { acao: true, criadoEm: true } })
+    : [];
+  const temLinkAtivo = linksConferencia[0]?.acao === ACAO_LINK_CRIADO && linkAindaValido(linksConferencia[0].criadoEm);
 
   return (
     <>
@@ -67,6 +75,7 @@ export default async function Memoria({ params }: { params: Promise<{ id: string
           Estrutura da IN SEGES/MP 05/2017, Anexo VII-D · cada linha arredondada a 2 casas · tributos por dentro · regra {calc.versaoRegra}
         </p>
       </details>
+      {podeEnviar && comp && !comp.erros.length && <ConferenciaLink pedidoId={p.id} temLinkAtivo={temLinkAtivo} />}
       {p.gatilho === "JORNADA_EC141" && jornadaEmSimulacao() && <Alerta tipo="erro" className="mb-16" titulo={MARCA_SIMULACAO_JORNADA} />}
       {!comp || comp.erros.length ? (
         <Alerta tipo="erro" titulo="A memória ainda não pode ser montada">
