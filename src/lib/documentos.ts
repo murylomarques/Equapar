@@ -9,10 +9,11 @@ import { brl, calcularPlanilha, pct, dec } from "./calculo/motor";
 import { MODULOS, type PlanilhaCustos } from "./calculo/tipos";
 import { calcularPedido, situacaoChecklist, NOME_GATILHO } from "./pedido";
 import { formatarCnpj } from "./cnpj";
-import { data, dataLocal, dataPorExtenso, diasAte, hojeUTC, reais } from "./format";
+import { data, dataLocal, dataPorExtenso, diasAte, hojeUTC, plural, reais } from "./format";
 import { tempoAteFim } from "./mascaras";
 import { COR, hexParaRgb, Pdf } from "./pdf";
 import type { ResultadoRaioX } from "./pncp";
+import { comUmPorCento } from "./raio-x-valor";
 import { seloVigencia } from "./prazos";
 import { lerArquivo } from "./storage";
 import { ErroUsuario } from "./acao";
@@ -467,7 +468,8 @@ export async function minutaAditivoPdf(pedidoId: string, contaId: string) {
 // Relatório do Raio-X
 // ---------------------------------------------------------------------------
 
-export async function raioXPdf(r: ResultadoRaioX) {
+export async function raioXPdf(resultado: ResultadoRaioX) {
+  const r = comUmPorCento(resultado);
   const pdf = await Pdf.criar(`Raio-X Equapar · dados públicos do PNCP consultados em ${dataLocal(r.consultadoEm)}`);
   pdf.titulo("Raio-X dos contratos públicos", 20);
   pdf.texto(`${r.razaoSocial ?? "Empresa"} · CNPJ ${formatarCnpj(r.cnpj)}`, { tam: 12, negrito: true, espaco: 2 });
@@ -476,11 +478,27 @@ export async function raioXPdf(r: ResultadoRaioX) {
     return s.tom !== "neutro";
   }).length;
   pdf.texto(`${r.contratos.length} contratos vigentes no PNCP. ${seis} terminam nos próximos 6 meses.`, { espaco: 10 });
-  // 5.4: só fatos públicos (valor global publicado no PNCP e tempo até o fim da vigência); nenhuma estimativa
+  // 5.4: só fatos públicos (valor global publicado no PNCP e tempo até o fim da vigência) e, a partir deles, quanto vale
+  // 1% de reajuste por mês (valor global ÷ meses de vigência × 1%); nenhuma estimativa de valor a recuperar
+  if (r.umPorCentoMesTotal != null) {
+    const comValor = r.contratos.filter((c) => c.umPorCentoMes != null).length;
+    pdf.texto(
+      `Cada 1% de reajuste vale cerca de ${reais(r.umPorCentoMesTotal)} por mês${comValor < r.contratos.length ? ` nos ${plural(comValor, "contrato", "contratos")} com valor e vigência publicados` : ""}.`,
+      { negrito: true, espaco: 2 },
+    );
+    pdf.texto("Estimativa a partir do valor publicado no PNCP. Não é promessa de recuperação.", { tam: 8, cor: COR.grafite, espaco: 10 });
+  }
   pdf.tabela(
-    ["Órgão", "Objeto", "Valor global (PNCP)", "Fim da vigência", "Prazo"],
-    r.contratos.map((c) => [c.orgao, c.objeto.slice(0, 130), c.valorGlobal != null ? reais(c.valorGlobal) : "—", `${data(c.fim)} (${tempoAteFim(diasAte(c.fim))})`, seloVigencia(c.fim).texto]),
-    [0.22, 0.33, 0.15, 0.17, 0.13],
+    ["Órgão", "Objeto", "Valor global (PNCP)", "Cada 1% de reajuste", "Fim da vigência", "Prazo"],
+    r.contratos.map((c) => [
+      c.orgao,
+      c.objeto.slice(0, 110),
+      c.valorGlobal != null ? reais(c.valorGlobal) : "—",
+      c.umPorCentoMes != null ? `cerca de ${reais(c.umPorCentoMes)} por mês` : "—",
+      `${data(c.fim)} (${tempoAteFim(diasAte(c.fim))})`,
+      seloVigencia(c.fim).texto,
+    ]),
+    [0.2, 0.27, 0.13, 0.14, 0.15, 0.11],
   );
   pdf.titulo("O que fazer agora", 12);
   for (const t of [
@@ -491,7 +509,7 @@ export async function raioXPdf(r: ResultadoRaioX) {
     pdf.texto(`• ${t}`);
   pdf.y -= 6;
   pdf.texto(
-    "Este relatório usa só dados públicos do Portal Nacional de Contratações Públicas (PNCP). Ele não estima valor a recuperar: isso depende da planilha de custos e da convenção, que o CNPJ não revela. Contratos antigos podem não ter sido publicados no PNCP.",
+    "Este relatório usa só dados públicos do Portal Nacional de Contratações Públicas (PNCP). Ele não estima valor a recuperar: isso depende da planilha de custos e da convenção, que o CNPJ não revela. O valor de 1% de reajuste é só uma ordem de grandeza, calculada pelo valor global publicado dividido pelos meses de vigência. Contratos antigos podem não ter sido publicados no PNCP.",
     { tam: 8, cor: COR.grafite },
   );
   return pdf.bytes();
