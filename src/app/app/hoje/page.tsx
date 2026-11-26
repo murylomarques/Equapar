@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { resumoFinanceiro } from "@/lib/financeiro-pedido";
+import { aReceber, estaAReceber, LANCAMENTOS_A_RECEBER, saldoAReceber } from "@/lib/a-receber";
 import { CalendarClock, CheckCircle2, DollarSign, FolderOpen, Hourglass } from "lucide-react";
-import { contexto, pode } from "@/lib/auth";
+import { contexto, podeNaConta } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { contratosDoContexto } from "@/lib/consultas";
 import { acoesDoContrato, contratosComPrazoEm, prazoResposta, prazosDoContrato } from "@/lib/prazos";
-import { addDias, data, diasAte, emDias, hojeUTC, plural, reais, reaisResumo, saudacao, somarReais } from "@/lib/format";
+import { addDias, data, diasAte, emDias, hojeUTC, plural, reais, reaisResumo, saudacao } from "@/lib/format";
 import { SeloSimples } from "@/components/selo";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
@@ -45,7 +45,7 @@ export default async function Hoje() {
     );
   }
 
-  const leitura = !pode(ctx.papel, "editar_pedidos");
+  const leitura = !podeNaConta(ctx, "editar_pedidos");
   // F1: o primeiro dossiê gerado da conta (a pesquisa só aparece 7 dias depois dele)
   const primeiroDossie = (await db.pedido.findFirst({ where: { contrato: { empresa: { contaId: ctx.conta.id } }, geradoEm: { not: null } }, orderBy: { geradoEm: "asc" }, select: { geradoEm: true } }))?.geradoEm ?? null;
   const tarefas = await db.tarefa.findMany({
@@ -62,21 +62,15 @@ export default async function Hoje() {
     .sort((a, b) => (a.limite?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.limite?.getTime() ?? Number.MAX_SAFE_INTEGER));
 
   const aguardando = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "PROTOCOLADO").map((p) => ({ c, p })));
-  const receberBase = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "DEFERIDO" || p.estado === "FATURADO").map((p) => ({ c, p })));
-  // o mesmo saldo da tela A receber: retroativo aprovado menos o que já entrou (notas e baixas válidas)
+  // A receber: a mesma definição da tela A receber (saldo aprovado ainda não recebido), em lib/a-receber
+  const receberBase = contratos.flatMap((c) => c.pedidos.filter(estaAReceber).map((p) => ({ c, p })));
   const lancamentos = receberBase.length
-    ? await db.pedido.findMany({
-        where: { id: { in: receberBase.map(({ p }) => p.id) } },
-        select: { id: true, notasFiscais: { select: { id: true, valor: true, canceladaEm: true } }, baixas: { select: { notaFiscalId: true, valor: true, canceladaEm: true } } },
-      })
+    ? await db.pedido.findMany({ where: { id: { in: receberBase.map(({ p }) => p.id) } }, select: { id: true, ...LANCAMENTOS_A_RECEBER } })
     : [];
   const lancDe = new Map(lancamentos.map((l) => [l.id, l]));
-  const receber = receberBase.map(({ c, p }) => ({
-    c,
-    p,
-    pendente: resumoFinanceiro(p.retroativoAprovado ?? p.valorDeferido ?? 0, lancDe.get(p.id)?.notasFiscais ?? [], lancDe.get(p.id)?.baixas ?? []).totalPendente,
-  }));
-  const totalReceber = somarReais(receber.map((x) => x.pendente)); // L10
+  const comLancamentos = receberBase.map(({ c, p }) => ({ c, p, completo: { ...p, notasFiscais: lancDe.get(p.id)?.notasFiscais ?? [], baixas: lancDe.get(p.id)?.baixas ?? [] } }));
+  const receber = comLancamentos.map(({ c, p, completo }) => ({ c, p, pendente: saldoAReceber(completo) }));
+  const totalReceber = aReceber(comLancamentos.map((x) => x.completo)).total; // L10
   // L1: mesmo conjunto do filtro "Prazo em 30 dias" da Carteira e do resumo semanal
   const prazos30 = contratosComPrazoEm(contratos, 30, hoje).length;
 
@@ -94,7 +88,7 @@ export default async function Hoje() {
     .flatMap((c) => prazosDoContrato(c, hoje).map((p) => ({ ...p, contrato: c })))
     .filter((p) => p.data >= hoje)
     .sort((a, b) => a.data.getTime() - b.data.getTime())[0];
-  const podeEditar = pode(ctx.papel, "editar_contratos");
+  const podeEditar = podeNaConta(ctx, "editar_contratos");
   const tudoEmDia = acoes.length === 0 && tarefas.length === 0;
 
   return (

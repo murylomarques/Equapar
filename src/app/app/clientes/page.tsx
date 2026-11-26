@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Users } from "lucide-react";
-import { contexto, pode } from "@/lib/auth";
+import { contexto, podeNaConta } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatarCnpj } from "@/lib/cnpj";
-import { diasAte, plural, reais, somarReais } from "@/lib/format";
-import { acoesDoContrato } from "@/lib/prazos";
+import { hojeUTC, plural, reais } from "@/lib/format";
+import { contratosComPrazoEm } from "@/lib/prazos";
+import { aReceber, LANCAMENTOS_A_RECEBER } from "@/lib/a-receber";
 import { FormAcao } from "@/components/form-acao";
 import { BotaoEnvio } from "@/components/botao-envio";
 import { CampoCnpj, CampoTexto, Interruptor } from "@/components/ui/campos";
@@ -21,10 +22,22 @@ export default async function Clientes() {
   if (ctx.conta.tipo !== "ASSESSORIA") redirect("/app/hoje");
   const empresas = await db.empresa.findMany({
     where: { contaId: ctx.conta.id },
-    include: { contratos: { where: { arquivado: false }, include: { convencao: true, pedidos: true } } },
+    include: { contratos: { where: { arquivado: false }, include: { convencao: true, pedidos: { include: LANCAMENTOS_A_RECEBER } } } },
     orderBy: { razaoSocial: "asc" },
   });
-  const podeEditar = pode(ctx.papel, "editar_contratos");
+  const podeEditar = podeNaConta(ctx, "editar_contratos");
+  const hoje = hojeUTC();
+  // Os mesmos números das outras telas: "Prazo em 60 dias" é o filtro da Carteira; "A receber", a tela A receber
+  const numeros = new Map(
+    empresas.map((e) => [
+      e.id,
+      {
+        prazos: contratosComPrazoEm(e.contratos, 60, hoje).length,
+        abertos: e.contratos.flatMap((c) => c.pedidos).filter((p) => ["EM_ANALISE", "CALCULO_VALIDADO", "PROTOCOLADO"].includes(p.estado)).length,
+        receber: aReceber(e.contratos.flatMap((c) => c.pedidos)).total,
+      },
+    ]),
+  );
   return (
     <>
       <CabecalhoPagina titulo="Todos os clientes" subtitulo={`${plural(empresas.length, "cliente", "clientes")} nesta assessoria.`} />
@@ -55,7 +68,7 @@ export default async function Clientes() {
                   Contratos
                 </th>
                 <th scope="col" className="num">
-                  Prazos em 60 dias
+                  Prazo em 60 dias
                 </th>
                 <th scope="col" className="num">
                   Pedidos abertos
@@ -70,14 +83,7 @@ export default async function Clientes() {
             </thead>
             <tbody>
               {empresas.map((e) => {
-                const prazos = e.contratos.flatMap((c) => acoesDoContrato(c)).filter((a) => a.limite && diasAte(a.limite) <= 60).length;
-                const abertos = e.contratos.flatMap((c) => c.pedidos).filter((p) => ["EM_ANALISE", "CALCULO_VALIDADO", "PROTOCOLADO"].includes(p.estado)).length;
-                const receber = somarReais(
-                  e.contratos
-                    .flatMap((c) => c.pedidos)
-                    .filter((p) => ["DEFERIDO", "FATURADO"].includes(p.estado))
-                    .map((p) => p.valorDeferido),
-                ); // L10
+                const { prazos, abertos, receber } = numeros.get(e.id)!;
                 return (
                   <tr key={e.id}>
                     <td>
@@ -102,14 +108,7 @@ export default async function Clientes() {
         {/* celular: um cartão por cliente com os mesmos números (a tabela cortava 3 colunas) */}
         <div className="cartoes-celular">
           {empresas.map((e) => {
-            const prazos = e.contratos.flatMap((c) => acoesDoContrato(c)).filter((a) => a.limite && diasAte(a.limite) <= 60).length;
-            const abertos = e.contratos.flatMap((c) => c.pedidos).filter((p) => ["EM_ANALISE", "CALCULO_VALIDADO", "PROTOCOLADO"].includes(p.estado)).length;
-            const receber = somarReais(
-              e.contratos
-                .flatMap((c) => c.pedidos)
-                .filter((p) => ["DEFERIDO", "FATURADO"].includes(p.estado))
-                .map((p) => p.valorDeferido),
-            );
+            const { prazos, abertos, receber } = numeros.get(e.id)!;
             return (
               <div key={e.id} className="cartao-linha">
                 <strong>{e.razaoSocial}</strong>
@@ -117,7 +116,7 @@ export default async function Clientes() {
                   {formatarCnpj(e.cnpj)}
                 </span>
                 <span className="legenda" style={{ display: "block" }}>
-                  {plural(e.contratos.length, "contrato", "contratos")} · {plural(prazos, "prazo", "prazos")} em 60 dias · {plural(abertos, "pedido aberto", "pedidos abertos")} · a receber {reais(receber)}
+                  {plural(e.contratos.length, "contrato", "contratos")} · {plural(prazos, "contrato", "contratos")} com prazo em 60 dias · {plural(abertos, "pedido aberto", "pedidos abertos")} · a receber {reais(receber)}
                 </span>
                 <div className="mt-8">
                   <BotaoCliente id={e.id} />
