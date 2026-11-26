@@ -3,7 +3,7 @@ import { ehDemo, sessaoAtual } from "@/lib/auth";
 import { entrarNaDemonstracao } from "./acoes";
 import { Captcha } from "@/components/captcha";
 import { Contato } from "@/components/contato";
-import { AvisoLimiteDemo } from "./limite";
+import { AvisoLimiteDemo, motivoDemo } from "./limite";
 import { metaPagina } from "../seo";
 
 export const metadata = metaPagina({
@@ -12,8 +12,9 @@ export const metadata = metaPagina({
   caminho: "/demonstracao",
 });
 
-export default async function Demonstracao({ searchParams }: { searchParams: Promise<{ limite?: string; captcha?: string }> }) {
+export default async function Demonstracao({ searchParams }: { searchParams: Promise<{ limite?: string; indisponivel?: string; captcha?: string }> }) {
   const sp = await searchParams;
+  const motivo = motivoDemo(sp);
   const s = await sessaoAtual();
   const real = s && !s.pendente2fa && !ehDemo(s);
   return (
@@ -37,7 +38,7 @@ export default async function Demonstracao({ searchParams }: { searchParams: Pro
               Uma empresa fictícia de limpeza com contratos, prazos, pedidos e valores a receber. Você navega por todas as telas; nada do que aparece é de uma empresa
               real, e a demonstração não envia e-mail nem WhatsApp.
             </p>
-            {sp.limite && <AvisoLimiteDemo />}
+            {motivo && <AvisoLimiteDemo motivo={motivo} />}
             {sp.captcha && (
               <p className="erro-texto" role="alert">
                 Não conseguimos confirmar que você não é um robô. Tente de novo.
