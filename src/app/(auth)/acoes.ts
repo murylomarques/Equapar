@@ -27,6 +27,7 @@ import { ipConfiavel } from "@/lib/limite";
 import { appUrl, enviar } from "@/lib/mensagens";
 import { conviteValido, lerTokenConvite } from "@/lib/convite";
 import { normalizarCnpj } from "@/lib/mascaras";
+import { verificarCaptcha } from "@/lib/captcha";
 
 export type Estado = Resultado;
 
@@ -91,6 +92,8 @@ export async function criarConta(_: Estado, fd: FormData): Promise<Estado> {
     if (!cnpjValido(cnpj)) erros.cnpj = "Esse CNPJ não existe. Confira os 14 caracteres.";
   }
   if (Object.keys(erros).length || !p.success) return { campos: erros };
+  // S2: captcha no cadastro, como no Raio-X (sem TURNSTILE_SECRET_KEY fica simulado e aceita)
+  if (!(await verificarCaptcha(String(fd.get("cf-turnstile-response") ?? ""), ipConfiavel(await headers())))) return { erro: "Não conseguimos confirmar que você não é um robô. Tente de novo." };
   const d = p.data;
   if (await db.usuario.findUnique({ where: { email: d.email } })) return { campos: { email: "Já existe uma conta com este e-mail. Use a tela Entrar." } };
 
