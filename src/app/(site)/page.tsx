@@ -7,12 +7,13 @@ import { SITE, canaisDeAviso, dadosEmpresa } from "@/lib/site";
 import { TabelaPlanos } from "@/components/planos";
 import { FONTES } from "@/lib/prazos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
+import { guiaNoAr } from "@/lib/chaves";
 import { jsonLdEquapar, metaPagina } from "./seo";
 
 export const metadata = metaPagina({
   titulo: "Repactuação de contratos públicos no prazo | Equapar",
   descricao:
-    "Para empresas de limpeza, portaria e recepção com contratos públicos: gestão de prazos, memória de cálculo e documentos da repactuação até o recebimento. Raio-X grátis pelo CNPJ.",
+    "Controle de repactuação para empresas de limpeza, portaria e recepção com contratos públicos: prazos, memória de cálculo e documentos até o recebimento. Raio-X grátis pelo CNPJ.",
   caminho: "/",
 });
 
@@ -35,6 +36,8 @@ function etapas() {
   ] as const;
 }
 
+const GUIA_REFORMA = "reforma-tributaria-contratos-publicos-reequilibrio";
+
 const PERGUNTAS = () =>
   [
     ["É seguro digitar meu CNPJ?", "Sim. O Raio-X só consulta dados públicos do PNCP. Não pedimos senha, certificado ou documento."],
@@ -48,7 +51,17 @@ const PERGUNTAS = () =>
     ["Serve para reajuste por índice?", "Avisa o prazo e mostra a cláusula. A conta completa é para repactuação de contratos com mão de obra."],
     [
       "E a reforma tributária?",
-      "Contratos assinados antes da LC 214/2025, ou com proposta anterior a ela, podem ter direito ao reequilíbrio previsto na lei. A Equapar marca quais são.",
+      // o guia da reforma fica escondido no modo piloto: o link só aparece com ele no ar
+      <>
+        Contratos assinados antes da LC 214/2025, ou com proposta anterior a ela, podem ter direito ao reequilíbrio previsto na lei. A Equapar marca quais são; o cálculo da carga
+        tributária ainda não faz parte do produto.
+        {guiaNoAr(GUIA_REFORMA) && (
+          <>
+            {" "}
+            <Link href={`/guias/${GUIA_REFORMA}`}>Leia o guia</Link>.
+          </>
+        )}
+      </>,
     ],
     ["Como cancelo?", "Na tela de cobrança, a qualquer momento. Seus dados ficam disponíveis para exportar."],
   ] as const;
@@ -77,8 +90,8 @@ export default function Landing() {
               </h1>
             )}
             <p className="abertura-texto leitura">
-              A Equapar avisa os prazos de cada contrato, gera a memória de cálculo e os arquivos editáveis da repactuação e acompanha o pedido até a diferença entrar no caixa. Você
-              confere e protocola.
+              A Equapar é o controle de repactuação dos seus contratos públicos: avisa os prazos de cada contrato, gera a memória de cálculo e os arquivos editáveis e acompanha o
+              pedido até a diferença entrar no caixa. Você confere e protocola.
             </p>
             <div className="mt-24">
               <FormCnpjServidor id="cnpj-abertura" />
@@ -178,6 +191,7 @@ export default function Landing() {
       <Revelar className="secao" id="como-funciona">
         <div className="site-largura">
           <h2 className="titulo-secao">Do contrato ao dinheiro na conta</h2>
+          <p className="secundario leitura secao-intro">Diferente da planilha, não esquece o prazo. Diferente da consultoria, cobre a carteira inteira, todo mês.</p>
           <ol className="etapas lista-limpa">
             {etapas().map(([titulo, texto], i) => (
               <li key={titulo} className="etapa">
