@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FileText, Scale } from "lucide-react";
-import { contexto, pode } from "@/lib/auth";
+import { contexto, podeNaConta } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { data, dataLocal, MESES, paraInputData, plural } from "@/lib/format";
 import { SeloSimples } from "@/components/selo";
@@ -17,17 +17,17 @@ export default async function Convencoes() {
     include: { _count: { select: { contratos: true } }, documentos: { orderBy: { criadoEm: "desc" } } },
     orderBy: [{ ano: "desc" }, { nome: "asc" }],
   });
-  const podeEditar = pode(ctx.papel, "editar_pedidos");
+  const podeEditar = podeNaConta(ctx, "editar_pedidos");
   return (
     <>
-      <CabecalhoPagina titulo="Convenções" subtitulo="Biblioteca das convenções coletivas usadas nos contratos. A data-base de cada uma dispara os avisos." />
+      <CabecalhoPagina titulo="Convenções" subtitulo="Biblioteca das convenções coletivas usadas nos contratos. Avisamos 30 e 7 dias antes da data-base de cada uma, e no dia." />
       <div className="grade-2">
         <div className="pilha">
           {convs.length === 0 && (
             <EstadoVazio icone={Scale} titulo="Nenhuma convenção ainda" porque="Cadastre a convenção da categoria para a Equapar avisar a data-base e montar os pedidos." />
           )}
           {convs.map((c) => (
-            <article key={c.id} className="cartao">
+            <article key={c.id} id={`convencao-${c.id}`} className="cartao">
               <div className="entre" style={{ alignItems: "flex-start" }}>
                 <div style={{ minWidth: 0 }}>
                   <h2 className="mb-0">{c.nome}</h2>

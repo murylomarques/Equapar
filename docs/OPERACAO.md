@@ -55,7 +55,7 @@ Toda integração nasce em **simulação**. Ligar é decisão do dono (chave rea
 | Integração | Variáveis | Antes de ligar |
 | --- | --- | --- |
 | E-mail | `SMTP_URL`, `EMAIL_FROM` | SPF, DKIM e DMARC no domínio |
-| WhatsApp | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` | Modelos aprovados na Meta, incluindo `equapar_deferido_valor`; webhook apontando para `/api/whatsapp/webhook` |
+| WhatsApp | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` | Modelos aprovados na Meta, incluindo `equapar_deferido_valor`, `equapar_data_base` e `equapar_data_base_chegou` (aviso da data-base da convenção); webhook apontando para `/api/whatsapp/webhook` |
 | Login com Google | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | URI de retorno `APP_URL/api/auth/google/callback` |
 | Leitura de PDF com IA | `ANTHROPIC_API_KEY` | Atualizar a página de privacidade e o `docs/LGPD.md` (operador) |
 | Captcha | `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Domínio cadastrado no Turnstile |

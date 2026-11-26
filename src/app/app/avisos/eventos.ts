@@ -16,21 +16,35 @@ export async function classificarAvisos(ctx: Contexto, linhas: Linha[]) {
   const eventos = agrupar(linhas);
   const contratoIds = [...new Set(eventos.map((e) => e.contratoId).filter((x): x is string => !!x))];
   const pedidoIds = [...new Set(eventos.map((e) => e.pedidoId).filter((x): x is string => !!x))];
-  const [contratos, pedidos] = await Promise.all([
+  const convencaoIds = [...new Set(eventos.map((e) => e.convencaoId).filter((x): x is string => !!x))];
+  const [contratos, pedidos, convencoes] = await Promise.all([
     contratoIds.length
       ? db.contrato.findMany({ where: { id: { in: contratoIds }, empresa: { contaId: ctx.conta.id } }, select: { id: true, numero: true, orgao: true, vigenciaFim: true, arquivado: true } })
       : [],
     pedidoIds.length
       ? db.pedido.findMany({ where: { id: { in: pedidoIds }, contrato: { empresa: { contaId: ctx.conta.id } } }, select: { id: true, estado: true, apostiladoEm: true, contratoId: true } })
       : [],
+    convencaoIds.length
+      ? db.convencao.findMany({
+          where: { id: { in: convencaoIds }, contaId: ctx.conta.id },
+          select: {
+            id: true,
+            nome: true,
+            mesDataBase: true,
+            dataDeposito: true,
+            _count: { select: { contratos: { where: { arquivado: false, maoDeObraDedicada: true, tipoReajuste: "REPACTUACAO" } } } },
+          },
+        })
+      : [],
   ]);
+  const convencaoDe = new Map(convencoes.map((c) => [c.id, { id: c.id, nome: c.nome, mesDataBase: c.mesDataBase, dataDeposito: c.dataDeposito, contratosAtivos: c._count.contratos }]));
   const contratoDe = new Map(contratos.map((c) => [c.id, c]));
   const pedidoDe = new Map(pedidos.map((p) => [p.id, p]));
   const contaEmDia = situacaoEfetiva(ctx.conta.situacaoCobranca, ctx.conta.carenciaAte) === "EM_DIA";
   const itens = ordenar(
     eventos.map((ev) => ({
       ev,
-      c: classificar(ev, { contrato: ev.contratoId ? (contratoDe.get(ev.contratoId) ?? null) : null, pedido: ev.pedidoId ? (pedidoDe.get(ev.pedidoId) ?? null) : null, contaEmDia }),
+      c: classificar(ev, { contrato: ev.contratoId ? (contratoDe.get(ev.contratoId) ?? null) : null, pedido: ev.pedidoId ? (pedidoDe.get(ev.pedidoId) ?? null) : null, contaEmDia, convencao: ev.convencaoId ? (convencaoDe.get(ev.convencaoId) ?? null) : null }),
     })),
   );
   return { eventos, itens };

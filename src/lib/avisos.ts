@@ -5,8 +5,9 @@
 import type { Conta, Contrato, Convencao, Pedido, Usuario } from "@prisma/client";
 import { db } from "./db";
 import { appUrl, enviar, MODELOS, type ModeloWhatsapp } from "./mensagens";
-import { acoesDoContrato, contratosComPrazoEm, prazoResposta } from "./prazos";
-import { data, diasAte, hojeUTC, plural, reais, reaisResumo, somarReais } from "./format";
+import { acoesDoContrato, contratosComPrazoEm, marcoDataBase, prazoResposta } from "./prazos";
+import { aReceber, estaAReceber, LANCAMENTOS_A_RECEBER, saldoAReceber, type PedidoAReceber } from "./a-receber";
+import { data, diasAte, hojeUTC, plural, reais, reaisResumo } from "./format";
 import { JORNADA, afetadoPelaJornada } from "./jornada";
 import { jornadaLiberada } from "./chaves";
 
@@ -18,7 +19,7 @@ export function prefsDe(u: Pick<Usuario, "prefsAvisos">): Required<Prefs> {
   return { ...PREFS_PADRAO, ...((u.prefsAvisos as Prefs | null) ?? {}) };
 }
 
-type ContratoAviso = Contrato & { convencao: Convencao | null; pedidos: Pedido[] };
+type ContratoAviso = Contrato & { convencao: Convencao | null; pedidos: (Pedido & Pick<PedidoAReceber, "notasFiscais" | "baixas">)[] };
 
 function canais(u: Usuario, escolha: "EMAIL" | "WHATSAPP" | "AMBOS") {
   const out: { canal: "EMAIL" | "WHATSAPP"; destino: string }[] = [];
@@ -54,6 +55,42 @@ async function avisarContrato(conta: Conta, usuarios: Usuario[], c: ContratoAvis
         destino: d.destino,
         assunto: `Em ${dias} dias: contrato ${c.numero} (${c.orgao})`,
         corpo,
+        modelo: { nome: modelo, params },
+      });
+    }
+  }
+}
+
+/** "3 contratos (45/2025, 12/2024 e 7/2026)"; acima de 3 números, "e mais N". */
+export function listaContratos(numeros: string[]) {
+  const mostrar = numeros.slice(0, 3);
+  const resto = numeros.length - mostrar.length;
+  const nomes = resto > 0 ? `${mostrar.join(", ")} e mais ${resto}` : mostrar.length > 1 ? `${mostrar.slice(0, -1).join(", ")} e ${mostrar.at(-1)}` : mostrar[0];
+  return `${plural(numeros.length, "contrato", "contratos")} (${nomes})`;
+}
+
+/**
+ * Aviso da data-base da convenção (30 e 7 dias antes, e no dia): um por convenção e data-base, para todos os membros,
+ * pelos canais escolhidos em "Prazos" (os mesmos dos avisos do fim da vigência). Chave: "DB30:<convencaoId>:<data-base>".
+ */
+async function avisarDataBase(conta: Conta, usuarios: Usuario[], conv: Convencao, contratos: ContratoAviso[], m: NonNullable<ReturnType<typeof marcoDataBase>>) {
+  const link = appUrl(`/app/convencoes#convencao-${conv.id}`);
+  const params: Record<string, string> = { convencao: conv.nome, data: data(m.dataBase), contratos: listaContratos(contratos.map((c) => c.numero)), link };
+  const modelo: ModeloWhatsapp = m.marco === "DB0" ? "equapar_data_base_chegou" : "equapar_data_base";
+  const texto = MODELOS[modelo](params);
+  const assunto = m.marco === "DB0" ? `Data-base chegou: ${conv.nome}` : `Data-base em ${plural(m.dias, "dia", "dias")}: ${conv.nome}`;
+  // no e-mail, cada contrato com o link dos prazos dele
+  const email = [texto, ``, `Contratos desta convenção:`, ...contratos.map((c) => `- Contrato ${c.numero} · ${c.orgao}: ${appUrl(`/app/contratos/${c.id}?aba=prazos`)}`)].join("\n");
+  for (const u of usuarios) {
+    for (const d of canais(u, prefsDe(u).prazo)) {
+      await enviar({
+        contaId: conta.id,
+        chave: `${m.marco}:${conv.id}:${m.dataBase.toISOString().slice(0, 10)}`,
+        tipo: m.marco,
+        canal: d.canal,
+        destino: d.destino,
+        assunto,
+        corpo: d.canal === "EMAIL" ? email : texto,
         modelo: { nome: modelo, params },
       });
     }
@@ -139,7 +176,7 @@ function semanaIso(d: Date) {
 /** Roda os avisos. Com `contaId`, só daquela conta (S5: "Verificar prazos agora" não toca nas outras). */
 export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: string; agora?: Date } = {}) {
   const hoje = hojeUTC(agora);
-  const resumo = { prazos: 0, semanais: 0, apostilamento: 0, jornada: 0 };
+  const resumo = { prazos: 0, dataBase: 0, semanais: 0, apostilamento: 0, jornada: 0 };
   const horaBr = Number(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo", hour: "numeric", hour12: false }));
   const segunda = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getDay() === 1;
 
@@ -153,7 +190,7 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
     const usuarios = conta.membros.map((m) => m.usuario);
     const contratos = await db.contrato.findMany({
       where: { arquivado: false, empresa: { contaId: conta.id } },
-      include: { convencao: true, pedidos: true },
+      include: { convencao: true, pedidos: { include: LANCAMENTOS_A_RECEBER } },
     });
 
     for (const c of contratos) {
@@ -167,6 +204,7 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
       for (const p of c.pedidos) {
         if (p.estado === "DEFERIDO" && !p.apostiladoEm && p.deferidoEm && diasAte(p.deferidoEm, agora) <= -30) {
           for (const u of usuarios) {
+            if (!u.emailVerificadoEm) continue; // C7: sem e-mail confirmado, não recebe avisos (como os de prazo)
             const r = await enviar({
               contaId: conta.id,
               contratoId: c.id,
@@ -181,6 +219,21 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
           }
         }
       }
+    }
+
+    // Data-base de cada convenção dos contratos de repactuação com mão de obra: 30 e 7 dias antes, e no dia
+    const porConvencao = new Map<string, { conv: Convencao; contratos: ContratoAviso[] }>();
+    for (const c of contratos) {
+      if (c.tipoReajuste !== "REPACTUACAO" || !c.maoDeObraDedicada || !c.convencao) continue;
+      const g = porConvencao.get(c.convencao.id) ?? { conv: c.convencao, contratos: [] };
+      g.contratos.push(c);
+      porConvencao.set(c.convencao.id, g);
+    }
+    for (const { conv, contratos: doGrupo } of porConvencao.values()) {
+      const m = marcoDataBase(conv, hoje);
+      if (!m) continue;
+      await avisarDataBase(conta, usuarios, conv, doGrupo, m);
+      resumo.dataBase++;
     }
 
     // 5.1: aviso único por conta sobre a jornada (EC 141/2026), com a fonte, quando há contrato afetado
@@ -215,11 +268,12 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
       const acoes = contratos.flatMap((c) => acoesDoContrato(c, hoje)).filter((a) => !a.limite || diasAte(a.limite, agora) <= 7);
       const comPrazo = contratosComPrazoEm(contratos, 7, hoje).length; // L1: mesma regra do cartão de Hoje e do filtro
       const aguardando = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "PROTOCOLADO").map((p) => ({ c, p })));
-      const receber = contratos.flatMap((c) => c.pedidos.filter((p) => p.estado === "DEFERIDO" || p.estado === "FATURADO").map((p) => ({ c, p })));
-      const totalReceber = somarReais(receber.map(({ p }) => p.valorDeferido ?? p.diferencaRetroativa)); // L10
+      // a mesma conta da tela A receber (saldo aprovado ainda não recebido), em lib/a-receber
+      const receber = contratos.flatMap((c) => c.pedidos.filter(estaAReceber).map((p) => ({ c, p, saldo: saldoAReceber(p) })));
+      const totalReceber = aReceber(contratos.flatMap((c) => c.pedidos)).total; // L10
       for (const u of usuarios) {
         const pr = prefsDe(u);
-        if (!pr.semanal || horaBr < pr.hora) continue;
+        if (!pr.semanal || horaBr < pr.hora || !u.emailVerificadoEm) continue; // C7: só com e-mail confirmado
         const linhas = [
           `Sua semana na Equapar`,
           ``,
@@ -230,7 +284,7 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
           ...aguardando.map(({ c, p }) => `- Contrato ${c.numero} · ${c.orgao} · protocolado em ${data(p.protocoloData)}: ${appUrl(`/app/pedidos/${p.id}/pronto`)}`),
           ``,
           `A RECEBER: ${reaisResumo(totalReceber)}`,
-          ...receber.map(({ c, p }) => `- Contrato ${c.numero} · ${c.orgao} · ${reais(p.valorDeferido ?? p.diferencaRetroativa)}: ${appUrl("/app/a-receber")}`),
+          ...receber.map(({ c, saldo }) => `- Contrato ${c.numero} · ${c.orgao} · ${reais(saldo)}: ${appUrl("/app/a-receber")}`),
         ];
         const r = await enviar({
           contaId: conta.id,

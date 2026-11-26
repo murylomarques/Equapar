@@ -109,7 +109,7 @@ function Importar({ empresa, temContratos }: { empresa?: { id: string; cnpj: str
   );
 }
 
-function Marcar({ contratos }: { contratos: { id: string; numero: string; orgao: string; objeto: string; maoDeObraDedicada: boolean; vigenciaFim: Date }[] }) {
+function Marcar({ contratos }: { contratos: { id: string; numero: string; orgao: string; objeto: string; maoDeObraDedicada: boolean; vigenciaFim: Date; pncpControle: string | null }[] }) {
   if (!contratos.length)
     return (
       <EstadoVazio
@@ -125,7 +125,8 @@ function Marcar({ contratos }: { contratos: { id: string; numero: string; orgao:
     );
   return (
     <div className="cartao">
-      <h1>Achamos {plural(contratos.length, "contrato", "contratos")} no PNCP</h1>
+      {/* a lista traz todos os contratos ativos da conta; o título só fala em PNCP quando todos vieram de lá */}
+      <h1>{tituloMarcar(contratos.length, contratos.filter((c) => c.pncpControle).length)}</h1>
       <p className="secundario">Marque os que têm funcionários seus trabalhando no órgão. Os de limpeza já vêm marcados.</p>
       <FormAcao action={onboardingMarcar} semToast>
         <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
@@ -158,6 +159,12 @@ function Marcar({ contratos }: { contratos: { id: string; numero: string; orgao:
       </FormAcao>
     </div>
   );
+}
+
+function tituloMarcar(total: number, doPncp: number) {
+  if (doPncp === total) return `Achamos ${plural(total, "contrato", "contratos")} no PNCP`;
+  if (doPncp === 0) return `Sua carteira tem ${plural(total, "contrato", "contratos")}`;
+  return `Sua carteira tem ${plural(total, "contrato", "contratos")}, ${doPncp} ${doPncp === 1 ? "importado" : "importados"} do PNCP`;
 }
 
 async function Convencoes() {
@@ -261,7 +268,9 @@ async function Pronto() {
       <h1 className="mt-16">
         Sua carteira tem {plural(contratos.length, "contrato", "contratos")} e {plural(k, "prazo", "prazos")} nos próximos 6 meses.
       </h1>
-      <p className="secundario">A tela Hoje mostra o que fazer primeiro. Os avisos chegam aos 60, 30 e 7 dias de cada prazo.</p>
+      <p className="secundario">
+        A tela Hoje mostra o que fazer primeiro. Avisamos 60, 30 e 7 dias antes do fim de cada contrato e 30 e 7 dias antes da data-base de cada convenção, além do próprio dia.
+      </p>
       <div className="fileira">
         <Link href="/app/hoje" className="btn btn-primario">
           Ver o que fazer hoje
