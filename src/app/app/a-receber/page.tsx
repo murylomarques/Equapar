@@ -9,24 +9,24 @@ import { SeloSimples } from "@/components/selo";
 import { Alerta, CabecalhoPagina, Termo } from "@/components/ui/estrutura";
 import { EstadoVazio } from "@/components/ui/apresentacao";
 import { modoPiloto } from "@/lib/chaves";
-import { resumoFinanceiro } from "@/lib/financeiro-pedido";
+import { aReceber, ESTADOS_A_RECEBER, financeiroDoPedido } from "@/lib/a-receber";
 
 export const metadata: Metadata = { title: "A receber | Equapar" };
 
 export default async function AReceber() {
   const ctx = await contexto();
   const pedidosDb = await db.pedido.findMany({
-    where: { ...escopoPedidos(ctx), estado: { in: ["DEFERIDO", "FATURADO"] } },
+    where: { ...escopoPedidos(ctx), estado: { in: [...ESTADOS_A_RECEBER] } },
     include: { contrato: { include: { empresa: true } }, notasFiscais: true, baixas: true },
     orderBy: { deferidoEm: "asc" },
   });
-  const pedidos = pedidosDb.map((p) => ({ ...p, financeiro: resumoFinanceiro(p.retroativoAprovado ?? p.valorDeferido ?? 0, p.notasFiscais, p.baixas) }));
+  const pedidos = pedidosDb.map((p) => ({ ...p, financeiro: financeiroDoPedido(p) }));
   const recebidos = await db.pedido.findMany({
     where: { ...escopoPedidos(ctx), estado: "RECEBIDO", recebidoEm: { gte: diasAtras(365) } },
     include: { contrato: true },
     orderBy: { recebidoEm: "desc" },
   });
-  const total = somarReais(pedidos.map((p) => p.financeiro.totalPendente));
+  const { total } = aReceber(pedidosDb); // a mesma conta de Hoje, Clientes e do resumo semanal
   const recebido12 = somarReais(recebidos.map((p) => p.valorRecebido));
   const atrasados = pedidos.filter((p) => !p.apostiladoEm && p.deferidoEm && diasAte(p.deferidoEm) <= -30);
   const acao = (p: (typeof pedidos)[number]) => (p.estado === "FATURADO" ? "Registrar recebimento" : p.apostiladoEm ? "Registrar nota fiscal" : "Registrar apostilamento");
