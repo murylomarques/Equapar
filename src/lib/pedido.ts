@@ -81,8 +81,10 @@ type PedidoCalculo = Pick<Pedido, "planilhaAntes" | "planilhaAgora" | "dataBase"
     >
   >;
 
+type OpcoesCalculo = Omit<PedidoCalculo, "planilhaAntes" | "planilhaAgora">;
+
 /** D4: no pedido da jornada, o retroativo conta do início dos efeitos financeiros (padrão: o início da etapa = data-base). */
-function inicioDoRetroativo(p: PedidoCalculo) {
+function inicioDoRetroativo(p: OpcoesCalculo) {
   return p.gatilho === "JORNADA_EC141" && p.jornadaInicioEfeitos ? p.jornadaInicioEfeitos : p.dataBase;
 }
 
@@ -90,25 +92,30 @@ function inicioDoRetroativo(p: PedidoCalculo) {
  * L11: até quando contar. Padrão: a data informada no passo 3. Opções do pedido: a data do protocolo
  * ou a do apostilamento (enquanto a data escolhida não existe, vale a data informada).
  */
-function fimDoRetroativo(p: PedidoCalculo): Date {
+function fimDoRetroativo(p: OpcoesCalculo): Date {
   const informada = p.dataReferencia ?? hojeUTC();
   if (p.retroContarAte === "DATA_PROTOCOLO") return p.protocoloData ?? informada;
   if (p.retroContarAte === "DATA_APOSTILAMENTO") return p.apostiladoEm ?? informada;
   return informada;
 }
 
-export function calcularPedido(p: PedidoCalculo): CalculoPedido {
+export type RetroativoDoPedido = Pick<CalculoPedido, "retroativo" | "retroativoBruto" | "jaPago" | "comparacaoMes" | "dataReferencia" | "regraRetroativo" | "pendenciaRetroativo">;
+
+/**
+ * Retroativo do pedido a partir da diferença mensal já calculada: regra escolhida (data final e mês
+ * incompleto), competências separadas e valores já pagos. É a mesma conta do resultado oficial e da
+ * prévia do passo 3 (editor da planilha), para que as duas telas nunca mostrem números diferentes.
+ * diferencaMensal null = comparação com pendências (sem retroativo).
+ */
+export function retroativoDoPedido(p: OpcoesCalculo, diferencaMensal: string | null): RetroativoDoPedido {
   const dataReferencia = fimDoRetroativo(p);
   const mes = p.retroMesIncompleto ?? "DIAS_CORRIDOS";
   const regraRetroativo = `contado até ${NOME_CONTAR_ATE[p.retroContarAte ?? "DATA_INFORMADA"]}, mês incompleto por ${NOME_MES_INCOMPLETO[mes]}`;
-  const vazio = { retroativoBruto: null, jaPago: null, comparacaoMes: null };
-  if (!p.planilhaAntes || !p.planilhaAgora) return { comparacao: null, retroativo: null, ...vazio, dataReferencia, regraRetroativo, versaoRegra: VERSAO_REGRA, pronto: false };
-  const comparacao = compararPlanilhas(p.planilhaAntes as unknown as PlanilhaCustos, p.planilhaAgora as unknown as PlanilhaCustos);
   const inicio = inicioDoRetroativo(p);
   let bruto: Retroativo | null = null;
   let pendenciaRetroativo: string | undefined;
   const competencias = Array.isArray(p.retroativoCompetencias) ? (p.retroativoCompetencias as unknown as CompetenciaRetroativo[]) : [];
-  if (comparacao.erros.length === 0 && competencias.length) {
+  if (diferencaMensal != null && competencias.length) {
     try {
       const detalhado = calcularRetroativoCompetencias(competencias);
       bruto = {
@@ -124,30 +131,42 @@ export function calcularPedido(p: PedidoCalculo): CalculoPedido {
     } catch (e) {
       pendenciaRetroativo = e instanceof Error ? e.message : "Confira as competências do retroativo.";
     }
-  } else if (comparacao.erros.length === 0 && inicio) {
-    bruto = calcularRetroativo(comparacao.diferencaMensal, inicio, dataReferencia, mes);
+  } else if (diferencaMensal != null && inicio) {
+    bruto = calcularRetroativo(diferencaMensal, inicio, dataReferencia, mes);
   }
   // C6: os campos novos vazios deixam o resultado igual ao de antes (trava 3)
   const pago = new Decimal(p.valoresJaPagos?.toString() ?? "0");
   const retroativo = bruto && pago.gt(0) ? { ...bruto, total: Decimal.max(0, new Decimal(bruto.total).minus(pago)).toFixed(2) } : bruto;
   const comparacaoMes =
-    p.retroCompararMes && comparacao.erros.length === 0 && inicio
+    p.retroCompararMes && diferencaMensal != null && inicio
       ? {
-          DIAS_CORRIDOS: calcularRetroativo(comparacao.diferencaMensal, inicio, dataReferencia, "DIAS_CORRIDOS").total,
-          MES_30_DIAS: calcularRetroativo(comparacao.diferencaMensal, inicio, dataReferencia, "MES_30_DIAS").total,
+          DIAS_CORRIDOS: calcularRetroativo(diferencaMensal, inicio, dataReferencia, "DIAS_CORRIDOS").total,
+          MES_30_DIAS: calcularRetroativo(diferencaMensal, inicio, dataReferencia, "MES_30_DIAS").total,
         }
       : null;
   return {
-    comparacao,
     retroativo,
     retroativoBruto: bruto && pago.gt(0) ? bruto.total : null,
     jaPago: bruto && pago.gt(0) ? pago.toFixed(2) : null,
     comparacaoMes,
     dataReferencia,
     regraRetroativo,
-    versaoRegra: VERSAO_REGRA,
-    pronto: comparacao.erros.length === 0 && !pendenciaRetroativo && (!p.calculoManual || !!p.calculoManualJustificativa?.trim()),
     pendenciaRetroativo,
+  };
+}
+
+export function calcularPedido(p: PedidoCalculo): CalculoPedido {
+  if (!p.planilhaAntes || !p.planilhaAgora) {
+    const { dataReferencia, regraRetroativo } = retroativoDoPedido(p, null);
+    return { comparacao: null, retroativo: null, retroativoBruto: null, jaPago: null, comparacaoMes: null, dataReferencia, regraRetroativo, versaoRegra: VERSAO_REGRA, pronto: false };
+  }
+  const comparacao = compararPlanilhas(p.planilhaAntes as unknown as PlanilhaCustos, p.planilhaAgora as unknown as PlanilhaCustos);
+  const retro = retroativoDoPedido(p, comparacao.erros.length === 0 ? comparacao.diferencaMensal : null);
+  return {
+    comparacao,
+    ...retro,
+    versaoRegra: VERSAO_REGRA,
+    pronto: comparacao.erros.length === 0 && !retro.pendenciaRetroativo && (!p.calculoManual || !!p.calculoManualJustificativa?.trim()),
   };
 }
 

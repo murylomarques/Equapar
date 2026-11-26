@@ -40,7 +40,11 @@ function simulacaoJornada(d: Dados) {
 }
 
 function marca(d: Dados) {
-  const conta = d.p.contrato.empresa.conta;
+  return marcaDaConta(d.p.contrato.empresa.conta);
+}
+
+/** Nome, cor e logo dos PDFs: os da assessoria (conta ASSESSORIA com marca) ou "Equapar". */
+export function marcaDaConta(conta: { tipo: string; marcaNome: string | null; marcaCor: string | null; marcaLogo: string | null }) {
   return {
     nome: conta.tipo === "ASSESSORIA" && conta.marcaNome ? conta.marcaNome : "Equapar",
     cor: conta.tipo === "ASSESSORIA" ? hexParaRgb(conta.marcaCor) : null,
@@ -49,7 +53,7 @@ function marca(d: Dados) {
 }
 
 /** Logo da assessoria para os PDFs (PNG/JPG); sem logo ou com erro de leitura, segue sem ele. */
-async function logoDe(caminho: string | null) {
+export async function logoDe(caminho: string | null) {
   if (!caminho) return null;
   try {
     const bytes = new Uint8Array(await lerArquivo(caminho));

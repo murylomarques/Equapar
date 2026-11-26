@@ -449,6 +449,17 @@ function Passo3({ p, leitura, iaConvencao }: { p: P; leitura: boolean; iaConvenc
         dataReferenciaInicial={paraInputData(p.dataReferencia ?? hojeUTC())}
         somenteLeitura={leitura}
         formReferencia="form-passo3"
+        opcoesRetroativo={{
+          retroContarAte: p.retroContarAte,
+          retroMesIncompleto: p.retroMesIncompleto,
+          retroCompararMes: p.retroCompararMes,
+          valoresJaPagos: p.valoresJaPagos ? p.valoresJaPagos.toString() : null,
+          retroativoCompetencias: Array.isArray(p.retroativoCompetencias) ? (p.retroativoCompetencias as unknown as CompetenciaRetroativo[]) : [],
+          protocoloData: p.protocoloData ? paraInputData(p.protocoloData) : null,
+          apostiladoEm: p.apostiladoEm ? paraInputData(p.apostiladoEm) : null,
+          gatilho: p.gatilho,
+          jornadaInicioEfeitos: p.jornadaInicioEfeitos ? paraInputData(p.jornadaInicioEfeitos) : null,
+        }}
       />
       <FormAcao action={concluirPasso3} id="form-passo3" semToast esperarSalvamento>
         <input type="hidden" name="pedidoId" value={p.id} />

@@ -1,7 +1,8 @@
 "use client";
 import { AlertTriangle, ChevronDown, Monitor, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { brl, calcularPlanilha, calcularRetroativo, compararPlanilhas, pct, validarPlanilha } from "@/lib/calculo/motor";
+import { brl, calcularPlanilha, compararPlanilhas, pct, validarPlanilha } from "@/lib/calculo/motor";
+import { opcoesDoFormulario, previaRetroativo, type OpcoesRetroativo } from "@/lib/previa-retroativo";
 import { BASES_PERMITIDAS, MODULOS, NOME_BASE, type BaseId, type LinhaPlanilha, type ModuloId, type PlanilhaCustos } from "@/lib/calculo/tipos";
 import { novoId, postoModelo } from "@/lib/calculo/modelo";
 import { plural } from "@/lib/mascaras";
@@ -147,6 +148,7 @@ export function EditorPlanilha({
   dataReferenciaInicial,
   somenteLeitura,
   formReferencia,
+  opcoesRetroativo,
 }: {
   pedidoId: string;
   qual: "antes" | "agora";
@@ -156,6 +158,8 @@ export function EditorPlanilha({
   dataReferenciaInicial?: string;
   somenteLeitura?: boolean;
   formReferencia?: string;
+  /** Regra da diferença retroativa gravada no pedido; a prévia acompanha o que for mudado no formulário. */
+  opcoesRetroativo?: OpcoesRetroativo;
 }) {
   const [planilha, setPlanilha] = useState<PlanilhaCustos>(inicial);
   const [salvo, setSalvo] = useState<EstadoSalvo>({ tipo: "ocioso" });
@@ -226,10 +230,42 @@ export function EditorPlanilha({
   const errosCalculo = useMemo(() => validarPlanilha(planilhaCalculo), [planilhaCalculo]);
   const resultado = useMemo(() => (errosCalculo.length ? null : calcularPlanilha(planilhaCalculo)), [planilhaCalculo, errosCalculo]);
   const comparacao = useMemo(() => (antes && !errosCalculo.length ? compararPlanilhas(antes, planilhaCalculo) : null), [antes, planilhaCalculo, errosCalculo]);
+  // A prévia do retroativo usa a mesma conta do resultado oficial (lib/pedido.ts): data final e mês incompleto
+  // escolhidos, competências separadas e valores já pagos, lidos do formulário enquanto a pessoa muda.
+  const [opcoesForm, setOpcoesForm] = useState<{ opcoes: OpcoesRetroativo; erro?: string } | null>(opcoesRetroativo ? { opcoes: opcoesRetroativo } : null);
+  useEffect(() => {
+    if (!opcoesRetroativo || !formReferencia) return;
+    const form = document.getElementById(formReferencia);
+    if (!(form instanceof HTMLFormElement)) return;
+    let espera: ReturnType<typeof setTimeout> | null = null;
+    // lê depois que o React grava os campos controlados (ex.: o JSON oculto das competências)
+    const ler = () => {
+      if (espera) clearTimeout(espera);
+      espera = setTimeout(() => setOpcoesForm(opcoesDoFormulario(opcoesRetroativo, new FormData(form))), 0);
+    };
+    ler();
+    for (const ev of ["input", "change", "click"]) form.addEventListener(ev, ler);
+    return () => {
+      if (espera) clearTimeout(espera);
+      for (const ev of ["input", "change", "click"]) form.removeEventListener(ev, ler);
+    };
+  }, [opcoesRetroativo, formReferencia]);
+  const opcoesCalculo = useDeferredValue(opcoesForm);
   const retro = useMemo(() => {
     if (!comparacao || comparacao.erros.length || !dataBase || !dataRef) return null;
-    return calcularRetroativo(comparacao.diferencaMensal, new Date(`${dataBase}T00:00:00Z`), new Date(`${dataRef}T00:00:00Z`));
-  }, [comparacao, dataBase, dataRef]);
+    const opcoes: OpcoesRetroativo = opcoesCalculo?.opcoes ?? {
+      retroContarAte: "DATA_INFORMADA",
+      retroMesIncompleto: "DIAS_CORRIDOS",
+      retroCompararMes: false,
+      valoresJaPagos: null,
+      retroativoCompetencias: [],
+      protocoloData: null,
+      apostiladoEm: null,
+      gatilho: "NOVA_CONVENCAO",
+      jornadaInicioEfeitos: null,
+    };
+    return { ...previaRetroativo(opcoes, comparacao.diferencaMensal, dataBase, dataRef), erroForm: opcoesCalculo?.erro };
+  }, [comparacao, dataBase, dataRef, opcoesCalculo]);
 
   // linhas digitadas de forma diferente da planilha atual (modo "agora")
   const mudou = useMemo(() => {
@@ -627,9 +663,19 @@ export function EditorPlanilha({
                     <strong>Desde a data-base</strong>
                   </dt>
                   <dd className="num" style={{ fontWeight: 600 }}>
-                    {retro ? brl(retro.total) : "—"}
+                    {retro?.retroativo && !retro.pendenciaRetroativo && !retro.erroForm ? brl(retro.retroativo.total) : "—"}
                   </dd>
                 </dl>
+                {retro && (
+                  <p className="legenda mt-8 mb-0">
+                    {retro.erroForm ?? retro.pendenciaRetroativo ?? (
+                      <>
+                        {retro.jaPago && retro.retroativoBruto && `${brl(retro.retroativoBruto)} menos ${brl(retro.jaPago)} já pagos pelo órgão. `}
+                        {opcoesCalculo?.opcoes.retroativoCompetencias.length ? "Por competência, como informado na regra abaixo." : `Regra: ${retro.regraRetroativo}.`}
+                      </>
+                    )}
+                  </p>
+                )}
                 <div className="mt-16">
                   <CampoData
                     nome="dataReferencia"

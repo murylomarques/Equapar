@@ -9,8 +9,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // área logada, API, links curtos e páginas de link único (senha, convite, confirmação) ficam fora da busca
-      disallow: ["/app", "/api", "/r/", "/entrar/2fa", "/redefinir-senha", "/confirmar-email", "/convite"],
+      // área logada, API, links curtos e páginas de link único (senha, convite, confirmação, conferência) ficam fora da busca
+      disallow: ["/app", "/api", "/r/", "/entrar/2fa", "/redefinir-senha", "/confirmar-email", "/convite", "/conferir/"],
     },
     sitemap: `${urlSite()}/sitemap.xml`,
   };
