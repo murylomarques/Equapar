@@ -448,6 +448,26 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
               Ver o contrato
             </Link>
             {lancamentos}
+            <hr className="regua" />
+            <h3>Caso pronto</h3>
+            <p className="secundario">
+              Um resumo de uma página deste resultado: valores, categoria e a linha do tempo do protocolo ao recebimento. Sai anônimo (tipo de órgão e UF), como rascunho.
+            </p>
+            <form method="get" action={`/api/pedidos/${p.id}/caso`} className="pilha-8">
+              <label className="check">
+                <input type="checkbox" name="identificado" value="1" />
+                <span>Incluir o nome do órgão e o número do contrato</span>
+              </label>
+              <div className="fileira">
+                <button type="submit" name="formato" value="pdf" className="btn">
+                  Baixar caso (PDF)
+                </button>
+                <button type="submit" name="formato" value="md" className="btn">
+                  Baixar texto
+                </button>
+              </div>
+            </form>
+            <p className="legenda mt-8 mb-0">Publicar o caso exige a autorização assinada do cliente, no modelo de autorização de publicação de caso.</p>
           </section>
           {arquivos}
         </div>

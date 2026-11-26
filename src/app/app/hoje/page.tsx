@@ -104,6 +104,9 @@ export default async function Hoje() {
         <p className="mb-0" style={{ fontSize: 17 }}>
           {saudacao()}, {ctx.usuario.nome.split(" ")[0]}. Próximos 30 dias: {plural(prazos30, "contrato com prazo", "contratos com prazo")}.
         </p>
+        <a href="/api/relatorios/socio" className="btn btn-pequeno mt-8" download>
+          Resumo para o sócio (PDF)
+        </a>
       </div>
 
       <div className="cartoes-numero faixa-numeros">

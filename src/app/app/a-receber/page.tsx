@@ -37,11 +37,16 @@ export default async function AReceber() {
         titulo="A receber"
         subtitulo={pedidos.length ? `${reaisResumo(total)} de saldo aprovado ainda não recebido` : undefined}
         acao={
-          modoPiloto() ? undefined : (
-            <Link href="/app/recuperado" className="btn">
-              Recuperado com a Equapar
+          <div className="fileira">
+            <Link href="/app/a-receber/ano" className="btn">
+              Relatório do ano
             </Link>
-          )
+            {!modoPiloto() && (
+              <Link href="/app/recuperado" className="btn">
+                Recuperado com a Equapar
+              </Link>
+            )}
+          </div>
         }
       />
       {atrasados.length > 0 && (
