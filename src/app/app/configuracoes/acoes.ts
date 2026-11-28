@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { Papel, Plano } from "@prisma/client";
 import { conferirSenha, conferirTotp, exigirUsuario, encerrarSessao, exigir, hashSenha, novoTotp, registrarHistorico, senhaFraca } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { modoPiloto } from "@/lib/chaves";
 import { tentar, texto, type Resultado } from "@/lib/acao";
 import { appUrl, enviar } from "@/lib/mensagens";
 import { rodarAvisos } from "@/lib/avisos";
@@ -96,7 +97,7 @@ export async function convidarPessoa(_: Resultado, fd: FormData): Promise<Result
       assunto: `${ctx.usuario.nome} convidou você para a Equapar`,
       corpo: precisaSenha
         ? `${ctx.usuario.nome} convidou você para a conta ${ctx.conta.nome} na Equapar. Para entrar, crie a sua senha neste link, que vale por 7 dias: ${link}`
-        : `${ctx.usuario.nome} adicionou você à conta ${ctx.conta.nome} na Equapar. Entre com o seu e-mail e a sua senha em ${link}.`,
+        : `${ctx.usuario.nome} adicionou você à conta ${ctx.conta.nome} na Equapar. Entre com o seu e-mail e a sua senha de sempre: ${link}`,
     });
     await registrarHistorico(ctx, `Convidou ${nome} (${papel.toLowerCase()})`);
     revalidatePath("/app/configuracoes");
@@ -148,6 +149,8 @@ export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado>
     const metodo = z.enum(["PIX", "BOLETO", "CARTAO", "ESCOLHER"]).catch("ESCOLHER").parse(texto(fd, "metodo") || "ESCOLHER");
     const agora = new Date();
     const conta = await db.conta.findUniqueOrThrow({ where: { id: ctx.conta.id } });
+    // no modo piloto o plano Assessoria não está à venda (a tela já o esconde; aqui fecha o acesso direto pelo formulário)
+    if (plano === "ASSESSORIA" && modoPiloto() && conta.plano !== "ASSESSORIA") return { erro: "O plano Assessoria ainda não está aberto. Fale com a gente." };
     const prev = preverMudanca(conta, plano, agora, ciclo);
     if (!prev.possivel) return { erro: [prev.titulo, ...prev.linhas].join(" ") };
     if (prev.efeito === "REATIVAR") {

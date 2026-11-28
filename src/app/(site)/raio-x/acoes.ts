@@ -73,7 +73,7 @@ export async function pedirRelatorio(_: EstadoForm, fd: FormData): Promise<Estad
     canal: "EMAIL",
     destino: email,
     assunto: `Seu Raio-X dos contratos públicos (CNPJ ${formatarCnpj(cnpj)})`,
-    corpo: `Olá. Aqui está o relatório do Raio-X com os contratos vigentes no PNCP e os prazos de cada um: ${appUrl(link)}\n\nPara montar o pedido de repactuação com memória de cálculo, crie sua conta: ${appUrl(`/criar-conta?cnpj=${cnpj}`)}\n\nVocê recebeu esta mensagem porque pediu o relatório no site da Equapar.`,
+    corpo: `Olá. O relatório do Raio-X está pronto, com os contratos vigentes no PNCP e os prazos de cada um.\n\nVer o relatório: ${appUrl(link)}\n\nPara montar o pedido de repactuação com memória de cálculo, crie sua conta em ${appUrl(`/criar-conta?cnpj=${cnpj}`)}\n\nVocê recebeu esta mensagem porque pediu o relatório no site da Equapar.`,
   });
   return { ok: "Relatório enviado.", dados: { link } };
 }

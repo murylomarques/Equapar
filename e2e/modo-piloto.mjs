@@ -9,11 +9,12 @@ const contagem = await contar();
 const b = await navegador();
 try {
   const anon = await (await b.newContext()).newPage();
-  for (const r of ["/assessorias", "/guias/reforma-tributaria-contratos-publicos-reequilibrio"]) {
-    const s = (await anon.request.get(`${BASE}${r}`)).status();
-    conferir(ligado ? s === 404 : s === 200, `${r}: ${s} (${ligado ? "esperado 404" : "esperado 200"})`);
+  {
+    const s = (await anon.request.get(`${BASE}/assessorias`)).status();
+    conferir(ligado ? s === 404 : s === 200, `/assessorias: ${s} (${ligado ? "esperado 404" : "esperado 200"})`);
   }
-  for (const r of ["/guias/repactuacao-passo-a-passo-lei-14133", "/guias/prorrogacao-sem-perder-a-repactuacao", "/guias/convencao-coletiva-limpeza-data-base"])
+  // guias aprovados pelo advogado não dependem do piloto (decisão de 27/11/2026)
+  for (const r of ["/guias/repactuacao-passo-a-passo-lei-14133", "/guias/prorrogacao-sem-perder-a-repactuacao", "/guias/convencao-coletiva-limpeza-data-base", "/guias/reforma-tributaria-contratos-publicos-reequilibrio", "/guias/jornada-40-horas-contratos-publicos"])
     conferir((await anon.request.get(`${BASE}${r}`)).status() === 200, `${r} sempre no ar`);
   const p = await entrarComoDono(await b.newContext());
   for (const r of ["/app/recuperado", "/app/trocar-conta"]) {

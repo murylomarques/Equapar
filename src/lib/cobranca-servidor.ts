@@ -3,6 +3,7 @@ import { Prisma, type Plano } from "@prisma/client";
 import Decimal from "decimal.js";
 import { db } from "./db";
 import { aplicarEvento, type Ciclo, type SituacaoCobranca, valorDoPlano } from "./planos";
+import { PRECOS } from "./precos";
 import { cobranca, vencimentoNoGateway, type Metodo } from "./cobranca";
 import { appUrl, enviar } from "./mensagens";
 import { reais } from "./format";
@@ -110,6 +111,25 @@ async function garantirCobrancaNoGateway(tx: Tx, faturaId: string, metodo: Metod
   return tx.fatura.update({ where: { id: f.id }, data: { gatewayId: c.id, linkPagamento: c.link } });
 }
 
+/** Texto que marca, na descrição da fatura, que o Piloto já foi abatido (uma vez por conta). */
+export const MARCA_ABATIMENTO_PILOTO = "com abatimento do Piloto";
+
+/**
+ * Decisão do dono (27/11/2026): quem fez o Piloto e assina o anual (Carteira ou Assessoria) em até
+ * PRECOS.pilotoAbatimentoDias dias do início do Piloto tem o valor pago no Piloto abatido da 1ª fatura anual.
+ * Uma vez só: se já existe fatura (aberta ou paga) com o abatimento, não abate de novo. Nunca deixa a fatura negativa.
+ */
+async function abatimentoDoPiloto(tx: Tx, contaId: string, plano: Plano, ciclo: Ciclo, cheio: Decimal, agora: Date): Promise<Decimal> {
+  if (ciclo !== "ANUAL" || (plano !== "CARTEIRA" && plano !== "ASSESSORIA")) return new Decimal(0);
+  const conta = await tx.conta.findUniqueOrThrow({ where: { id: contaId }, select: { pilotoInicio: true } });
+  if (!conta.pilotoInicio || agora.getTime() - conta.pilotoInicio.getTime() > PRECOS.pilotoAbatimentoDias * 86_400_000) return new Decimal(0);
+  const usado = await tx.fatura.count({ where: { contaId, status: { in: ["ABERTA", "FALHOU", "PAGA"] }, descricao: { contains: MARCA_ABATIMENTO_PILOTO } } });
+  if (usado) return new Decimal(0);
+  const pilotos = await tx.fatura.findMany({ where: { contaId, plano: "PILOTO", status: "PAGA" }, select: { valor: true, valorEstornado: true } });
+  const pago = pilotos.reduce((t, f) => t.plus(f.valor.toString()).minus(f.valorEstornado.toString()), new Decimal(0));
+  return Decimal.max(0, Decimal.min(pago, cheio));
+}
+
 /**
  * Abre a cobrança de uma compra de plano. O plano NÃO muda aqui: a fatura diz o que compra e o acesso começa
  * quando o pagamento for confirmado. A decisão inteira, inclusive a chamada ao gateway, acontece com a conta
@@ -147,12 +167,14 @@ export async function abrirCobrancaDoPlano(
     const sobrepostas = await tx.fatura.findMany({ where: { contaId, status: "PAGA", renovacao: true, periodoInicio: { gt: agora }, revisao: null }, select: { id: true } });
     if (sobrepostas.length) await tx.fatura.updateMany({ where: { id: { in: sobrepostas.map((f) => f.id) } }, data: { revisao: "RENOVACAO_PAGA_SOBREPOSTA" } });
     const postos = await postosCobrados(tx, contaId);
-    const valor = valorDoPlano(plano, { postos, ciclo });
+    const cheio = valorDoPlano(plano, { postos, ciclo });
+    const abatimento = await abatimentoDoPiloto(tx, contaId, plano, ciclo, cheio, agora);
+    const valor = cheio.minus(abatimento);
     const nova = await tx.fatura.create({
       data: {
         contaId,
         referencia: agora.toISOString().slice(0, 7),
-        descricao: `Plano ${plano.toLowerCase()} (${ciclo === "ANUAL" ? "anual" : "mensal"})`,
+        descricao: `Plano ${plano.toLowerCase()} (${ciclo === "ANUAL" ? "anual" : "mensal"})${abatimento.gt(0) ? `, ${MARCA_ABATIMENTO_PILOTO} de ${reais(abatimento.toFixed(2))}` : ""}`,
         valor: valor.toFixed(2),
         postos,
         vencimento: new Date(agora.getTime() + 3 * 86_400_000),
@@ -405,12 +427,13 @@ export async function resumoAssinatura(contaId: string, agora = new Date()) {
 async function avisarDonos(contaId: string, tipo: "pago" | "atrasada" | "carencia", valor: string, link: string | null, carenciaAte: Date | null) {
   const donos = await db.membro.findMany({ where: { contaId, papel: "DONO" }, include: { usuario: true } });
   const texto = {
-    pago: `Recebemos o pagamento de ${reais(valor)}. Obrigado!`,
-    atrasada: `O pagamento de ${reais(valor)} não foi identificado. Tentaremos de novo em 5 dias. Para pagar agora: ${link ?? appUrl("/app/configuracoes?aba=cobranca")}`,
-    carencia: `Depois de 3 tentativas, o pagamento de ${reais(valor)} não foi identificado. A conta continua funcionando até ${carenciaAte?.toLocaleDateString("pt-BR", { timeZone: "UTC" })}; depois, fica só para consulta (nenhum dado é apagado). Para regularizar: ${appUrl("/app/configuracoes?aba=cobranca")}`,
+    pago: `Recebemos o pagamento de ${reais(valor)}. Obrigado!\n\nVer as faturas: ${appUrl("/app/configuracoes?aba=cobranca")}`,
+    atrasada: `O pagamento de ${reais(valor)} não foi identificado. Tentaremos de novo em 5 dias.\n\nPagar agora: ${link ?? appUrl("/app/configuracoes?aba=cobranca")}`,
+    carencia: `Depois de 3 tentativas, o pagamento de ${reais(valor)} não foi identificado. A conta continua funcionando até ${carenciaAte?.toLocaleDateString("pt-BR", { timeZone: "UTC" })}; depois, fica só para consulta (nenhum dado é apagado).\n\nRegularizar o pagamento: ${appUrl("/app/configuracoes?aba=cobranca")}`,
   }[tipo];
+  const assunto = { pago: `Pagamento recebido: ${reais(valor)}`, atrasada: `Pagamento não identificado: ${reais(valor)}`, carencia: "Regularize o pagamento da sua assinatura" }[tipo];
   for (const d of donos)
-    await enviar({ contaId, chave: `COBRANCA:${tipo}:${contaId}:${Date.now()}`, tipo: "COBRANCA", canal: "EMAIL", destino: d.usuario.email, assunto: "Equapar: cobrança", corpo: texto });
+    await enviar({ contaId, chave: `COBRANCA:${tipo}:${contaId}:${Date.now()}`, tipo: "COBRANCA", canal: "EMAIL", destino: d.usuario.email, assunto, corpo: texto });
 }
 
 /** O que a equipe faz com cada fatura marcada para revisão (painel interno e e-mail). */

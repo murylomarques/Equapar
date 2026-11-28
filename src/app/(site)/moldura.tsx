@@ -15,8 +15,8 @@ export function TopoSite() {
       {process.env.SITE_FAIXA_JORNADA === "true" && jornadaLiberada() && (
         <div className="site-faixa">
           <div className="site-largura">
-            {/* texto sugerido no prompt; passa pelo dono (trava 6) */}
-            A jornada caiu para 40 horas. Seus contratos com o governo precisam ser recalculados.{" "}
+            {/* texto alinhado ao guia aprovado pelo advogado (datas da EC 141/2026) */}
+            A jornada máxima cai para 42 horas em 16/12/2026 e para 40 horas em 16/12/2027. Contratos públicos com mão de obra precisam de aditivo.{" "}
             <Link prefetch={false} href="/guias/jornada-40-horas-contratos-publicos">Entenda o prazo</Link>
           </div>
         </div>
@@ -60,6 +60,7 @@ export function RodapeSite() {
           <nav aria-label="Produto" className="rodape-coluna">
             <Link prefetch={false} href="/raio-x">Raio-X grátis</Link>
             <Link prefetch={false} href="/#como-funciona">Como funciona</Link>
+            <Link prefetch={false} href="/software-de-repactuacao">Software de repactuação</Link>
             <Link prefetch={false} href="/precos">Preços</Link>
             <Link prefetch={false} href="/guias">Guias</Link>
           </nav>

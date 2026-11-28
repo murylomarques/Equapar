@@ -7,20 +7,20 @@ import Decimal from "decimal.js";
 export type PlanoId = "GRATIS" | "PILOTO" | "CARTEIRA" | "ASSESSORIA";
 export type Ciclo = "MENSAL" | "ANUAL";
 
-import { num, PRECOS } from "./precos";
+import { PRECOS } from "./precos";
 export { PRECOS };
 
 /** Valor de uma fatura do ciclo: mensal ou 12 meses com o desconto anual. */
 export function valorDoPlano(plano: PlanoId, opts: { postos: number; ciclo: Ciclo }): Decimal {
   let mensal: Decimal;
   if (plano === "CARTEIRA") mensal = Decimal.max(PRECOS.carteiraMinimo, new Decimal(PRECOS.carteiraPorPosto).times(Math.max(0, opts.postos)));
-  else if (plano === "ASSESSORIA") mensal = new Decimal(PRECOS.assessoria);
+  else if (plano === "ASSESSORIA")
+    // R$ 1.497 até 1.500 postos somados dos clientes; R$ 1 por posto acima disso (fecha a arbitragem com a Carteira)
+    mensal = new Decimal(PRECOS.assessoria).plus(new Decimal(PRECOS.assessoriaPorPostoExtra).times(Math.max(0, opts.postos - PRECOS.assessoriaPostosIncluidos)));
   else return new Decimal(0); // Grátis: nada; Piloto: cobrado por pedido, não por mês
   if (opts.ciclo === "MENSAL") return mensal.toDecimalPlaces(2);
-  return mensal
-    .times(12)
-    .times(new Decimal(100).minus(PRECOS.descontoAnualPct()).div(100))
-    .toDecimalPlaces(2);
+  // anual: 12 meses pelo preço de N (padrão 10)
+  return mensal.times(PRECOS.mesesPagosNoAnual()).toDecimalPlaces(2);
 }
 
 // ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ export function limiteDoPlano(plano: PlanoId, acao: { tipo: "gerar_pedido" } | {
   if (!exigirPlanoLigado()) return null;
   if (acao.tipo === "gerar_pedido" && plano === "GRATIS") return "Gerar o pedido faz parte do Piloto ou da assinatura. Escolha um plano em Configurações › Cobrança.";
   if (acao.tipo === "adicionar_cliente") {
-    const max = num(process.env.ASSESSORIA_MAX_CLIENTES, 20);
+    const max = PRECOS.assessoriaClientes();
     if (plano !== "ASSESSORIA") return "Vários clientes fazem parte do plano Assessoria.";
     if (acao.clientesAtuais >= max) return `O plano Assessoria atual vai até ${max} clientes. Fale com a gente para ampliar.`;
   }

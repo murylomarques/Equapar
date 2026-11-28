@@ -45,7 +45,7 @@ export default function Precos() {
               <strong>Cancelamento:</strong> na tela de cobrança, quando quiser. O período pago vale até o fim e os dados ficam para exportar.
             </li>
           </ul>
-          <p className="mb-8">Dúvidas sobre o piloto ou sobre o seu caso?</p>
+          <p className="mb-8">Dúvidas sobre os planos ou sobre o seu caso?</p>
           <Contato />
         </div>
       </div>

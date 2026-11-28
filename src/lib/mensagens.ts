@@ -9,6 +9,7 @@ import { db } from "./db";
 import { normalizarTelefoneBR } from "./telefone";
 import { ErroUsuario } from "./acao";
 import { remetentePadrao } from "./site";
+import { emailHtml } from "./email-layout";
 
 export function emailAtivo() {
   return !!process.env.SMTP_URL;
@@ -96,7 +97,9 @@ export async function enviarEmailDeTeste(): Promise<{ ok: true; para: number } |
   try {
     const nodemailer = await import("nodemailer");
     const t = nodemailer.createTransport(process.env.SMTP_URL!);
-    await t.sendMail({ from: remetentePadrao(), to: para, subject: "Equapar: e-mail de teste", text: "E-mail de teste enviado pelo painel interno da Equapar. Se chegou, o envio está funcionando." });
+    const assunto = "Equapar: e-mail de teste";
+    const texto = "E-mail de teste enviado pelo painel interno da Equapar. Se chegou, o envio está funcionando.";
+    await t.sendMail({ from: remetentePadrao(), to: para, subject: assunto, text: texto, html: emailHtml({ assunto, texto, appUrl: appUrl(), rodapePreferencias: false }) });
     return { ok: true, para: para.length };
   } catch (e) {
     const x = e as { message?: string; code?: string; responseCode?: number; response?: string };
@@ -161,7 +164,8 @@ export async function enviar(e: Envio) {
       console.info(`[aviso SIMULADO: demonstração] ${e.canal}`);
     } else if (e.canal === "EMAIL" && emailAtivo()) {
       const pixel = `<img src="${appUrl(`/api/avisos/${aviso.id}/aberto`)}" width="1" height="1" alt="">`;
-      await enviarEmail(e.destino, e.assunto ?? "Equapar", corpo, (e.html ?? `<pre style="font-family:inherit;white-space:pre-wrap">${escaparHtml(corpo)}</pre>`) + pixel);
+      const html = e.html ?? emailHtml({ assunto: e.assunto ?? "Equapar", texto: corpo, appUrl: appUrl(), tipo: e.tipo, rodapePreferencias: !!e.contaId });
+      await enviarEmail(e.destino, e.assunto ?? "Equapar", corpo, html.includes("</body>") ? html.replace("</body>", `${pixel}</body>`) : html + pixel);
       status = "ENVIADO";
     } else if (e.canal === "WHATSAPP" && whatsappAtivo() && e.modelo) {
       const params = { ...e.modelo.params, link: appUrl(`/r/${aviso.id}?para=${encodeURIComponent((e.modelo.params.link ?? "").replace(appUrl(), ""))}`) };

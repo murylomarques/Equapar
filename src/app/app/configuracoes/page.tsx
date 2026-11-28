@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Monitor } from "lucide-react";
 import { contexto, ehDemo, NOME_PAPEL, pode } from "@/lib/auth";
 import { PRECOS, situacaoEfetiva, valorDoPlano } from "@/lib/planos";
+import { modoPiloto } from "@/lib/chaves";
 import { cobranca, simulacaoPermitida } from "@/lib/cobranca";
 import { resumoAssinatura } from "@/lib/cobranca-servidor";
 import { preverMudanca } from "@/lib/assinatura";
@@ -50,11 +51,25 @@ const ABAS = [
   ["dados", "Dados"],
 ] as const;
 
+/** Planos da tela de cobrança, com os preços de lib/precos.ts. No modo piloto, o Assessoria só aparece para quem já o tem. */
+const brl0 = (v: number) => `R$ ${v.toLocaleString("pt-BR")}`;
 const PLANOS = [
-  { valor: "GRATIS", titulo: "Raio-X (grátis)", descricao: "Carteira e prazos. Montar pedidos faz parte do piloto ou da assinatura." },
-  { valor: "PILOTO", titulo: "Piloto", descricao: "A partir de R$ 1.500 por pedido." },
-  { valor: "CARTEIRA", titulo: "Carteira", descricao: "R$ 4 por posto por mês, mínimo R$ 297." },
-  { valor: "ASSESSORIA", titulo: "Assessoria", descricao: "A partir de R$ 1.497 por mês, vários clientes." },
+  { valor: "GRATIS", titulo: "Raio-X (grátis)", descricao: "Carteira e prazos. Montar pedidos faz parte do Piloto ou da assinatura." },
+  {
+    valor: "PILOTO",
+    titulo: "Piloto",
+    descricao: `${brl0(PRECOS.pilotoPorPedido)} pelo 1º pedido, até ${PRECOS.pilotoPostosIncluidos} postos. Abatido se assinar o anual em até ${PRECOS.pilotoAbatimentoDias} dias.`,
+  },
+  {
+    valor: "CARTEIRA",
+    titulo: "Carteira",
+    descricao: `${brl0(PRECOS.carteiraPorPosto)} por posto por mês, mínimo ${brl0(PRECOS.carteiraMinimo)}. Anual: 12 meses pelo preço de ${PRECOS.mesesPagosNoAnual()}.`,
+  },
+  {
+    valor: "ASSESSORIA",
+    titulo: "Assessoria",
+    descricao: `${brl0(PRECOS.assessoria)} por mês, até ${PRECOS.assessoriaClientes()} clientes e ${PRECOS.assessoriaPostosIncluidos.toLocaleString("pt-BR")} postos; ${brl0(PRECOS.assessoriaPorPostoExtra)} por posto acima.`,
+  },
 ];
 
 export default async function Configuracoes({ searchParams }: { searchParams: Promise<{ aba?: string; plano?: string; ciclo?: string }> }) {
@@ -396,7 +411,7 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
           {conta.plano === "PILOTO" && (
             <>
               <dt>Valor</dt>
-              <dd>por pedido (a partir de {reais(PRECOS.pilotoPorPedido.toFixed(2))})</dd>
+              <dd>pelo 1º pedido ({reais(PRECOS.pilotoPorPedido.toFixed(2))}, até {PRECOS.pilotoPostosIncluidos} postos)</dd>
             </>
           )}
           {conta.mudancaAgendada && conta.mudancaAgendadaEm && (
@@ -452,7 +467,7 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
               nome="plano"
               legenda="Plano"
               valorInicial={destino ?? conta.plano}
-              opcoes={PLANOS.map((p) =>
+              opcoes={PLANOS.filter((p) => p.valor !== "ASSESSORIA" || !modoPiloto() || conta.plano === "ASSESSORIA").map((p) =>
                 p.valor === conta.plano
                   ? {
                       ...p,
@@ -471,7 +486,7 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
               valorInicial={cicloNovo}
               opcoes={[
                 { valor: "MENSAL", rotulo: "Mensal" },
-                { valor: "ANUAL", rotulo: PRECOS.descontoAnualPct() ? `Anual (${PRECOS.descontoAnualPct()}% de desconto)` : "Anual" },
+                { valor: "ANUAL", rotulo: `Anual (12 meses pelo preço de ${PRECOS.mesesPagosNoAnual()})` },
               ]}
             />
             <div>

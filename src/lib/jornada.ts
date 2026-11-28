@@ -28,9 +28,9 @@ export const JORNADA = {
   prazoAditivo: () => data(process.env.JORNADA_ADITIVO_PRAZO, "2027-10-16"),
   confirmado: () => process.env.JORNADA_REGRA_CONFIRMADA === "true",
   fonte: {
-    texto: "A EC 141/2026 reduz a jornada semanal de 44 para 40 horas, em etapas; em contratos com a administração, a recomposição do preço vem por aditivo de reequilíbrio.",
-    fonte: "EC 141/2026, segundo Conjur (24/10/2026); datas a confirmar com o jurídico",
-    url: "https://conjur.com.br/2026-out-24/o-fim-da-escala-6x1-e-a-repercussao-nos-contratos-publicos/",
+    texto: "A Emenda Constitucional 141/2026 reduz a jornada semanal de 44 para 40 horas, em duas etapas (42 horas, depois 40). Nos contratos públicos com mão de obra, o equilíbrio econômico-financeiro é preservado por termo aditivo.",
+    fonte: "Emenda Constitucional 141/2026 (Planalto)",
+    url: "https://planalto.gov.br/ccivil_03/constituicao/emendas/emc/emc141.htm",
   },
 };
 

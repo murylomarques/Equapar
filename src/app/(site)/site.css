@@ -751,12 +751,70 @@ a.guia-cartao:focus-visible .guia-cartao-acao {
 .guia .guia-chamada h2 {
   margin-top: 0;
 }
-@media (max-width: 560px) {
-  .guia-chamada {
-    padding: 20px 16px;
-  }
+.guia-data {
+  margin-top: 4px;
 }
-
+/* "Em resumo": a resposta direta, logo abaixo do título */
+.guia-resumo {
+  margin: 24px 0 8px;
+  padding: 18px 22px 10px;
+  background: var(--verde-suave);
+  border-radius: var(--raio-cartao);
+}
+.guia .guia-resumo h2 {
+  margin-top: 0;
+  font-size: 18px;
+}
+.guia-resumo ul {
+  padding-left: 20px;
+}
+/* tabelas dos guias (exemplos de cálculo, comparações): rolam de lado no celular, sem rolar a página */
+.guia-tabela {
+  overflow-x: auto;
+  margin: 16px 0 24px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+.guia-tabela:focus-visible {
+  outline: none;
+  box-shadow: var(--anel-foco);
+}
+.guia-tabela table {
+  width: 100%;
+  /* no celular, a tabela rola dentro da caixa em vez de espremer as colunas */
+  min-width: 560px;
+  border-collapse: collapse;
+  font: var(--t-tabela);
+}
+.guia-tabela caption {
+  caption-side: top;
+  text-align: left;
+  padding: 10px 12px 0;
+  font: var(--t-ajuda);
+  color: var(--grafite);
+}
+.guia-tabela th,
+.guia-tabela td {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--linha);
+}
+.guia-tabela thead th {
+  background: var(--superficie-2);
+  font-weight: 600;
+}
+.guia-tabela tbody th {
+  font-weight: 500;
+}
+.guia-tabela tbody tr:last-child th,
+.guia-tabela tbody tr:last-child td {
+  border-bottom: 0;
+}
+.guia-relacionados li {
+  margin-bottom: 10px;
+}
 /* Termos e privacidade: data da versão aprovada, logo abaixo do título */
 .documento-data {
   margin-bottom: 32px;
@@ -866,4 +924,14 @@ a.guia-cartao:focus-visible .guia-cartao-acao {
     position: sticky;
     top: 88px;
   }
+}
+
+/* Software de repactuação: seções espaçadas e as entregas em grade */
+.mt-48 {
+  margin-top: 48px;
+}
+.sw-entregas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
 }

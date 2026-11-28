@@ -61,7 +61,7 @@ describe("Pedir até com a convenção nova pendente (mesma regra da Decisão de
     expect(seloSituacao(c, hoje).texto).toBe("Ressalvar até 20/12/2026");
     const pedir = prazosDoContrato(c, hoje).find((p) => p.tipo === "pedir")!;
     expect(pedir.titulo).toMatch(/^Data-limite para ressalvar a repactuação no termo aditivo/);
-    expect(pedir.regra?.fonte).toMatch(/1\.827\/2008/);
+    expect(pedir.regra?.fonte).toBe("AGU, Parecer JT-02/2009");
     expect(acoesDoContrato(c, hoje)[0]).toMatchObject({ titulo: "Ressalvar a repactuação no aditivo", botao: "Ver o que fazer", href: "/app/contratos/k1/prorrogacao" });
   });
 

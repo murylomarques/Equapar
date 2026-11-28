@@ -121,7 +121,7 @@ O que foi feito: o formulário do CNPJ da landing e dos guias é renderizado no 
 - `/assessorias`, o plano Assessoria em Preços e o bloco de assessorias da landing, e `/app/trocar-conta` (também no menu da conta; a ação `trocarConta` recusa);
 - `/app/recuperado` (e o botão em A receber);
 - o histórico do órgão (contrato e pedido);
-- os guias de reforma tributária e da jornada (o da jornada volta com a chave da fase D). No ar sempre: `GUIAS_NO_AR` (repactuação passo a passo, prorrogação, convenção e data-base).
+- os guias de reforma tributária e da jornada (o da jornada volta com a chave da fase D). No ar sempre: os demais guias aprovados; os com `revisao: "pendente"` (advogado ainda não revisou) nunca entram no ar (`GUIAS_FORA_DO_PILOTO` lista os que o piloto esconde).
 
 As rotas escondidas são tratadas no servidor, no `proxy` (valem na hora): 404 no site, redirecionamento para `/app/hoje` no app. Trava 10: nada é apagado.
 

@@ -14,13 +14,15 @@ const b = await navegador();
 try {
   const p = await entrarComoDono(await b.newContext());
   await p.goto(`${BASE}/app/configuracoes?aba=cobranca`);
-  await p.getByRole("radio", { name: /Assessoria/ }).check();
+  // no modo piloto o Assessoria não aparece; a Carteira passa pelo mesmo fluxo de cobrança
+  await p.getByRole("radio", { name: /^Carteira/ }).check();
+  conferir((await p.getByRole("radio", { name: /Assessoria/ }).count()) === 0 || process.env.MODO_PILOTO === "false", "no modo piloto, o plano Assessoria não aparece para quem não o tem");
   // fluxo atual: ver o que muda antes de confirmar, depois abrir a cobrança
   await p.getByRole("button", { name: "Ver o que muda" }).click();
   await p.getByRole("button", { name: "Abrir a cobrança" }).click();
   await p.getByText(/Cobrança aberta/).first().waitFor();
   let conta = await db.conta.findUnique({ where: { id: contaId } });
-  conferir(conta.plano === "GRATIS" && conta.planoPendente === "ASSESSORIA", "escolher o plano abre a cobrança e não muda o plano ainda");
+  conferir(conta.plano === "GRATIS" && conta.planoPendente === "CARTEIRA", "escolher o plano abre a cobrança e não muda o plano ainda");
   await p.reload();
   conferir((await p.getByText(/Aguardando pagamento/).count()) > 0, "a tela mostra o plano aguardando pagamento");
   const aberta = await db.fatura.findFirst({ where: { contaId, id: { notIn: faturasAntes }, status: "ABERTA" } });
@@ -28,7 +30,7 @@ try {
   // espera o pagamento ser processado (a fatura nova paga no banco), não um "paga" de faturas antigas
   for (let i = 0; i < 30 && (await db.fatura.findUnique({ where: { id: aberta.id } })).status !== "PAGA"; i++) await p.waitForTimeout(500);
   conta = await db.conta.findUnique({ where: { id: contaId } });
-  conferir(conta.plano === "ASSESSORIA" && !conta.planoPendente, "depois do pagamento, o plano passa a valer");
+  conferir(conta.plano === "CARTEIRA" && !conta.planoPendente, "depois do pagamento, o plano passa a valer");
   const nova = await db.fatura.findFirst({ where: { contaId, id: { notIn: faturasAntes } } });
   conferir(nova?.status === "PAGA" && !!nova.pagaEm, "fatura marcada como paga");
   const avisos = await db.aviso.count({ where: { contaId, tipo: "COBRANCA", status: "ENVIADO" } });

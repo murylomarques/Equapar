@@ -60,7 +60,7 @@ Segue o Anexo VII-D da IN SEGES/MP 05/2017: Módulo 1 (remuneração), Submódul
 | Repactuação e demonstração analítica | Lei 14.133/2021, art. 135, § 6º ([TCU](https://licitacoesecontratos.tcu.gov.br/6-2-2-1-3-repactuacao/)) |
 | Prazo preferencial de resposta | Lei 14.133/2021, art. 92, § 6º ([TCU](https://licitacoesecontratos.tcu.gov.br/6-2-2-1-3-repactuacao/)) |
 | Preclusão ao prorrogar sem pedir | [TCU, Licitações e Contratos, 6.3](https://licitacoesecontratos.tcu.gov.br/6-3-manutencao-e-prorrogacao-do-contrato/) |
-| Ressalva no termo aditivo | TCU, Acórdão 1.827/2008-Plenário ([Zênite](https://zenite.blog.br/cct-nao-depositada-x-direito-a-repactuacao-apos-a-prorrogacao/)) |
+| Ressalva no termo aditivo | AGU, [Parecer JT-02/2009](https://www.planalto.gov.br/ccivil_03/agu/prc-jt-02-2009.htm) (reproduz o voto do relator no TCU) |
 
 ## Assinatura do cálculo aprovado
 

@@ -13,9 +13,9 @@ export const FONTES = {
     url: "https://licitacoesecontratos.tcu.gov.br/6-3-manutencao-e-prorrogacao-do-contrato/",
   },
   ressalva: {
-    texto: "Com a convenção ainda pendente na data da prorrogação, o TCU admite ressalvar o direito no termo aditivo.",
-    fonte: "TCU, Acórdão 1.827/2008-Plenário, segundo a Zênite",
-    url: "https://zenite.blog.br/cct-nao-depositada-x-direito-a-repactuacao-apos-a-prorrogacao/",
+    texto: "Com a convenção ainda pendente, solicite expressamente, antes de assinar a prorrogação, uma cláusula no termo aditivo que resguarde a pretensão à repactuação. A ressalva não substitui a solicitação completa nem garante o deferimento.",
+    fonte: "AGU, Parecer JT-02/2009",
+    url: "https://www.planalto.gov.br/ccivil_03/agu/prc-jt-02-2009.htm",
   },
   resposta: {
     texto: "Nos contratos com mão de obra, a resposta ao pedido tem prazo preferencial de 1 mês, contado da entrega da documentação.",

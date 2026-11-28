@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 // 5.1: aviso da jornada vai uma vez por conta, só quando há contrato afetado, e traz a fonte.
-const u = { id: "u1", email: "pessoa@exemplo.local", whatsapp: null, whatsappConsentEm: null, prefsAvisos: null, emailVerificadoEm: new Date() };
+const u = { id: "u1", email: "pessoa@exemplo.local", whatsapp: null, whatsappConsentEm: null, prefsAvisos: null as null | { prazo: string }, emailVerificadoEm: new Date() };
 const conta = { id: "a", demo: false, avisoJornadaEm: null as Date | null, membros: [{ usuario: u }], empresas: [{ exemplo: false }] };
 const afetado = { id: "k1", numero: "1/2025", orgao: "Órgão", maoDeObraDedicada: true, arquivado: false, vigenciaFim: new Date("2028-06-30T00:00:00Z"), convencao: null, pedidos: [], tipoReajuste: "REPACTUACAO" };
 const enviados: { chave: string; corpo: string }[] = [];
@@ -25,14 +25,23 @@ describe("5.1: aviso da jornada", () => {
     expect(enviados.filter((e) => e.chave.startsWith("JORNADA:"))).toHaveLength(0);
     expect(conta.avisoJornadaEm).toBeNull();
   });
+  it("quem recebe os prazos só por WhatsApp não recebe o e-mail, e a conta não fica marcada como avisada", async () => {
+    vi.stubEnv("JORNADA_REGRA_CONFIRMADA", "true");
+    u.prefsAvisos = { prazo: "WHATSAPP" };
+    await rodarAvisos({ agora: new Date("2026-11-13T15:00:00Z") });
+    expect(enviados.filter((e) => e.chave.startsWith("JORNADA:"))).toHaveLength(0);
+    expect(conta.avisoJornadaEm).toBeNull();
+    u.prefsAvisos = null;
+  });
   it("envia uma vez com a fonte e marca a conta; na segunda rodada não repete", async () => {
     vi.stubEnv("JORNADA_REGRA_CONFIRMADA", "true");
     const agora = new Date("2026-11-13T15:00:00Z"); // sexta: sem resumo semanal
     await rodarAvisos({ agora });
     const j = enviados.filter((e) => e.chave.startsWith("JORNADA:"));
     expect(j).toHaveLength(1);
-    expect(j[0].corpo).toContain("conjur.com.br");
-    expect(j[0].corpo).toContain("a confirmar");
+    expect(j[0].corpo).toContain("planalto.gov.br/ccivil_03/constituicao/emendas/emc/emc141.htm");
+    expect(j[0].corpo).toContain("ADIs 8041 e 8042");
+    expect(j[0].corpo).toContain("Confirme as datas do seu contrato com o seu jurídico");
     expect(conta.avisoJornadaEm).toEqual(agora);
     await rodarAvisos({ agora });
     expect(enviados.filter((e) => e.chave.startsWith("JORNADA:"))).toHaveLength(1);

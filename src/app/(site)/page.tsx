@@ -3,7 +3,8 @@ import Link from "next/link";
 import { FormCnpjServidor } from "@/components/form-cnpj-servidor";
 import { PreviaCarteira, PreviaHoje, PreviaMemoria, PreviaPronto, PreviaReceber } from "@/components/previas";
 import { Revelar } from "@/components/revelar";
-import { SITE, canaisDeAviso, dadosEmpresa } from "@/lib/site";
+import { SITE, dadosEmpresa } from "@/lib/site";
+import { COMPARACAO, etapas } from "@/lib/site-conteudo";
 import { TabelaPlanos } from "@/components/planos";
 import { FONTES } from "@/lib/prazos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
@@ -16,25 +17,6 @@ export const metadata = metaPagina({
     "Controle de repactuação para empresas de limpeza, portaria e recepção com contratos públicos: prazos, memória de cálculo e documentos até o recebimento. Raio-X grátis pelo CNPJ.",
   caminho: "/",
 });
-
-/** Comparação da landing: critério, planilha e memória, consultoria por pedido, Equapar. */
-const COMPARACAO = [
-  ["Avisa antes da prorrogação", "Se alguém lembrar", "Se contratada para isso", "Sempre, por contrato"],
-  ["Mostra de onde saiu cada número", "Depende de quem fez", "Sim", "Sim, linha a linha"],
-  ["Acompanha até receber", "Depende da equipe", "Depende do escopo", "Sim"],
-  ["Como se paga", "Horas da equipe", "Por pedido", "Por mês, por posto"],
-] as const;
-
-/** Como funciona: as cinco etapas que o produto cobre hoje. */
-function etapas() {
-  return [
-    ["Contrato", "Digite o CNPJ: os contratos publicados no PNCP entram sozinhos. Você confirma a convenção coletiva de cada um."],
-    ["Repactuação", `${canaisDeAviso()} aos 60, 30 e 7 dias do prazo, com o que fazer em cada caso: pedir, ressalvar ou esperar a convenção.`],
-    ["Memória e documentos", "Envie a planilha de custos da proposta. A Equapar refaz a conta, mostra a origem de cada número e gera ofício, planilha e memória de cálculo editáveis."],
-    ["Protocolo", "Você confere e protocola pelo canal do contrato. A Equapar guarda o número e conta o prazo de resposta do órgão."],
-    ["Recebimento", "Apostilamento, nota fiscal da diferença e recebimento. Nada sai da lista antes de o dinheiro entrar."],
-  ] as const;
-}
 
 const GUIA_REFORMA = "reforma-tributaria-contratos-publicos-reequilibrio";
 
@@ -322,8 +304,8 @@ function QuemFaz() {
       <blockquote>
         <p>
           {e.fundadorNome
-            ? `Sou ${e.fundadorNome}. Criei a Equapar depois de ver empresas de limpeza perderem repactuações por prazo e por conta mal documentada. Respondo pessoalmente as mensagens do piloto.`
-            : "A Equapar nasceu de ver empresas de limpeza perderem repactuações por prazo e por conta mal documentada. As mensagens do piloto são respondidas por quem constrói o sistema."}
+            ? `Sou ${e.fundadorNome}. Criei a Equapar depois de ver empresas de limpeza perderem repactuações por prazo e por conta mal documentada. Respondo pessoalmente as mensagens dos primeiros clientes.`
+            : "A Equapar nasceu de ver empresas de limpeza perderem repactuações por prazo e por conta mal documentada. As mensagens são respondidas por quem constrói o sistema."}
         </p>
       </blockquote>
     </figure>

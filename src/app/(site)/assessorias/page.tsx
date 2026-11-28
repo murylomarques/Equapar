@@ -33,7 +33,9 @@ export default function Assessorias() {
             <li>Papéis por pessoa: dono, gerente de contratos, contador e leitura.</li>
           </ul>
           <p>
-            <strong>A partir de R$ {PRECOS.assessoria.toLocaleString("pt-BR")} por mês.</strong>
+            <strong>
+              R$ {PRECOS.assessoria.toLocaleString("pt-BR")} por mês, até {PRECOS.assessoriaClientes()} clientes e {PRECOS.assessoriaPostosIncluidos.toLocaleString("pt-BR")} postos somados; R$ {PRECOS.assessoriaPorPostoExtra} por posto acima disso.
+            </strong>
           </p>
           <div className="fileira">
             <form action={entrarNaDemonstracao}>

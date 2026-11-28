@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aplicarEvento, CARENCIA_DIAS, situacaoEfetiva, valorDoPlano } from "./planos";
+import { precoJornada40 } from "./precos";
 
 describe("4.2: preços", () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -12,10 +13,28 @@ describe("4.2: preços", () => {
     expect(valorDoPlano("GRATIS", { postos: 50, ciclo: "MENSAL" }).toFixed(2)).toBe("0.00");
     expect(valorDoPlano("PILOTO", { postos: 50, ciclo: "MENSAL" }).toFixed(2)).toBe("0.00");
   });
-  it("anual = 12 meses com o desconto configurado (0% até o dono decidir)", () => {
-    expect(valorDoPlano("ASSESSORIA", { postos: 0, ciclo: "ANUAL" }).toFixed(2)).toBe("17964.00");
-    vi.stubEnv("DESCONTO_ANUAL_PCT", "15");
-    expect(valorDoPlano("ASSESSORIA", { postos: 0, ciclo: "ANUAL" }).toFixed(2)).toBe("15269.40");
+  it("anual = 12 meses pelo preço de 10 (configurável de 1 a 12; fora disso, 10)", () => {
+    expect(valorDoPlano("CARTEIRA", { postos: 60, ciclo: "ANUAL" }).toFixed(2)).toBe("2970.00");
+    expect(valorDoPlano("CARTEIRA", { postos: 200, ciclo: "ANUAL" }).toFixed(2)).toBe("8000.00");
+    expect(valorDoPlano("ASSESSORIA", { postos: 0, ciclo: "ANUAL" }).toFixed(2)).toBe("14970.00");
+    vi.stubEnv("MESES_PAGOS_ANUAL", "12");
+    expect(valorDoPlano("CARTEIRA", { postos: 60, ciclo: "ANUAL" }).toFixed(2)).toBe("3564.00");
+    for (const invalido of ["0", "13", "-5", "10.5", "abc"]) {
+      vi.stubEnv("MESES_PAGOS_ANUAL", invalido);
+      expect(valorDoPlano("CARTEIRA", { postos: 60, ciclo: "ANUAL" }).toFixed(2)).toBe("2970.00");
+    }
+  });
+  it("Assessoria: R$ 1.497 até 1.500 postos somados; R$ 1 por posto acima", () => {
+    expect(valorDoPlano("ASSESSORIA", { postos: 1500, ciclo: "MENSAL" }).toFixed(2)).toBe("1497.00");
+    expect(valorDoPlano("ASSESSORIA", { postos: 1501, ciclo: "MENSAL" }).toFixed(2)).toBe("1498.00");
+    expect(valorDoPlano("ASSESSORIA", { postos: 2000, ciclo: "MENSAL" }).toFixed(2)).toBe("1997.00");
+  });
+  it("Jornada 40h avulsa por faixa de postos do contrato", () => {
+    expect(precoJornada40(1)).toBe(990);
+    expect(precoJornada40(30)).toBe(990);
+    expect(precoJornada40(31)).toBe(1990);
+    expect(precoJornada40(100)).toBe(1990);
+    expect(precoJornada40(101)).toBeNull();
   });
 });
 

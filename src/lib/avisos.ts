@@ -239,8 +239,10 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
     // 5.1: aviso único por conta sobre a jornada (EC 141/2026), com a fonte, quando há contrato afetado
     const afetados = contratos.filter((c) => afetadoPelaJornada(c));
     if (jornadaLiberada() && !conta.avisoJornadaEm && afetados.length > 0) {
+      let enviados = 0;
       for (const u of usuarios) {
-        if (!u.emailVerificadoEm) continue;
+        // só para quem recebe os avisos de prazo por e-mail (não há modelo de WhatsApp para este aviso)
+        if (!canais(u, prefsDe(u).prazo).some((d) => d.canal === "EMAIL")) continue;
         const r = await enviar({
           contaId: conta.id,
           chave: `JORNADA:${conta.id}:${u.id}`,
@@ -251,16 +253,21 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
           corpo: [
             `Equapar: ${JORNADA.fonte.texto}`,
             ``,
-            `Pelas datas que usamos (a confirmar com o seu jurídico), a jornada cai para 42 horas em ${data(JORNADA.inicio42())} e para 40 horas em ${data(JORNADA.inicio40())}.`,
-            `${plural(afetados.length, "contrato de mão de obra dedicada segue", "contratos de mão de obra dedicada seguem")} vigente${afetados.length > 1 ? "s" : ""} depois disso.`,
+            `A jornada máxima cai para 42 horas em ${data(JORNADA.inicio42())} e para 40 horas em ${data(JORNADA.inicio40())}.`,
+            `Nos contratos públicos com mão de obra, a adaptação vem por termo aditivo. A decisão liminar do STF de 12/11/2026 (ADIs 8041 e 8042) deu 180 dias, contados da publicação da emenda, para adaptar os contratos. Confirme as datas do seu contrato com o seu jurídico.`,
+            `${plural(afetados.length, "contrato de mão de obra dedicada seu segue", "contratos de mão de obra dedicada seus seguem")} vigente${afetados.length > 1 ? "s" : ""} depois disso.`,
+            `Fonte: ${JORNADA.fonte.fonte}. ${JORNADA.fonte.url}`,
             ``,
             `Ver os contratos e montar os pedidos: ${appUrl("/app/carteira?filtro=jornada")}`,
-            `Fonte: ${JORNADA.fonte.fonte}. ${JORNADA.fonte.url}`,
           ].join("\n"),
         });
-        if (r) resumo.jornada++;
+        if (r) {
+          resumo.jornada++;
+          enviados++;
+        }
       }
-      await db.conta.update({ where: { id: conta.id }, data: { avisoJornadaEm: agora } });
+      // só marca a conta como avisada se alguém recebeu (senão, quem ligar o e-mail depois ainda recebe)
+      if (enviados > 0) await db.conta.update({ where: { id: conta.id }, data: { avisoJornadaEm: agora } });
     }
 
     // Resumo semanal: segunda às 7h (ou no horário escolhido)
@@ -292,7 +299,7 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
           tipo: "SEMANAL",
           canal: "EMAIL",
           destino: u.email,
-          assunto: `Sua semana: ${plural(comPrazo, "contrato com prazo", "contratos com prazo")}, ${aguardando.length} pedidos no órgão, ${reaisResumo(totalReceber)} a receber`,
+          assunto: `Sua semana: ${plural(comPrazo, "contrato com prazo", "contratos com prazo")}, ${plural(aguardando.length, "pedido no órgão", "pedidos no órgão")}, ${reaisResumo(totalReceber)} a receber`,
           corpo: linhas.join("\n"),
         });
         if (r) resumo.semanais++;

@@ -2,6 +2,7 @@
  * A6 e D0: chaves de recurso, lidas do ambiente a cada requisição (valem pelo .env de quem sobe a imagem).
  * Trava 10: chave esconde, nunca apaga. Desligar devolve tudo como estava, com os mesmos dados.
  */
+import { GUIAS } from "./guias";
 
 /** MODO_PILOTO (padrão true): esconde assessoria, trocar de conta, Recuperado, histórico do órgão e guias fora do piloto. */
 export function modoPiloto() {
@@ -13,14 +14,24 @@ export function jornadaLiberada() {
   return process.env.JORNADA_REGRA_CONFIRMADA === "true";
 }
 
-/** Guias que ficam no ar sempre, também no piloto. */
-export const GUIAS_NO_AR = ["repactuacao-passo-a-passo-lei-14133", "prorrogacao-sem-perder-a-repactuacao", "convencao-coletiva-limpeza-data-base"] as const;
+/**
+ * GUIAS_PREVIA=true: mostra os guias com revisão jurídica pendente, com faixa de rascunho e sem indexação. Só para
+ * conferir em máquina local ou mostrar ao advogado num ambiente fechado; nunca ligar no site público.
+ */
+export function previaGuias() {
+  return process.env.GUIAS_PREVIA === "true";
+}
+
 export const GUIA_JORNADA = "jornada-40-horas-contratos-publicos";
 
+/**
+ * Guia no ar: só depende da revisão jurídica (decisão do dono, 27/11/2026). Com `revisao: "pendente"` (o advogado
+ * ainda não aprovou) fica fora, salvo na prévia local; aprovado, fica no ar sempre, também no piloto e com o módulo da
+ * jornada desligado: o guia informa, não vende o plano.
+ */
 export function guiaNoAr(slug: string) {
-  if ((GUIAS_NO_AR as readonly string[]).includes(slug)) return true;
-  if (slug === GUIA_JORNADA) return jornadaLiberada(); // volta junto com a chave da fase D
-  return !modoPiloto();
+  const g = GUIAS.find((x) => x.slug === slug);
+  return !!g && (g.revisao !== "pendente" || previaGuias());
 }
 
 /** Rotas escondidas pelo modo piloto: no site, 404; dentro do app, volta para Hoje. */

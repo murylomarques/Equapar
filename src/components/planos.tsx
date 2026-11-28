@@ -2,6 +2,7 @@ import Link from "next/link";
 import { canaisDeAviso } from "@/lib/site";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { PRECOS } from "@/lib/planos";
+import { precoJornada40 } from "@/lib/precos";
 import { Contato } from "./contato";
 import { modoPiloto } from "@/lib/chaves";
 import { jornadaLiberada } from "@/lib/chaves";
@@ -43,15 +44,18 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
           <h3 className="mb-0">Piloto</h3>
           <p className="plano-para">Para resolver um pedido real agora.</p>
           <div className="preco">
-            <span className="preco-de">a partir de</span> <span style={{ whiteSpace: "nowrap" }}>{r$(PRECOS.pilotoPorPedido)}</span>
+            <span style={{ whiteSpace: "nowrap" }}>{r$(PRECOS.pilotoPorPedido)}</span>
           </div>
-          <small className="plano-unidade">por pedido</small>
+          <small className="plano-unidade">pelo 1º pedido, até {PRECOS.pilotoPostosIncluidos} postos</small>
           {/* C3: os mesmos termos do texto aprovado, em três pontos como nos outros planos */}
           <ul>
             <li>Organização de documentos e prazos</li>
             <li>Consolidação dos dados e geração da memória de cálculo e dos arquivos editáveis</li>
             <li>Conferência e protocolo feitos por você</li>
           </ul>
+          <p className="legenda mb-0">
+            Assine o anual em até {PRECOS.pilotoAbatimentoDias} dias e os {r$(PRECOS.pilotoPorPedido)} viram desconto.
+          </p>
           <div>
             <Contato agenda={false} />
           </div>
@@ -59,7 +63,7 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
         <div className="plano plano-destaque">
           <div className="entre">
             <h3 className="mb-0">Carteira</h3>
-            <span className="selo selo-verde">Preço de lançamento</span>
+            <span className="selo selo-verde">Preço de fundador</span>
           </div>
           <p className="plano-para">Para manter todos os contratos no prazo, todo mês.</p>
           <div className="preco">
@@ -76,6 +80,10 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
               Exemplo: {limite - 1} postos = {r$(min)} (mínimo); {limite} postos = {r$(limite * porPosto)}.
             </p>
           )}
+          <p className="legenda mb-0">
+            <strong>Anual:</strong> 12 meses pelo preço de {PRECOS.mesesPagosNoAnual()}
+            {jornadaLiberada() ? ", com a Jornada 40 horas incluída" : ""}.
+          </p>
           {revisaoEspecialistaAtiva() && <p className="legenda mb-0">Revisão de especialista é cobrada à parte.</p>}
           <div>
             <Link href="/criar-conta" className="btn btn-primario">
@@ -88,9 +96,12 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
           <div className="plano">
             <h3 className="mb-0">Jornada 40 horas</h3>
             <p className="plano-para">Para recalcular os contratos com a nova jornada.</p>
-            <div className="preco">{r$(PRECOS.jornada40PorContrato())}</div>
-            <small className="plano-unidade">por contrato, nas duas etapas</small>
+            <div className="preco">{r$(precoJornada40(1)!)}</div>
+            <small className="plano-unidade">
+              por contrato até {PRECOS.jornada40Faixas[0].ate} postos; {r$(PRECOS.jornada40Faixas[1].valor)} até {PRECOS.jornada40Faixas[1].ate} postos
+            </small>
             <p className="secundario mb-0 plano-texto">Pedido de reequilíbrio pela EC 141/2026, com os dois cenários (manter ou reduzir as horas) lado a lado.</p>
+            <p className="legenda mb-0">Incluída no anual da Carteira. Acima de {PRECOS.jornada40Faixas[1].ate} postos, sob consulta.</p>
             <div>
               <Contato agenda={false} />
             </div>
@@ -101,9 +112,11 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
             <h3 className="mb-0">Assessoria</h3>
             <p className="plano-para">Para quem cuida da repactuação de vários clientes.</p>
             <div className="preco">
-              <span className="preco-de">a partir de</span> <span style={{ whiteSpace: "nowrap" }}>{r$(PRECOS.assessoria)}</span>
+              <span style={{ whiteSpace: "nowrap" }}>{r$(PRECOS.assessoria)}</span>
             </div>
-            <small className="plano-unidade">por mês</small>
+            <small className="plano-unidade">
+              por mês, até {PRECOS.assessoriaClientes()} clientes e {PRECOS.assessoriaPostosIncluidos.toLocaleString("pt-BR")} postos; {r$(PRECOS.assessoriaPorPostoExtra)} por posto acima
+            </small>
             <ul>
               <li>Vários clientes numa conta</li>
               <li>A sua marca nos PDFs</li>
@@ -116,7 +129,10 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
           </div>
         )}
       </div>
-      <p className="legenda mt-16 mb-0">Preço de lançamento: a página mostra sempre o preço que estiver valendo.</p>
+      <p className="legenda mt-16 mb-0">
+        Preço de fundador: os {PRECOS.fundadorClientes} primeiros clientes mantêm este preço por {PRECOS.fundadorMeses} meses. Garantia de {PRECOS.garantiaDias} dias: se desistir
+        no primeiro mês, devolvemos a 1ª mensalidade (a garantia não cobre o resultado do pedido no órgão).
+      </p>
 
       {comparar && (
         <details className="comparar-planos mt-24">
@@ -137,7 +153,7 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
               <tbody>
                 {[
                   ["Alcance", "Consulta pontual", "Um pedido real", "Todos os contratos, todo mês", "Todos os contratos de vários clientes"],
-                  ["Como se paga", "Grátis, sem cadastro", `A partir de ${r$(PRECOS.pilotoPorPedido)} por pedido`, `${r$(porPosto)} por posto ao mês, mínimo ${r$(min)}`, `A partir de ${r$(PRECOS.assessoria)} por mês`],
+                  ["Como se paga", "Grátis, sem cadastro", `${r$(PRECOS.pilotoPorPedido)} pelo 1º pedido (até ${PRECOS.pilotoPostosIncluidos} postos)`, `${r$(porPosto)} por posto ao mês, mínimo ${r$(min)}`, `${r$(PRECOS.assessoria)} por mês até ${PRECOS.assessoriaPostosIncluidos.toLocaleString("pt-BR")} postos; ${r$(PRECOS.assessoriaPorPostoExtra)} por posto acima`],
                   ["Contratos e prazos do PNCP pelo CNPJ", "Sim", "Sim", "Sim", "Sim"],
                   ["Memória de cálculo e arquivos editáveis", "Não", "Sim", "Sim", "Sim"],
                   ["Vários clientes e a sua marca nos PDFs", "Não", "Não", "Não", "Sim"],
