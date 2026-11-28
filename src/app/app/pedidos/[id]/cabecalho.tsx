@@ -8,7 +8,7 @@ export function CabecalhoPedido({
   passo,
   podeEditar,
 }: {
-  pedido: { id: string; passoAtual: number; atualizadoEm: Date; contrato: { id: string; numero: string; orgao: string } };
+  pedido: { id: string; passoAtual: number; atualizadoEm: Date; gatilho?: string; contrato: { id: string; numero: string; orgao: string } };
   passo: number;
   podeEditar?: boolean;
 }) {

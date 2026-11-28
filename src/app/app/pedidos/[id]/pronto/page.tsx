@@ -81,7 +81,13 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
       <h2 id="arquivos">Arquivos do pedido</h2>
       {!versaoFinal && <p className="legenda mb-16">Os arquivos finais liberam quando a versão atual da memória for aprovada. Até lá, cada download sai como rascunho.</p>}
       <ul className="lista-limpa pilha-8">
-        {[...ARQUIVOS.slice(0, -1), ...(p.gatilho === "JORNADA_EC141" ? [{ href: "aditivo.pdf", nome: "Minuta do termo aditivo (PDF)", icone: FileText }] : []), ARQUIVOS[ARQUIVOS.length - 1]].map((a) => (
+        {[...ARQUIVOS.slice(0, -1), ...(p.gatilho === "JORNADA_EC141"
+          ? [
+              { href: "fundamentacao.pdf", nome: "Fundamentação normativa (PDF)", icone: FileText },
+              { href: "retroativo.pdf", nome: "Demonstrativo retroativo por competência (PDF)", icone: FileText },
+              { href: "aditivo.pdf", nome: "Minuta do termo aditivo (PDF)", icone: FileText },
+            ]
+          : []), ARQUIVOS[ARQUIVOS.length - 1]].map((a) => (
           <li key={a.href}>
             <a href={`/api/pedidos/${p.id}/arquivos/${a.href}${versaoFinal ? "" : "?rascunho=1"}`} className="cartao-linha arquivo-pedido" style={{ boxShadow: "none" }} download>
               <a.icone size={18} strokeWidth={1.5} aria-hidden />
@@ -178,9 +184,9 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
         trilha={[
           { rotulo: "Pedidos", href: "/app/pedidos" },
           { rotulo: `Contrato ${p.contrato.numero}`, href: `/app/contratos/${p.contrato.id}` },
-          { rotulo: "Pedido de repactuação" },
+          { rotulo: p.gatilho === "JORNADA_EC141" ? "Adequação à jornada (EC 141/2026)" : "Pedido de repactuação" },
         ]}
-        titulo="Pedido de repactuação"
+        titulo={p.gatilho === "JORNADA_EC141" ? "Adequação à jornada (EC 141/2026)" : "Pedido de repactuação"}
         subtitulo={`Contrato ${p.contrato.numero} · ${p.contrato.orgao}`}
       />
 
@@ -301,6 +307,17 @@ export default async function Pronto({ params }: { params: Promise<{ id: string 
                   <CampoDinheiro nome="mensalAprovado" rotulo="Valor mensal aprovado" valorInicial={c?.mensalAgora} ajuda="No deferimento parcial, informe o novo valor mensal reconhecido pelo órgão." />
                   <CampoDinheiro nome="retroativoAprovado" rotulo="Retroativo aprovado" valorInicial={calc.retroativo?.total} ajuda="A diferença retroativa reconhecida pelo órgão." />
                 </div>
+                {/* parecer de 28/11/2026 (A2): efeitos reconhecidos pela Administração, separados dos efeitos pedidos */}
+                {p.gatilho === "JORNADA_EC141" && (
+                  <CampoData
+                    nome="jornadaEfeitosReconhecidos"
+                    rotulo="Efeitos financeiros reconhecidos a partir de"
+                    opcional
+                    valorInicial={p.jornadaEfeitosReconhecidos ? paraInputData(p.jornadaEfeitosReconhecidos) : null}
+                    mostrarRelativo={false}
+                    ajuda="A data que o órgão reconheceu, se for diferente da pedida."
+                  />
+                )}
                 <TextoLongo nome="respostaResumo" rotulo="Resumo da resposta" opcional limite={1000} />
                 <TextoLongo nome="decisaoEvidencia" rotulo="Fundamento ou documento da decisão" opcional ajuda="Obrigatório para deferimento parcial." limite={1000} />
                 <BotaoEnvio className={aprovarPrimeiro ? "btn" : undefined}>Registrar resposta</BotaoEnvio>

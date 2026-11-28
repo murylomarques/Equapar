@@ -294,7 +294,13 @@ model Pedido {
   inicioJornada              DateTime? // 5.1: início da nova jornada
   jornadaDataAditivo         DateTime? // D4: quando o aditivo foi formalizado
   jornadaInicioEfeitos       DateTime? // D4: início dos efeitos financeiros (padrão: início da etapa); o retroativo usa esta
-  cenarioJornada             String? // 5.1: MANTER_HORAS ou REDUZIR_HORAS (escolha explícita, sem padrão)
+  cenarioJornada             String? // MANTER_HORAS, REDUZIR_HORAS ou REORGANIZAR_ESCALAS (escolha explícita, sem padrão)
+  // parecer de 28/11/2026 (A1/A2): enquadramento do contrato e as datas separadas
+  jornadaEnquadramento       String? // VIGENTE_NA_EC, LICITACAO_EM_ANDAMENTO ou SEM_TRANSICAO
+  jornadaAssinaturaContrato  DateTime? // assinatura do contrato (prazo de 180 dias da licitação em andamento)
+  jornadaAlteracaoCustos     DateTime? // quando os custos efetivamente mudaram
+  jornadaEfeitosReconhecidos DateTime? // efeitos financeiros reconhecidos pela Administração
+  metodologiaVersao          String? // D: versão da metodologia de cálculo usada
   recursoData                DateTime? // 5.5: recurso depois do indeferimento
   recursoPrazo               DateTime?
   pedidoOrigemId             String? // 5.5: novo pedido a partir deste

@@ -165,7 +165,7 @@ export default async function Carteira({ searchParams }: { searchParams: Promise
             </FormAcao>
           }
         >
-          A nova jornada começa em {data(JORNADA.inicio42())} (42 horas) e {data(JORNADA.inicio40())} (40 horas), datas a confirmar com o jurídico. Cada pedido escolhe o cenário: manter ou reduzir as horas.
+          Datas gerais: {data(JORNADA.inicio42())} (42 horas) e {data(JORNADA.inicio40())} (40 horas). Nos contratos públicos, o prazo do aditivo depende do enquadramento de cada contrato{JORNADA.liminarVigente() ? ` (vigentes na publicação da EC: até ${data(JORNADA.prazoAditivo())}, pela decisão cautelar do STF)` : ""}. Cada pedido calcula por tipo de posto e escolhe o cenário: manter a cobertura, reduzir as horas ou reorganizar as escalas.
         </Alerta>
       )}
 

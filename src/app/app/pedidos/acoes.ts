@@ -13,7 +13,7 @@ import { avisarDeferido, avisarProtocolo } from "@/lib/avisos";
 import { calcularPedido, NOME_ESTADO } from "@/lib/pedido";
 import { validarPlanilha } from "@/lib/calculo/motor";
 import { clonarPlanilha, planilhaModelo } from "@/lib/calculo/modelo";
-import type { PlanilhaCustos } from "@/lib/calculo/tipos";
+import type { JornadaDoPosto, PlanilhaCustos } from "@/lib/calculo/tipos";
 import { lerConvencaoPdf, lerPlanilhaPdf } from "@/lib/ia";
 import { deLeituraIa, importarExcel, type LinhaNaoLida } from "@/lib/planilha-import";
 import { apagarArquivo, gravarArquivo, lerArquivo, salvarArquivo } from "@/lib/storage";
@@ -24,7 +24,7 @@ import { aoTrocarPlanilhaAtual, dadosInvalidarAprovacao, hashCalculo, pendencias
 import { memoriaPdf, oficioPdf, planilhaXlsx } from "@/lib/documentos";
 import { revisaoEspecialistaAtiva } from "@/lib/revisao";
 import { limiteDoPlano } from "@/lib/planos";
-import { etapaNaData, etapasJornada, JORNADA, planilhaDoCenario, type Cenario } from "@/lib/jornada";
+import { enquadramentoSugerido, etapaNaData, etapasJornada, inicioNoContrato, JORNADA, METODOLOGIA_JORNADA_VERSAO, pendenciasDoCenario, planilhaDoCenario, type Cenario } from "@/lib/jornada";
 import { proximaVersao } from "@/lib/versao-documento";
 import { aplicarConfirmadas, filtrarSugestoes, fonteDaSugestao, linhasParaConvencao, normalizarNumero, type SugestoesConvencao } from "@/lib/sugestoes-convencao";
 import { acaoJornada } from "@/lib/jornada-acesso";
@@ -66,7 +66,10 @@ async function criarPedido(ctx: Awaited<ReturnType<typeof exigir>>, contratoId: 
           gatilho: "JORNADA_EC141",
           dataBase: inicio,
           inicioJornada: inicio,
-          jornadaInicioEfeitos: inicio, // D4: padrão = início da etapa
+          // A1/A2: enquadramento sugerido pelo início do contrato; os efeitos pedidos saem da regra (a empresa confere no passo 1)
+          jornadaEnquadramento: enquadramentoSugerido(c.vigenciaInicio),
+          jornadaAssinaturaContrato: c.vigenciaInicio,
+          jornadaInicioEfeitos: enquadramentoSugerido(c.vigenciaInicio) ? inicioNoContrato(de40 ? "42-40" : "44-42", "VIGENTE_NA_EC") : inicio,
           jornadaAntes: de40 ? 42 : 44,
           jornadaDepois: de40 ? 40 : 42,
           horasCobertura: "44.00",
@@ -167,8 +170,14 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
     // financeiros (padrão: o início da etapa; o retroativo usa esta). 44 → 40 num só aditivo fica fora.
     const etapa = jornada ? etapasJornada().find((e) => e.id === texto(fd, "etapa")) ?? null : null;
     const inicioJornada = etapa?.inicio ?? null;
-    const jornadaInicioEfeitos = jornada ? lerData(fd.get("jornadaInicioEfeitos")) ?? inicioJornada : null;
+    // parecer de 28/11/2026 (A1/A2): enquadramento do contrato; os efeitos pedidos saem da regra, salvo data informada
+    const enq = z.enum(["VIGENTE_NA_EC", "LICITACAO_EM_ANDAMENTO", "SEM_TRANSICAO"]).safeParse(texto(fd, "jornadaEnquadramento"));
+    const jornadaEnquadramento = jornada && enq.success ? enq.data : null;
+    const jornadaAssinaturaContrato = jornada ? lerData(fd.get("jornadaAssinaturaContrato")) : null;
+    const jornadaAlteracaoCustos = jornada ? lerData(fd.get("jornadaAlteracaoCustos")) : null;
     const jornadaDataAditivo = jornada ? lerData(fd.get("jornadaDataAditivo")) : null;
+    const efeitosPelaRegra = etapa && jornadaEnquadramento ? inicioNoContrato(etapa.id, jornadaEnquadramento, { dataAditivo: jornadaDataAditivo, assinatura: jornadaAssinaturaContrato }) : inicioJornada;
+    const jornadaInicioEfeitos = jornada ? lerData(fd.get("jornadaInicioEfeitos")) ?? efeitosPelaRegra : null;
     const jornadaAntes = etapa?.antes ?? null;
     const jornadaDepois = etapa?.depois ?? null;
     const horasCobertura = jornada ? Number(texto(fd, "horasCobertura").replace(",", ".") || 0) : null;
@@ -179,6 +188,9 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
     if (convencaoId && !conv) return { erro: "Convenção inválida." };
     const campos: Record<string, string> = {};
     if (jornada) {
+      if (!jornadaEnquadramento) campos.jornadaEnquadramento = "Escolha o enquadramento do contrato: ele define o prazo do aditivo.";
+      if (jornadaEnquadramento === "LICITACAO_EM_ANDAMENTO" && !jornadaAssinaturaContrato)
+        campos.jornadaAssinaturaContrato = "Informe a assinatura do contrato: o prazo é de 180 dias a partir dela.";
       if (!etapa) campos.etapa = "Escolha a etapa: de 44 para 42 horas ou de 42 para 40 horas.";
       // D3: os efeitos financeiros precisam cair dentro da etapa escolhida
       else if (jornadaInicioEfeitos && etapaNaData(jornadaInicioEfeitos)?.id !== etapa.id)
@@ -194,7 +206,13 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
     if (p.gatilho !== gatilho) mudou.push("o motivo");
     if ((p.convencaoId ?? null) !== convencaoId) mudou.push("a convenção");
     if (p.dataBase?.getTime() !== dataBase?.getTime()) mudou.push("a data-base");
-    if (p.jornadaAntes !== jornadaAntes || p.jornadaDepois !== jornadaDepois || Number(p.horasCobertura ?? 0) !== Number(horasCobertura ?? 0) || p.jornadaInicioEfeitos?.getTime() !== jornadaInicioEfeitos?.getTime())
+    if (
+      p.jornadaAntes !== jornadaAntes ||
+      p.jornadaDepois !== jornadaDepois ||
+      Number(p.horasCobertura ?? 0) !== Number(horasCobertura ?? 0) ||
+      p.jornadaInicioEfeitos?.getTime() !== jornadaInicioEfeitos?.getTime() ||
+      (p.jornadaEnquadramento ?? null) !== jornadaEnquadramento
+    )
       mudou.push("os dados da jornada");
     const invalidar = mudou.length ? await invalidarAprovacao(ctx, p, `Alterou ${mudou.join(", ")}`) : {};
     await db.pedido.update({
@@ -213,6 +231,9 @@ export async function salvarPasso1(_: Resultado, fd: FormData): Promise<Resultad
         inicioJornada,
         jornadaInicioEfeitos,
         jornadaDataAditivo,
+        jornadaEnquadramento,
+        jornadaAssinaturaContrato,
+        jornadaAlteracaoCustos,
         ...(jornada ? {} : { cenarioJornada: null }),
         passoAtual: Math.max(p.passoAtual, 2),
       },
@@ -385,6 +406,28 @@ export async function concluirPasso2(_: Resultado, fd: FormData): Promise<Result
   redirect(`/app/pedidos/${texto(fd, "pedidoId")}/passo/3`);
 }
 
+/** A4: lê os dados de um posto do formulário do passo 3 (campos j:<posto>:<campo>). Vazio fica vazio (sem presumir). */
+function lerJornadaDoPosto(fd: FormData, tipoId: string): JornadaDoPosto {
+  const n = (k: string) => {
+    const v = Number(String(fd.get(`j:${tipoId}:${k}`) ?? "").replace(",", "."));
+    return Number.isFinite(v) && v > 0 ? v : undefined;
+  };
+  const semanal = String(fd.get(`j:${tipoId}:semanal`) ?? "");
+  const adicional = Number(String(fd.get(`j:${tipoId}:adicionalHePct`) ?? "").replace(",", "."));
+  const j: JornadaDoPosto = {
+    escala12x36: semanal === "12X36" || undefined,
+    semanal: semanal !== "12X36" && Number(semanal) > 0 ? Number(semanal) : undefined,
+    empregadosAntes: n("empregadosAntes"),
+    empregadosDepois: n("empregadosDepois"),
+    diasAntes: n("diasAntes"),
+    diasDepois: n("diasDepois"),
+    adicionalHePct: String(fd.get(`j:${tipoId}:adicionalHePct`) ?? "").trim() !== "" && Number.isFinite(adicional) && adicional >= 0 ? adicional : undefined,
+    divisor: n("divisor"),
+    compensar12x36: fd.get(`j:${tipoId}:compensar12x36`) === "on" || undefined,
+  };
+  return Object.fromEntries(Object.entries(j).filter(([, v]) => v !== undefined)) as JornadaDoPosto;
+}
+
 export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Resultado> {
   const r = await tentar(async (): Promise<Resultado | void> => {
     const editavel = await pedidoEditavel(fd);
@@ -393,10 +436,10 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
     const cenarioAnterior = p.cenarioJornada;
     const ref = lerData(fd.get("dataReferencia")) ?? hojeUTC();
     // 5.1: no pedido da jornada, a planilha nova sai do cenário escolhido (escolha obrigatória, sem padrão)
-    let jornadaDados: { cenarioJornada?: Cenario; planilhaAntes?: Prisma.InputJsonValue; planilhaAgora?: Prisma.InputJsonValue } = {};
+    let jornadaDados: { cenarioJornada?: Cenario; planilhaAntes?: Prisma.InputJsonValue; planilhaAgora?: Prisma.InputJsonValue; metodologiaVersao?: string } = {};
     if (p.gatilho === "JORNADA_EC141") {
-      const cen = z.enum(["MANTER_HORAS", "REDUZIR_HORAS"]).safeParse(texto(fd, "cenarioJornada"));
-      if (!cen.success) return { erro: "Escolha o cenário: manter ou reduzir as horas de serviço.", campos: { cenarioJornada: "Escolha um cenário." } };
+      const cen = z.enum(["MANTER_HORAS", "REDUZIR_HORAS", "REORGANIZAR_ESCALAS"]).safeParse(texto(fd, "cenarioJornada"));
+      if (!cen.success) return { erro: "Escolha o cenário: manter a cobertura, reduzir as horas ou reorganizar as escalas.", campos: { cenarioJornada: "Escolha um cenário." } };
       if (!p.planilhaAntes || !p.jornadaAntes || !p.jornadaDepois) return recusarPorPendencias(p.id, pendenciasParaGerar(p, [], 3), "Antes de continuar, resolva:");
       // D2: a escolha das linhas do módulo 5 que acompanham o número de empregados fica gravada na planilha atual
       let atual = p.planilhaAntes as unknown as PlanilhaCustos;
@@ -407,7 +450,11 @@ export async function concluirPasso3(_: Resultado, fd: FormData): Promise<Result
             linhas: t.linhas.map((l) => (l.modulo === "M5" && l.tipo === "VALOR" ? { ...l, acompanhaEmpregados: fd.get(`acompanha:${t.id}:${l.id}`) === "on" } : l)),
           })),
         };
-      jornadaDados = { cenarioJornada: cen.data, planilhaAntes: json(atual), planilhaAgora: json(planilhaDoCenario(atual, cen.data, p.jornadaAntes, p.jornadaDepois)) };
+      // A4: dados de cada posto (jornada, dimensionamento real, dias trabalhados, 12x36), gravados na planilha atual
+      if (fd.get("jornadaPostosEditado") === "1") atual = { tipos: atual.tipos.map((t) => ({ ...t, jornada: lerJornadaDoPosto(fd, t.id) })) };
+      const pend = pendenciasDoCenario(atual, cen.data);
+      if (pend.length) return { erro: pend.join(" ") };
+      jornadaDados = { cenarioJornada: cen.data, metodologiaVersao: METODOLOGIA_JORNADA_VERSAO, planilhaAntes: json(atual), planilhaAgora: json(planilhaDoCenario(atual, cen.data, p.jornadaAntes, p.jornadaDepois)) };
       p = { ...p, cenarioJornada: cen.data, planilhaAntes: jornadaDados.planilhaAntes as Prisma.JsonValue, planilhaAgora: jornadaDados.planilhaAgora as Prisma.JsonValue };
     }
     let retroativoCompetencias: CompetenciaRetroativo[] = [];
@@ -675,6 +722,7 @@ export async function registrarResposta(_: Resultado, fd: FormData): Promise<Res
           mensalVigenteAnterior: p.contrato.valorMensal,
           retroativoAprovado: retroativoAprovado.toFixed(2),
           conciliacaoPendente: false,
+          ...(p.gatilho === "JORNADA_EC141" ? { jornadaEfeitosReconhecidos: lerData(fd.get("jornadaEfeitosReconhecidos")) } : {}),
         },
       });
       await registrarHistorico(ctx, parcial ? "Registrou o deferimento parcial" : "Registrou o deferimento total", {

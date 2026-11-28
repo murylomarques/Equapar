@@ -17,7 +17,20 @@ import { comUmPorCento } from "./raio-x-valor";
 import { seloVigencia } from "./prazos";
 import { lerArquivo } from "./storage";
 import { ErroUsuario } from "./acao";
-import { fatorTexto, horasReduzidas, planilhaDoCenario, reducaoHorasPct } from "./jornada";
+import {
+  explicarInicio,
+  JORNADA,
+  METODOLOGIA_JORNADA_VERSAO,
+  NOME_CENARIO,
+  NOME_ENQUADRAMENTO,
+  NORMAS_JORNADA,
+  horasReduzidas,
+  planilhaDoCenario,
+  prazoAditivoDoContrato,
+  reducaoHorasPct,
+  type Cenario,
+  type Enquadramento,
+} from "./jornada";
 import { jornadaEmSimulacao, MARCA_SIMULACAO_JORNADA } from "./jornada-acesso";
 import { validarDocumentoFinal } from "./pedido-final";
 
@@ -91,7 +104,7 @@ function textoOficio(d: Dados) {
       `Ao(À) ${c.orgao}`,
       "A/C Gestor(a) e Fiscal do Contrato",
       "",
-      jornada ? `Assunto: Pedido de reequilíbrio econômico-financeiro do Contrato nº ${c.numero}` : `Assunto: Pedido de repactuação do Contrato nº ${c.numero}`,
+      jornada ? `Assunto: Pedido de adequação do Contrato nº ${c.numero} à jornada da EC 141/2026 (termo aditivo)` : `Assunto: Pedido de repactuação do Contrato nº ${c.numero}`,
       "",
       "Senhor(a) Gestor(a),",
       "",
@@ -123,21 +136,39 @@ function textoOficio(d: Dados) {
   };
 }
 
-// 5.1: texto do pedido da jornada. O fundamento jurídico fica para o advogado preencher.
-const FUNDAMENTO = "[fundamento indicado pelo advogado]";
+// Pedido da jornada: fundamento do parecer de 28/11/2026 (art. 9º da EC 141/2026; arts. 124 e 134 da Lei 14.133/2021).
 
 /** D5: as duas opções, com a preferência da empresa marcada. Calculadas da mesma planilha atual. */
+/** Parecer de 28/11/2026 (A4): os três cenários lado a lado, com o valor de cada um. */
 function cenariosLadoALado(d: Dados): string[] {
   const { p } = d;
   const atual = p.planilhaAntes as unknown as PlanilhaCustos;
   const a = p.jornadaAntes!;
   const b = p.jornadaDepois!;
   const cob = Number(p.horasCobertura);
-  const manter = calcularPedido({ ...p, planilhaAgora: planilhaDoCenario(atual, "MANTER_HORAS", a, b) as never }).comparacao;
-  const pref = (c: string) => (p.cenarioJornada === c ? " [preferência da empresa]" : "");
+  const valor = (c: Cenario) => calcularPedido({ ...p, planilhaAgora: planilhaDoCenario(atual, c, a, b) as never }).comparacao;
+  const pref = (c: string) => (p.cenarioJornada === c ? " [opção apresentada pela empresa]" : "");
+  const manter = valor("MANTER_HORAS");
+  const reorganizar = atual.tipos.every((t) => t.jornada?.empregadosAntes && t.jornada?.empregadosDepois) ? valor("REORGANIZAR_ESCALAS") : null;
   return [
-    `(1) Manter as horas de serviço${pref("MANTER_HORAS")}: ${cob} horas semanais por posto; ${fatorTexto(a, b)} empregados equivalentes por posto; valor mensal ${manter ? brl(manter.mensalAgora) : "—"}.`,
-    `(2) Reduzir as horas de serviço${pref("REDUZIR_HORAS")}: ${horasReduzidas(cob, a, b).toString().replace(".", ",")} horas semanais por posto (redução de ${reducaoHorasPct(a, b).toFixed(3).replace(".", ",")}%); valor mensal ${manter ? brl(manter.mensalAntes) : "—"}, sem mudança.`,
+    `(1) ${NOME_CENARIO.MANTER_HORAS}${pref("MANTER_HORAS")}: ${cob} horas semanais por posto, com o redimensionamento de empregados, escalas e substituições; valor mensal ${manter ? brl(manter.mensalAgora) : "—"} (diferença de ${manter ? brl(manter.diferencaMensal) : "—"}).`,
+    `(2) ${NOME_CENARIO.REDUZIR_HORAS}${pref("REDUZIR_HORAS")}: proposta de ${horasReduzidas(cob, a, b).toString().replace(".", ",")} horas semanais por posto (redução de ${reducaoHorasPct(a, b).toFixed(3).replace(".", ",")}%), a negociar; a manutenção do preço mensal não é garantida.`,
+    `(3) ${NOME_CENARIO.REORGANIZAR_ESCALAS}${pref("REORGANIZAR_ESCALAS")}: ${reorganizar ? `escalas e número de empregados informados pela empresa em cada posto; valor mensal ${brl(reorganizar.mensalAgora)} (diferença de ${brl(reorganizar.diferencaMensal)}).` : "alternativa a apresentar com o dimensionamento de cada posto."}`,
+  ];
+}
+
+/** Datas do pedido da jornada, separadas (A2). */
+function datasJornada(p: Dados["p"]): string[] {
+  const enq = p.jornadaEnquadramento as Enquadramento | null;
+  const prazo = enq ? prazoAditivoDoContrato(enq, p.jornadaAssinaturaContrato) : null;
+  return [
+    `Exigibilidade geral da jornada da etapa: ${data(p.inicioJornada)}.`,
+    `Enquadramento do contrato: ${enq ? NOME_ENQUADRAMENTO[enq] : "não informado"}${prazo ? `; prazo para o termo aditivo: ${data(prazo)}` : ""}.`,
+    ...(p.jornadaAlteracaoCustos ? [`Alteração efetiva dos custos: ${data(p.jornadaAlteracaoCustos)}.`] : []),
+    ...(p.protocoloData ? [`Protocolo do pedido: ${data(p.protocoloData)}.`] : []),
+    ...(p.jornadaDataAditivo ? [`Formalização do aditivo: ${data(p.jornadaDataAditivo)}.`] : []),
+    `Efeitos financeiros pleiteados a partir de: ${data(p.jornadaInicioEfeitos ?? p.dataBase)}.`,
+    ...(p.jornadaEfeitosReconhecidos ? [`Efeitos financeiros reconhecidos pela Administração a partir de: ${data(p.jornadaEfeitosReconhecidos)}.`] : []),
   ];
 }
 
@@ -145,24 +176,33 @@ function linhasJornada(d: Dados): string[] {
   const { p, comp, calc } = d;
   const c = p.contrato;
   const e = c.empresa;
-  const manter = p.cenarioJornada === "MANTER_HORAS";
+  const cen = (p.cenarioJornada ?? "MANTER_HORAS") as Cenario;
   const retro = calc.retroativo;
+  const efeitos = p.jornadaInicioEfeitos ?? p.dataBase;
+  const dif = Number(comp.diferencaMensal);
   return [
-    `${e.razaoSocial}, inscrita no CNPJ sob o nº ${formatarCnpj(e.cnpj)}, contratada por meio do Contrato nº ${c.numero}, cujo objeto é ${c.objeto.replace(/\.$/, "")}, vem, respeitosamente, requerer o REEQUILÍBRIO ECONÔMICO-FINANCEIRO do contrato, em razão da redução da jornada semanal de trabalho de ${p.jornadaAntes} para ${p.jornadaDepois} horas, decorrente da Emenda Constitucional nº 141/2026, a partir de ${data(p.inicioJornada ?? p.dataBase)}, com fundamento em ${FUNDAMENTO}.`,
+    `${e.razaoSocial}, inscrita no CNPJ sob o nº ${formatarCnpj(e.cnpj)}, contratada por meio do Contrato nº ${c.numero}, cujo objeto é ${c.objeto.replace(/\.$/, "")}, vem, respeitosamente, requerer a ADEQUAÇÃO CONTRATUAL à redução da duração do trabalho de ${p.jornadaAntes} para ${p.jornadaDepois} horas semanais, decorrente da Emenda Constitucional nº 141/2026, por meio de termo aditivo, com fundamento no art. 9º da EC 141/2026 e nos arts. 124 e 134 da Lei 14.133/2021.`,
     "",
-    "Os dois cenários possíveis, lado a lado:",
+    "Trata-se de recomposição decorrente de alteração legislativa, distinta da repactuação ordinária prevista no contrato: não se aplica a exigência de anualidade, e a formalização se dá por termo aditivo, não por apostilamento.",
+    "",
+    "Datas consideradas:",
+    ...datasJornada(p),
+    "",
+    "Os cenários possíveis, lado a lado:",
     ...cenariosLadoALado(d),
     "A escolha do cenário e a formalização cabem ao órgão, pelo rito do contrato.",
     "",
-    manter
-      ? `No cenário preferido pela empresa (manter as horas), o salário e os demais valores por empregado ficam no valor da convenção, e cada posto passa a precisar de ${fatorTexto(p.jornadaAntes!, p.jornadaDepois!)} empregados equivalentes (${p.jornadaAntes} ÷ ${p.jornadaDepois}). A planilha de custos e a memória de cálculo anexas demonstram a variação, linha a linha. O valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, uma diferença de ${brl(comp.diferencaMensal)} por mês${comp.variacaoPct ? ` (${pct(comp.variacaoPct)})` : ""}.${retro ? ` A diferença acumulada desde ${data(p.jornadaInicioEfeitos ?? p.dataBase)} até ${data(calc.dataReferencia)} soma ${brl(retro.total)} (${calc.regraRetroativo}).` : ""}`
-      : `No cenário preferido pela empresa (reduzir as horas), mantido o valor mensal de ${brl(comp.mensalAgora)}, as horas de serviço de cada posto passam de ${Number(p.horasCobertura)} para ${horasReduzidas(Number(p.horasCobertura), p.jornadaAntes!, p.jornadaDepois!).toString().replace(".", ",")} horas semanais (redução de ${reducaoHorasPct(p.jornadaAntes!, p.jornadaDepois!).toFixed(3).replace(".", ",")}% das horas entregues).`,
+    cen === "REDUZIR_HORAS"
+      ? `Na opção apresentada pela empresa (reduzir as horas de cobertura), as horas de serviço de cada posto passariam de ${Number(p.horasCobertura)} para ${horasReduzidas(Number(p.horasCobertura), p.jornadaAntes!, p.jornadaDepois!).toString().replace(".", ",")} horas semanais. Trata-se de proposta de alteração das condições de execução, a negociar, com os impactos demonstrados na planilha comparativa.`
+      : `Na opção apresentada pela empresa (${NOME_CENARIO[cen].toLowerCase()}), o cálculo foi feito por tipo de posto, com o dimensionamento real de pessoal informado pela empresa; os fatores ${p.jornadaAntes}/${p.jornadaDepois} servem só como referência matemática. O salário mensal fica preservado e o segundo repouso semanal não é somado de novo. A planilha comparativa e a memória de cálculo anexas demonstram cada rubrica alterada. O valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, ${dif > 0 ? "um acréscimo" : dif < 0 ? "uma redução" : "sem variação"}${dif !== 0 ? ` de ${brl(Math.abs(dif).toFixed(2))} por mês` : ""}${comp.variacaoPct && dif !== 0 ? ` (${pct(comp.variacaoPct)})` : ""}.${retro && dif > 0 ? ` A diferença por competência desde ${data(efeitos)} até ${data(calc.dataReferencia)} soma ${brl(retro.total)} (demonstrativo anexo), sujeita à comprovação da repercussão econômica.` : ""}`,
     "",
     "Diante do exposto, requer:",
-    manter
-      ? `a) a celebração de termo aditivo de reequilíbrio, com o valor mensal do contrato em ${brl(comp.mensalAgora)}, com efeitos a partir de ${data(p.dataBase)};`
-      : "a) a celebração de termo aditivo que registre a redução das horas de serviço, mantido o valor mensal;",
-    manter ? "b) o pagamento das diferenças desde o início da nova jornada, a serem faturadas em nota fiscal própria após o aditivo." : "b) a adequação das ordens de serviço à nova carga horária.",
+    cen === "REDUZIR_HORAS"
+      ? "a) a celebração de termo aditivo que formalize a adequação das condições de execução à nova jornada;"
+      : `a) a celebração de termo aditivo de adequação, com o valor mensal do contrato em ${brl(comp.mensalAgora)}, com efeitos a partir de ${data(efeitos)};`,
+    cen === "REDUZIR_HORAS"
+      ? "b) a adequação das ordens de serviço à nova carga horária."
+      : "b) o pagamento das diferenças apuradas por competência, comprovada a repercussão econômica, em nota fiscal própria após o aditivo.",
   ];
 }
 
@@ -231,7 +271,7 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
   const pdf = await Pdf.criar(`Memória de cálculo · Contrato ${c.numero} · ${m.nome} · regra ${calc.versaoRegra}`, m.cor, await logoDe(m.logo));
   if (aprovacaoValida(p)) pdf.selo("MEMÓRIA APROVADA", COR.verde);
   if (simulacaoJornada(d)) pdf.selo(MARCA_SIMULACAO_JORNADA, COR.carimbo);
-  pdf.titulo("Memória de cálculo da repactuação");
+  pdf.titulo(p.gatilho === "JORNADA_EC141" ? "Memória de cálculo da adequação à jornada" : "Memória de cálculo da repactuação");
   pdf.texto(`Contrato ${c.numero} · ${c.orgao}`, { tam: 11, negrito: true, espaco: 2 });
   pdf.texto(`${c.empresa.razaoSocial} · CNPJ ${formatarCnpj(c.empresa.cnpj)}`, { cor: COR.grafite, espaco: 2 });
   pdf.texto(
@@ -240,7 +280,7 @@ export async function memoriaPdf(pedidoId: string, contaId: string) {
   );
   if (p.gatilho === "JORNADA_EC141")
     pdf.texto(
-      `Jornada de ${p.jornadaAntes} para ${p.jornadaDepois} horas semanais · cobertura de ${Number(p.horasCobertura)} horas por posto · cenário: ${p.cenarioJornada === "MANTER_HORAS" ? `manter as horas (linhas em R$ × ${p.jornadaAntes} ÷ ${p.jornadaDepois})` : "reduzir as horas, valor mensal mantido"}. Regra nova, a confirmar com o jurídico.`,
+      `Jornada de ${p.jornadaAntes} para ${p.jornadaDepois} horas semanais · cobertura de ${Number(p.horasCobertura)} horas por posto · cenário: ${NOME_CENARIO[(p.cenarioJornada ?? "MANTER_HORAS") as Cenario].toLowerCase()} · cálculo por tipo de posto, com o dimensionamento informado pela empresa · metodologia ${p.metodologiaVersao ?? METODOLOGIA_JORNADA_VERSAO}. A diferença pode ser positiva, negativa ou zero.`,
       { cor: COR.grafite, espaco: 2 },
     );
   pdf.texto(
@@ -422,7 +462,12 @@ export async function pacoteZip(pedidoId: string, contaId: string, opcoes: { ras
   zip.file(`03-memoria-de-calculo-contrato-${n}.pdf`, await memoriaPdf(pedidoId, contaId));
   const docs = [...d.p.documentos];
   let i = 4;
-  if (d.p.gatilho === "JORNADA_EC141") zip.file(`${String(i++).padStart(2, "0")}-minuta-aditivo-contrato-${n}.pdf`, await minutaAditivoPdf(pedidoId, contaId));
+  // parecer de 28/11/2026 (A5): os 7 documentos da jornada (requerimento, fundamentação, memória, planilha, retroativo, minuta, anexos)
+  if (d.p.gatilho === "JORNADA_EC141") {
+    zip.file(`${String(i++).padStart(2, "0")}-fundamentacao-normativa-contrato-${n}.pdf`, await fundamentacaoPdf(pedidoId, contaId));
+    zip.file(`${String(i++).padStart(2, "0")}-demonstrativo-retroativo-contrato-${n}.pdf`, await retroativoPdf(pedidoId, contaId));
+    zip.file(`${String(i++).padStart(2, "0")}-minuta-aditivo-contrato-${n}.pdf`, await minutaAditivoPdf(pedidoId, contaId));
+  }
   for (const doc of docs) {
     try {
       zip.file(`${String(i++).padStart(2, "0")}-anexo-${doc.nome}`, await lerArquivo(doc.caminho));
@@ -431,6 +476,90 @@ export async function pacoteZip(pedidoId: string, contaId: string, opcoes: { ras
     }
   }
   return zip.generateAsync({ type: "nodebuffer" });
+}
+
+// ---------------------------------------------------------------------------
+// Parecer de 28/11/2026 (A5): fundamentação normativa e demonstrativo retroativo do pedido da jornada
+// ---------------------------------------------------------------------------
+
+export async function fundamentacaoPdf(pedidoId: string, contaId: string) {
+  const d = await carregar(pedidoId, contaId);
+  const { p } = d;
+  if (p.gatilho !== "JORNADA_EC141") throw new ErroUsuario("A fundamentação normativa é do pedido da jornada.");
+  const c = p.contrato;
+  const m = marca(d);
+  const enq = p.jornadaEnquadramento as Enquadramento | null;
+  const pdf = await Pdf.criar(`Fundamentação normativa · Contrato ${c.numero} · ${m.nome}`, m.cor, await logoDe(m.logo));
+  if (simulacaoJornada(d)) pdf.selo(MARCA_SIMULACAO_JORNADA, COR.carimbo);
+  pdf.titulo("Fundamentação normativa");
+  pdf.texto(`Contrato ${c.numero} · ${c.orgao} · ${c.empresa.razaoSocial}`, { tam: 11, negrito: true, espaco: 2 });
+  pdf.texto(`Metodologia ${p.metodologiaVersao ?? METODOLOGIA_JORNADA_VERSAO} · normas consultadas até 28/11/2026.`, { tam: 9, cor: COR.grafite, espaco: 8 });
+  pdf.titulo("Normas aplicáveis", 12);
+  for (const n of NORMAS_JORNADA) pdf.texto(`• ${n.nome}`, { tam: 10, espaco: 2 });
+  pdf.texto(
+    `A medida cautelar do STF tem natureza provisória${JORNADA.liminarVigente() ? " e está considerada nesta data" : " e não está sendo aplicada nesta data"}; os prazos podem mudar com o julgamento.`,
+    { tam: 9, cor: COR.grafite, espaco: 8 },
+  );
+  pdf.titulo("Enquadramento e prazos", 12);
+  pdf.texto(enq ? NOME_ENQUADRAMENTO[enq] + "." : "Enquadramento não informado.", { tam: 10, espaco: 2 });
+  if (enq) pdf.texto(explicarInicio(p.jornadaDepois === 40 ? "42-40" : "44-42", enq, { dataAditivo: p.jornadaDataAditivo, assinatura: p.jornadaAssinaturaContrato }), { tam: 10, espaco: 4 });
+  for (const l of datasJornada(p)) pdf.texto(`• ${l}`, { tam: 10, espaco: 2 });
+  pdf.texto(
+    "A data de aplicação da jornada não se confunde com o reconhecimento administrativo dos efeitos financeiros, que depende da decisão do órgão.",
+    { tam: 9, cor: COR.grafite, espaco: 8 },
+  );
+  pdf.titulo("Regras de cálculo aplicadas", 12);
+  for (const l of [
+    "Cálculo individualizado por contrato, tipo de posto e jornada; os fatores 44/42 e 44/40 são referência matemática, não teto legal nem aumento automático.",
+    "Postos de 42 horas ou menos não se alteram na etapa de 42 horas; de 40 horas ou menos, em nenhuma etapa. Na escala 12x36, a média mensal acima do limite semanal gera horas extras ou compensação, conforme o instrumento coletivo (Decreto 13.173/2026).",
+    "Divisores mensais de referência do salário-hora: 220 (44 h), 210 (42 h) e 200 (40 h), preservado o divisor mais favorável ao trabalhador.",
+    "Salário mensal e piso preservados; encargos recalculados sobre a base efetivamente alterada; vale-transporte e alimentação pelos dias trabalhados ou pelo valor fixado no instrumento coletivo.",
+    "O segundo repouso semanal remunerado vale desde 16/12/2026 e é tratado à parte; o valor já incorporado ao salário mensal não é duplicado (Portaria MTE 2.041/2026, art. 11).",
+    "Diferença = novo custo contratual − custo vigente, rubrica por rubrica, sem dupla contagem; pode ser positiva, negativa ou zero, e não presume crédito contra o órgão.",
+    "Recomposição por alteração legislativa: distinta da repactuação ordinária (art. 136 da Lei 14.133/2021), sem exigência de anualidade, formalizada por termo aditivo.",
+  ])
+    pdf.texto(`• ${l}`, { tam: 10, espaco: 3 });
+  pdf.titulo("Anexos comprobatórios", 12);
+  const anexos = [
+    "Requerimento administrativo",
+    "Memória de cálculo",
+    "Planilha comparativa (vigente × proposta)",
+    "Demonstrativo retroativo por competência",
+    "Minuta de termo aditivo",
+    ...p.documentos.map((x) => `Anexo: ${x.nome}`),
+  ];
+  for (const a of anexos) pdf.texto(`• ${a}`, { tam: 10, espaco: 2 });
+  pdf.regua();
+  pdf.texto("Documento de apoio gerado pela plataforma; não substitui a análise de profissional habilitado e não vincula a Administração.", { tam: 8, cor: COR.grafite });
+  return pdf.bytes();
+}
+
+export async function retroativoPdf(pedidoId: string, contaId: string) {
+  const d = await carregar(pedidoId, contaId);
+  const { p, calc, comp } = d;
+  const c = p.contrato;
+  const m = marca(d);
+  const pdf = await Pdf.criar(`Demonstrativo retroativo · Contrato ${c.numero} · ${m.nome}`, m.cor, await logoDe(m.logo));
+  if (simulacaoJornada(d)) pdf.selo(MARCA_SIMULACAO_JORNADA, COR.carimbo);
+  pdf.titulo("Demonstrativo retroativo por competência");
+  pdf.texto(`Contrato ${c.numero} · ${c.orgao} · ${c.empresa.razaoSocial}`, { tam: 11, negrito: true, espaco: 2 });
+  pdf.texto(
+    `Diferença mensal: ${brl(comp.diferencaMensal)} · efeitos pleiteados a partir de ${data(p.gatilho === "JORNADA_EC141" ? p.jornadaInicioEfeitos ?? p.dataBase : p.dataBase)} · referência ${data(calc.dataReferencia)}.`,
+    { cor: COR.grafite, espaco: 8 },
+  );
+  if (calc.retroativo?.meses.length) {
+    pdf.tabela(
+      ["Competência", "Dias", "Conta", "Valor"],
+      [...calc.retroativo.meses.map((x) => [x.competencia, `${x.dias}/${x.diasNoMes}`, x.conta, brl(x.valor)]), ["Total", "", "", brl(calc.retroativo.total)]],
+      [0.18, 0.12, 0.5, 0.2],
+      ["e", "d", "e", "d"],
+    );
+    pdf.texto(`Regra: diferença ${calc.regraRetroativo}.`, { tam: 9, espaco: 4 });
+    if (calc.jaPago) pdf.texto(`Retroativo bruto ${brl(calc.retroativoBruto!)}, menos ${brl(calc.jaPago)} já pagos pelo órgão no período.`, { tam: 9, espaco: 4 });
+  } else pdf.texto("Sem diferença retroativa no período (início dos efeitos futuro, ou diferença zero ou negativa).", { tam: 10 });
+  pdf.regua();
+  pdf.texto("O retroativo considera a repercussão econômica comprovada e não presume crédito contra o órgão público.", { tam: 8, cor: COR.grafite });
+  return pdf.bytes();
 }
 
 // ---------------------------------------------------------------------------
@@ -444,7 +573,8 @@ export async function minutaAditivoPdf(pedidoId: string, contaId: string) {
   const c = p.contrato;
   const e = c.empresa;
   const m = marca(d);
-  const manter = p.cenarioJornada === "MANTER_HORAS";
+  // A4/A5: manter a cobertura e reorganizar as escalas mudam o valor; reduzir as horas muda as condições de execução
+  const manter = p.cenarioJornada !== "REDUZIR_HORAS";
   const pdf = await Pdf.criar(`Minuta de termo aditivo · Contrato ${c.numero} · gerada por ${m.nome}`, m.cor, await logoDe(m.logo));
   pdf.selo("MINUTA, revise com seu jurídico", COR.carimbo);
   if (simulacaoJornada(d)) pdf.selo(MARCA_SIMULACAO_JORNADA, COR.carimbo);
@@ -452,12 +582,12 @@ export async function minutaAditivoPdf(pedidoId: string, contaId: string) {
   const blocos = [
     `CONTRATANTE: ${c.orgao}${c.orgaoCnpj ? `, CNPJ ${formatarCnpj(c.orgaoCnpj)}` : ""}.`,
     `CONTRATADA: ${e.razaoSocial}, CNPJ ${formatarCnpj(e.cnpj)}.`,
-    `FUNDAMENTO: Emenda Constitucional nº 141/2026 e ${FUNDAMENTO}.`,
-    `CLÁUSULA PRIMEIRA. DO OBJETO. Este termo aditivo trata do reequilíbrio econômico-financeiro do contrato em razão da redução da jornada semanal de trabalho de ${p.jornadaAntes} para ${p.jornadaDepois} horas.`,
+    "FUNDAMENTO: art. 9º da Emenda Constitucional nº 141/2026 e arts. 124 e 134 da Lei nº 14.133/2021.",
+    `CLÁUSULA PRIMEIRA. DO OBJETO. Este termo aditivo adequa o contrato à redução da duração do trabalho de ${p.jornadaAntes} para ${p.jornadaDepois} horas semanais, decorrente da Emenda Constitucional nº 141/2026.`,
     manter
-      ? `CLÁUSULA SEGUNDA. DO VALOR. Mantidas as ${Number(p.horasCobertura)} horas semanais de cobertura por posto, o valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, conforme a planilha de custos e a memória de cálculo anexas.`
-      : `CLÁUSULA SEGUNDA. DA CARGA HORÁRIA. Mantido o valor mensal de ${brl(comp.mensalAgora)}, as horas de serviço de cada posto passam de ${Number(p.horasCobertura)} para ${horasReduzidas(Number(p.horasCobertura), p.jornadaAntes!, p.jornadaDepois!).toString().replace(".", ",")} horas semanais.`,
-    `CLÁUSULA TERCEIRA. DOS EFEITOS. Os efeitos deste termo valem a partir de ${data(p.inicioJornada ?? p.dataBase)}.`,
+      ? `CLÁUSULA SEGUNDA. DO VALOR. ${p.cenarioJornada === "REORGANIZAR_ESCALAS" ? "Com a reorganização das escalas demonstrada nos anexos" : `Mantidas as ${Number(p.horasCobertura)} horas semanais de cobertura por posto`}, o valor mensal do contrato passa de ${brl(comp.mensalAntes)} para ${brl(comp.mensalAgora)}, conforme a planilha comparativa e a memória de cálculo anexas.`
+      : `CLÁUSULA SEGUNDA. DAS CONDIÇÕES DE EXECUÇÃO. Pelo valor mensal de ${brl(comp.mensalAgora)}, conforme negociado entre as partes, as horas de serviço de cada posto passam de ${Number(p.horasCobertura)} para ${horasReduzidas(Number(p.horasCobertura), p.jornadaAntes!, p.jornadaDepois!).toString().replace(".", ",")} horas semanais.`,
+    `CLÁUSULA TERCEIRA. DOS EFEITOS. Os efeitos deste termo valem a partir de ${data(p.jornadaInicioEfeitos ?? p.inicioJornada ?? p.dataBase)}.`,
     "CLÁUSULA QUARTA. DA RATIFICAÇÃO. Ficam mantidas as demais cláusulas do contrato que não conflitem com este termo.",
     `${c.municipio ?? "________"}, ____ de ____________ de ______.`,
   ];

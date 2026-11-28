@@ -81,6 +81,31 @@ export interface TipoPosto {
   nome: string; // "Servente 44h"
   quantidade: number;
   linhas: LinhaPlanilha[];
+  /** Jornada (EC 141/2026): dados do posto informados pela empresa no pedido da jornada (parecer de 28/11/2026, A4). */
+  jornada?: JornadaDoPosto;
+}
+
+/**
+ * A4: a jornada é tratada por tipo de posto, com o dimensionamento real informado pela empresa.
+ * Nada aqui é presumido: vazio = o padrão descrito em lib/jornada.ts.
+ */
+export interface JornadaDoPosto {
+  /** jornada semanal normal do posto hoje (44, 43, 42, 40, 36, 30...). Vazio: a jornada de antes da etapa. */
+  semanal?: number;
+  /** escala 12x36: apuração específica (Decreto 13.173/2026) */
+  escala12x36?: boolean;
+  /** empregados por posto hoje e depois da mudança (dimensionamento real). Vazios: a proporção das jornadas. */
+  empregadosAntes?: number;
+  empregadosDepois?: number;
+  /** dias trabalhados por empregado no mês, hoje e depois (vale-transporte e alimentação por dia). Vazios: sem mudança. */
+  diasAntes?: number;
+  diasDepois?: number;
+  /** 12x36: adicional das horas extras, em % (instrumento coletivo; padrão 50) */
+  adicionalHePct?: number;
+  /** 12x36: o excedente é compensado (sem custo), conforme o instrumento coletivo */
+  compensar12x36?: boolean;
+  /** divisor do salário-hora mais favorável previsto no instrumento coletivo (vazio: 210 ou 200) */
+  divisor?: number;
 }
 
 export interface PlanilhaCustos {

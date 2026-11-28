@@ -117,6 +117,7 @@ type PedidoPend = Pick<
       | "horasCobertura"
       | "inicioJornada"
       | "cenarioJornada"
+      | "jornadaEnquadramento"
       | "retroativoCompetencias"
       | "calculoManual"
       | "calculoManualJustificativa"
@@ -141,6 +142,7 @@ export function pendenciasParaGerar(p: PedidoPend, documentos: { tipo: string }[
   if (conv && !p.dataDeposito) r.push({ passo: 1, mensagem: "Falta a data do depósito da convenção." });
   if (p.gatilho === "OUTRO_CUSTO" && !p.descricaoGatilho) r.push({ passo: 1, mensagem: "Falta descrever qual custo mudou." });
   if (jornada && (!p.jornadaAntes || !p.jornadaDepois || !p.horasCobertura || !p.inicioJornada)) r.push({ passo: 1, mensagem: "Faltam os dados da jornada (antes, depois, horas de cobertura e início)." });
+  if (jornada && !p.jornadaEnquadramento) r.push({ passo: 1, mensagem: "Escolha o enquadramento do contrato: ele define o prazo do aditivo e o início dos efeitos." });
 
   const antes = p.planilhaAntes as unknown as PlanilhaCustos | null;
   const agora = p.planilhaAgora as unknown as PlanilhaCustos | null;
@@ -156,8 +158,9 @@ export function pendenciasParaGerar(p: PedidoPend, documentos: { tipo: string }[
     if (c?.erros.length) r.push({ passo: 3, mensagem: c.erros[0] });
     if (calc.pendenciaRetroativo) r.push({ passo: 3, mensagem: calc.pendenciaRetroativo });
     if (p.calculoManual && !p.calculoManualJustificativa?.trim()) r.push({ passo: 3, mensagem: "Cálculo manual exige justificativa registrada." });
-    else if (jornada && !p.cenarioJornada) r.push({ passo: 3, mensagem: "Escolha o cenário da jornada: manter ou reduzir as horas de serviço." });
-    else if (c && Number(c.diferencaMensal) <= 0 && !(jornada && p.cenarioJornada === "REDUZIR_HORAS")) r.push({ passo: 3, mensagem: "A planilha nova não aumenta o valor mensal." });
+    else if (jornada && !p.cenarioJornada) r.push({ passo: 3, mensagem: "Escolha o cenário da jornada: manter a cobertura, reduzir as horas ou reorganizar as escalas." });
+    // A4 (parecer de 28/11/2026): na jornada, a diferença pode ser positiva, negativa ou zero
+    else if (c && Number(c.diferencaMensal) <= 0 && !jornada) r.push({ passo: 3, mensagem: "A planilha nova não aumenta o valor mensal." });
     const sem = jornada ? [] : linhasSemFonte(antes, agora);
     if (sem.length)
       r.push({
@@ -252,6 +255,9 @@ export function hashCalculo(p: BaseCalculo): string {
   // C6/D4: entram só quando preenchidos (assinaturas antigas continuam valendo)
   if (j.valoresJaPagos != null && Number(j.valoresJaPagos) > 0) base.valoresJaPagos = String(j.valoresJaPagos);
   if (p.gatilho === "JORNADA_EC141" && j.jornadaInicioEfeitos) base.jornadaInicioEfeitos = j.jornadaInicioEfeitos;
+  // parecer de 28/11/2026: enquadramento e versão da metodologia entram quando preenchidos
+  if (p.gatilho === "JORNADA_EC141" && j.jornadaEnquadramento) base.jornadaEnquadramento = j.jornadaEnquadramento;
+  if (p.gatilho === "JORNADA_EC141" && j.metodologiaVersao) base.metodologiaVersao = j.metodologiaVersao;
   // L11: as opções do retroativo entram só quando diferem do padrão (assinaturas antigas continuam valendo)
   if (p.retroContarAte && p.retroContarAte !== "DATA_INFORMADA") base.retroContarAte = p.retroContarAte;
   if (p.retroMesIncompleto && p.retroMesIncompleto !== "DIAS_CORRIDOS") base.retroMesIncompleto = p.retroMesIncompleto;
