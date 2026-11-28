@@ -5,7 +5,7 @@ import { contexto, ehDemo, NOME_PAPEL, pode } from "@/lib/auth";
 import { PRECOS, situacaoEfetiva, valorDoPlano } from "@/lib/planos";
 import { modoPiloto } from "@/lib/chaves";
 import { cobranca, simulacaoPermitida } from "@/lib/cobranca";
-import { resumoAssinatura } from "@/lib/cobranca-servidor";
+import { previaCancelamento, resumoAssinatura, tabelaDoFundador } from "@/lib/cobranca-servidor";
 import { preverMudanca } from "@/lib/assinatura";
 import type { PlanoId } from "@/lib/planos";
 import { db } from "@/lib/db";
@@ -339,6 +339,8 @@ const REVISAO: Record<string, string> = {
   PAGA_APOS_CANCELAMENTO: "Pagamento recebido depois do cancelamento: não reativa o plano; o valor será devolvido.",
   ESTORNO_PARCIAL: "Estorno parcial registrado: o acesso do período foi mantido.",
   CHARGEBACK: "Contestação aberta no cartão: o acesso segue até a decisão.",
+  REEMBOLSO_GARANTIA: "Cancelada na garantia de 30 dias: o valor pago será devolvido.",
+  REEMBOLSO_PROPORCIONAL: "Anual cancelado: a parte proporcional será devolvida.",
 };
 const NOME_PLANO_CURTO: Record<string, string> = { GRATIS: "Grátis", PILOTO: "Piloto", CARTEIRA: "Carteira", ASSESSORIA: "Assessoria" };
 
@@ -354,9 +356,11 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
   const destino = (["GRATIS", "PILOTO", "CARTEIRA", "ASSESSORIA"] as const).find((p) => p === planoPrevisto) as PlanoId | undefined;
   const cicloNovo = cicloPrevisto === "ANUAL" ? "ANUAL" : cicloPrevisto === "MENSAL" ? "MENSAL" : ciclo;
   const previsao = destino ? preverMudanca(conta, destino, agora, cicloNovo) : null;
+  // B1: no cancelamento, a devolução (garantia ou proporcional do anual) aparece antes do clique
+  const devolucao = destino === "GRATIS" && previsao?.possivel ? await previaCancelamento(ctx.conta.id, agora) : null;
   // a mesma compra já aberta: o servidor devolve a mesma cobrança (não cria outra)
   const mesmaPendente = !!a.pendenteCompra && a.pendenteCompra.plano === destino && a.pendenteCompra.ciclo === cicloNovo;
-  const valorPrevisto = destino && (destino === "CARTEIRA" || destino === "ASSESSORIA") ? valorDoPlano(destino, { postos, ciclo: cicloNovo }).toFixed(2) : null;
+  const valorPrevisto = destino && (destino === "CARTEIRA" || destino === "ASSESSORIA") ? valorDoPlano(destino, { postos, ciclo: cicloNovo, tabela: tabelaDoFundador(conta, destino, agora) }).toFixed(2) : null;
   const base = (plano: string) =>
     plano === "CARTEIRA"
       ? `${plural(postos, "posto", "postos")} × R$ ${PRECOS.carteiraPorPosto} por mês, mínimo de ${reais(PRECOS.carteiraMinimo.toFixed(2))}`
@@ -382,7 +386,7 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
             <>
               <dt>Valor {ciclo === "ANUAL" ? "anual" : "mensal"}</dt>
               <dd className="tnum">
-                {reais(valorDoPlano(conta.plano, { postos, ciclo }).toFixed(2))}
+                {reais(valorDoPlano(conta.plano, { postos, ciclo, tabela: tabelaDoFundador(conta, conta.plano, agora) }).toFixed(2))}
                 <span className="legenda" style={{ display: "block" }}>
                   {base(conta.plano)}
                 </span>
@@ -406,6 +410,12 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                   {base(conta.mudancaAgendada && conta.mudancaAgendada !== "GRATIS" ? conta.mudancaAgendada : conta.plano)}. O valor é recalculado na data com os postos ativos.
                 </span>
               </dd>
+            </>
+          )}
+          {a.fundadorAte && (
+            <>
+              <dt>Preço de fundador</dt>
+              <dd>Preço mantido no plano {NOME_PLANO_CURTO[conta.fundadorPlano ?? ""] ?? ""} até {data(a.fundadorAte)}.</dd>
             </>
           )}
           {conta.plano === "PILOTO" && (
@@ -503,7 +513,11 @@ async function Cobranca({ dono, planoPrevisto, cicloPrevisto }: { dono: boolean;
                     <strong>{reais(valorPrevisto)}</strong> por {cicloNovo === "ANUAL" ? "ano" : "mês"} · {base(destino)}
                   </p>
                 )}
-                {previsao.linhas.length === 1 && !mesmaPendente ? (
+                {devolucao?.encerraAgora ? (
+                  <p className="mb-0">
+                    {devolucao.explicacao} A devolução é feita pelo mesmo meio de pagamento, em até 10 dias úteis. Você pode exportar seus dados por 30 dias.
+                  </p>
+                ) : previsao.linhas.length === 1 && !mesmaPendente ? (
                   <p className="mb-0">{previsao.linhas[0]}</p>
                 ) : (
                   <ul className="mb-0">

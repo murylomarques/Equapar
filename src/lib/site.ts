@@ -30,6 +30,9 @@ export function dadosEmpresa() {
     local: env("SITE_ENDERECO") || cidade,
     fundadorNome: env("SITE_FUNDADOR_NOME") || null,
     fundadorFoto: env("SITE_FUNDADOR_FOTO") || null,
+    /** D (parecer de 28/11): sem CNPJ, a pessoa física responsável, com nome completo e CPF (Decreto 7.962/2013) */
+    responsavelNome: env("SITE_RESPONSAVEL_NOME") || env("SITE_FUNDADOR_NOME") || null,
+    cpf: cpfFormatado(env("SITE_CPF")),
   };
 }
 
@@ -69,10 +72,25 @@ export function canaisDeAviso() {
   return process.env.WHATSAPP_TOKEN ? "Avisos por e-mail e WhatsApp" : "Avisos por e-mail";
 }
 
+/** CPF válido (dígitos verificadores) formatado 000.000.000-00; inválido ou vazio: null. */
+export function cpfFormatado(bruto: string): string | null {
+  const d = bruto.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return null;
+  const dv = (n: number) => {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += Number(d[i]) * (n + 1 - i);
+    const r = (s * 10) % 11;
+    return r === 10 ? 0 : r;
+  };
+  if (dv(9) !== Number(d[9]) || dv(10) !== Number(d[10])) return null;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
 /**
- * B5: como termos e privacidade identificam a empresa. Sem SITE_CNPJ: "Equapar, sob a responsabilidade de" o
- * fundador, o e-mail como canal do titular e a cidade como local. Nenhum documento pessoal (CPF) aparece no site.
- * Com o CNPJ preenchido, razão social, CNPJ e endereço, sem nova programação.
+ * B5 e D (parecer de 28/11/2026): como termos, privacidade e rodapé identificam o fornecedor.
+ * Com SITE_CNPJ: razão social, CNPJ e endereço. Sem CNPJ e com SITE_CPF: "Equapar, nome comercial de" a pessoa física
+ * responsável, com CPF e endereço (Decreto 7.962/2013, art. 2º). Sem os dois: só o nome do responsável e a cidade.
+ * Os dados ficam só no ambiente, nunca no código.
  */
 export function identificacaoEmpresa() {
   const e = dadosEmpresa();
@@ -81,6 +99,13 @@ export function identificacaoEmpresa() {
     return {
       texto: [e.razaoSocial, `CNPJ ${e.cnpj}`, e.local].filter(Boolean).join(", "),
       responsavel: e.fundadorNome,
+      canal: c.email,
+      local: e.local,
+    };
+  if (e.cpf && e.responsavelNome)
+    return {
+      texto: [`Equapar, nome comercial de ${e.responsavelNome}`, `CPF ${e.cpf}`, e.local].filter(Boolean).join(", "),
+      responsavel: e.responsavelNome,
       canal: c.email,
       local: e.local,
     };

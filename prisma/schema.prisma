@@ -83,6 +83,9 @@ model Usuario {
   codigosRecuperacao  String[]  @default([]) // C8: hashes dos códigos de recuperação
   // preferências de aviso: { prazo: "EMAIL"|"WHATSAPP"|"AMBOS", resposta: ..., deferido: ..., semanal: bool, hora: 7 }
   prefsAvisos         Json?
+  // D (parecer 28/11): aceite registrado dos termos de uso e da política de privacidade, com a versão aceita
+  termosVersao        String?
+  termosAceitosEm     DateTime?
   criadoEm            DateTime  @default(now())
 
   sessoes           Sessao[]
@@ -132,6 +135,10 @@ model Conta {
   planoVigenteAte        DateTime? // P0: fim do último período pago (o plano pago vale até aqui)
   renovacaoCancelada     Boolean   @default(false) // P0: o cliente cancelou a renovação; o acesso pago segue até planoVigenteAte
   mudancaAgendada        Plano? // P0: plano que passa a valer em mudancaAgendadaEm (downgrade no fim do período)
+  // B2 item 6: preço de fundador (10 primeiros contratantes): tabela de preços congelada por 24 meses no plano contratado
+  fundadorAte            DateTime?
+  fundadorPlano          Plano?
+  fundadorPrecos         Json?
   mudancaAgendadaEm      DateTime?
 
   membros           Membro[]
@@ -503,6 +510,10 @@ model Fatura {
   // revisão tratada pela equipe no painel interno (a marca `revisao` fica: ela muda o direito de acesso)
   revisaoResolvidaEm  DateTime?
   revisaoResolvidaPor String?
+  // B1: devolução devida no cancelamento (garantia de 30 dias ou proporcional do anual); a equipe faz no gateway
+  valorReembolsar     Decimal?  @db.Decimal(12, 2)
+  // D: oferta aceita na compra (versão dos termos, preço e condições mostrados)
+  oferta              Json?
 
   @@index([contaId, status])
 }

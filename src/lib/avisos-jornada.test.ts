@@ -39,9 +39,9 @@ describe("5.1: aviso da jornada", () => {
     await rodarAvisos({ agora });
     const j = enviados.filter((e) => e.chave.startsWith("JORNADA:"));
     expect(j).toHaveLength(1);
-    expect(j[0].corpo).toContain("planalto.gov.br/ccivil_03/constituicao/emendas/emc/emc141.htm");
+    expect(j[0].corpo).toContain("Emenda Constitucional nº 141/2026");
     expect(j[0].corpo).toContain("ADIs 8041 e 8042");
-    expect(j[0].corpo).toContain("Confirme as datas do seu contrato com o seu jurídico");
+    expect(j[0].corpo).toContain("/app/carteira?filtro=jornada");
     expect(conta.avisoJornadaEm).toEqual(agora);
     await rodarAvisos({ agora });
     expect(enviados.filter((e) => e.chave.startsWith("JORNADA:"))).toHaveLength(1);

@@ -164,10 +164,15 @@ export async function mudarPlano(_: Resultado, fd: FormData): Promise<Resultado>
       const informado = texto(fd, "motivo");
       const motivo = ["PRECO", "POUCO_USO", "FALTOU_FUNCAO", "TEMPORARIO", "OUTRO"].includes(informado) ? informado : "NAO_INFORMADO";
       await registrarEvento("renovacao_cancelada", { motivo, agendado: r.agendado });
-      await registrarHistorico(ctx, r.agendado ? `Cancelou a renovação; o plano pago segue até ${data(r.ate)}` : "Voltou ao plano Grátis");
+      await registrarHistorico(
+        ctx,
+        r.devolucao ? `Cancelou a assinatura com devolução de R$ ${r.devolucao.valor}` : r.agendado ? `Cancelou a renovação; o plano pago segue até ${data(r.ate)}` : "Voltou ao plano Grátis",
+      );
       revalidatePath("/app", "layout");
       return {
-        ok: r.agendado
+        ok: r.devolucao
+          ? `Assinatura cancelada. ${r.devolucao.explicacao} A devolução é feita pelo mesmo meio de pagamento, em até 10 dias úteis; a confirmação foi enviada por e-mail.`
+          : r.agendado
           ? `Renovação cancelada. Você continua com o plano atual até ${data(r.ate)}; depois, a conta passa para o Grátis. Seus dados ficam guardados.`
           : "Conta no plano Grátis. Seus dados continuam aqui e disponíveis para exportar.",
       };

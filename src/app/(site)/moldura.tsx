@@ -80,6 +80,12 @@ export function RodapeSite() {
             © {new Date().getFullYear()} {nome}
           </span>
           {empresa.cnpj && <span>CNPJ {empresa.cnpj}</span>}
+          {/* sem CNPJ: a pessoa física responsável (Decreto 7.962/2013, art. 2º) */}
+          {!empresa.cnpj && empresa.cpf && empresa.responsavelNome && (
+            <span>
+              {empresa.responsavelNome} · CPF {empresa.cpf}
+            </span>
+          )}
           {empresa.local && <span>{empresa.local}</span>}
         </p>
       </div>

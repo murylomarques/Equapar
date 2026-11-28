@@ -39,9 +39,39 @@ export const PRECOS = {
   /** Preço de fundador: os primeiros N clientes mantêm o preço por M meses. */
   fundadorClientes: 10,
   fundadorMeses: 24,
-  /** Garantia: devolução da 1ª mensalidade se o cliente desistir em até N dias (não garante resultado do pedido). */
+  /** Garantia: na 1ª assinatura, devolução do valor pago se o cliente desistir em até N dias (lib/reembolso.ts; não garante resultado do pedido). */
   garantiaDias: 30,
 };
+
+/** Os preços que entram no valor da assinatura. O preço de fundador congela esta tabela por 24 meses. */
+export type TabelaPrecos = {
+  carteiraPorPosto: number;
+  carteiraMinimo: number;
+  assessoria: number;
+  assessoriaPostosIncluidos: number;
+  assessoriaPorPostoExtra: number;
+  mesesPagosNoAnual: number;
+};
+
+export function tabelaAtual(): TabelaPrecos {
+  return {
+    carteiraPorPosto: PRECOS.carteiraPorPosto,
+    carteiraMinimo: PRECOS.carteiraMinimo,
+    assessoria: PRECOS.assessoria,
+    assessoriaPostosIncluidos: PRECOS.assessoriaPostosIncluidos,
+    assessoriaPorPostoExtra: PRECOS.assessoriaPorPostoExtra,
+    mesesPagosNoAnual: PRECOS.mesesPagosNoAnual(),
+  };
+}
+
+/** Lê uma tabela guardada (Json do banco); faltando ou inválida, null (vale a atual). */
+export function tabelaGuardada(v: unknown): TabelaPrecos | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const chaves = ["carteiraPorPosto", "carteiraMinimo", "assessoria", "assessoriaPostosIncluidos", "assessoriaPorPostoExtra", "mesesPagosNoAnual"] as const;
+  if (!chaves.every((k) => typeof o[k] === "number" && Number.isFinite(o[k]) && (o[k] as number) >= 0)) return null;
+  return Object.fromEntries(chaves.map((k) => [k, o[k]])) as TabelaPrecos;
+}
 
 /** Valor avulso da Jornada 40h para um contrato com `postos` postos; null = acima da última faixa (sob consulta). */
 export function precoJornada40(postos: number): number | null {

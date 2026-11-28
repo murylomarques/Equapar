@@ -8,7 +8,7 @@ import { appUrl, enviar, MODELOS, type ModeloWhatsapp } from "./mensagens";
 import { acoesDoContrato, contratosComPrazoEm, marcoDataBase, prazoResposta } from "./prazos";
 import { aReceber, estaAReceber, LANCAMENTOS_A_RECEBER, saldoAReceber, type PedidoAReceber } from "./a-receber";
 import { data, diasAte, hojeUTC, plural, reais, reaisResumo } from "./format";
-import { JORNADA, afetadoPelaJornada } from "./jornada";
+import { afetadoPelaJornada } from "./jornada";
 import { jornadaLiberada } from "./chaves";
 
 type Prefs = { prazo?: "EMAIL" | "WHATSAPP" | "AMBOS"; resposta?: "EMAIL" | "WHATSAPP" | "AMBOS"; deferido?: "EMAIL" | "WHATSAPP" | "AMBOS"; semanal?: boolean; hora?: number };
@@ -250,15 +250,23 @@ export async function rodarAvisos({ contaId, agora = new Date() }: { contaId?: s
           canal: "EMAIL",
           destino: u.email,
           assunto: `Jornada de 40 horas: ${plural(afetados.length, "contrato seu é afetado", "contratos seus são afetados")}`,
+          // texto do advogado (parecer de 28/11/2026, C2); só o link leva direto aos contratos afetados
           corpo: [
-            `Equapar: ${JORNADA.fonte.texto}`,
+            `Olá!`,
             ``,
-            `A jornada máxima cai para 42 horas em ${data(JORNADA.inicio42())} e para 40 horas em ${data(JORNADA.inicio40())}.`,
-            `Nos contratos públicos com mão de obra, a adaptação vem por termo aditivo. A decisão liminar do STF de 12/11/2026 (ADIs 8041 e 8042) deu 180 dias, contados da publicação da emenda, para adaptar os contratos. Confirme as datas do seu contrato com o seu jurídico.`,
-            `${plural(afetados.length, "contrato de mão de obra dedicada seu segue", "contratos de mão de obra dedicada seus seguem")} vigente${afetados.length > 1 ? "s" : ""} depois disso.`,
-            `Fonte: ${JORNADA.fonte.fonte}. ${JORNADA.fonte.url}`,
+            `A Emenda Constitucional nº 141/2026 estabeleceu novas regras para a duração do trabalho e o repouso semanal remunerado, com implementação progressiva da jornada de 42 e 40 horas semanais.`,
             ``,
-            `Ver os contratos e montar os pedidos: ${appUrl("/app/carteira?filtro=jornada")}`,
+            `Para os contratos administrativos abrangidos pelo regime de transição, a medida cautelar proferida pelo STF nas ADIs 8041 e 8042 estabeleceu prazo de até 180 dias para adaptação contratual, observadas as particularidades de cada contratação.`,
+            ``,
+            `A Equapar disponibiliza recursos para identificação dos prazos aplicáveis, simulação dos impactos financeiros, elaboração da memória de cálculo e organização dos documentos necessários ao pedido administrativo.`,
+            ``,
+            `Acesse sua conta para verificar os contratos potencialmente afetados e iniciar a apuração dos impactos.`,
+            ``,
+            `Ver os contratos afetados: ${appUrl("/app/carteira?filtro=jornada")}`,
+            ``,
+            `As informações são atualizadas conforme as alterações normativas e judiciais aplicáveis.`,
+            ``,
+            `Equapar — Gestão e equilíbrio econômico-financeiro de contratos públicos`,
           ].join("\n"),
         });
         if (r) {

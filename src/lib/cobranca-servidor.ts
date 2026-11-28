@@ -3,7 +3,9 @@ import { Prisma, type Plano } from "@prisma/client";
 import Decimal from "decimal.js";
 import { db } from "./db";
 import { aplicarEvento, type Ciclo, type SituacaoCobranca, valorDoPlano } from "./planos";
-import { PRECOS } from "./precos";
+import { PRECOS, tabelaAtual, tabelaGuardada, type TabelaPrecos } from "./precos";
+import { calcularReembolso, reaisBr, type Reembolso } from "./reembolso";
+import { TERMOS_VERSAO } from "./termos";
 import { cobranca, vencimentoNoGateway, type Metodo } from "./cobranca";
 import { appUrl, enviar } from "./mensagens";
 import { reais } from "./format";
@@ -111,6 +113,44 @@ async function garantirCobrancaNoGateway(tx: Tx, faturaId: string, metodo: Metod
   return tx.fatura.update({ where: { id: f.id }, data: { gatewayId: c.id, linkPagamento: c.link } });
 }
 
+/** Preço de fundador (B2 item 6): a tabela congelada vale no plano contratado até fundadorAte; mudança voluntária de plano não leva. */
+export function tabelaDoFundador(conta: { fundadorAte: Date | null; fundadorPlano: Plano | null; fundadorPrecos: unknown }, plano: Plano, agora: Date): TabelaPrecos | null {
+  if (!conta.fundadorAte || conta.fundadorAte <= agora || conta.fundadorPlano !== plano) return null;
+  return tabelaGuardada(conta.fundadorPrecos);
+}
+
+/** Oferta aceita na compra (D): versão dos termos e a tabela de preços usada; o cálculo da devolução usa esta tabela. */
+function ofertaDaCompra(plano: Plano, postos: number, tabela: TabelaPrecos | null) {
+  const t = tabela ?? tabelaAtual();
+  return {
+    termosVersao: TERMOS_VERSAO,
+    fundador: !!tabela,
+    tabela: t,
+    mensalCheio: valorDoPlano(plano, { postos, ciclo: "MENSAL", tabela: t }).toFixed(2),
+    garantiaDias: PRECOS.garantiaDias,
+  };
+}
+
+/** Tabela da contratação guardada na fatura (oferta), ou null. */
+const tabelaDaFatura = (oferta: unknown) => (oferta && typeof oferta === "object" ? tabelaGuardada((oferta as { tabela?: unknown }).tabela) : null);
+
+/**
+ * Marca os primeiros PRECOS.fundadorClientes contratantes distintos (conta real, compra de Carteira ou Assessoria paga).
+ * Trava global: dois pagamentos simultâneos não passam de 10. Chamada dentro da transação do pagamento.
+ */
+async function marcarFundador(tx: Tx, contaId: string, plano: Plano, oferta: unknown, agora: Date) {
+  if (plano !== "CARTEIRA" && plano !== "ASSESSORIA") return;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('fundador'))`;
+  const conta = await tx.conta.findUniqueOrThrow({ where: { id: contaId }, select: { fundadorAte: true, demo: true } });
+  if (conta.fundadorAte || conta.demo) return;
+  const ja = await tx.conta.count({ where: { fundadorAte: { not: null } } });
+  if (ja >= PRECOS.fundadorClientes) return;
+  const ate = new Date(agora);
+  ate.setUTCMonth(ate.getUTCMonth() + PRECOS.fundadorMeses);
+  const tabela = tabelaDaFatura(oferta) ?? tabelaAtual();
+  await tx.conta.update({ where: { id: contaId }, data: { fundadorAte: ate, fundadorPlano: plano, fundadorPrecos: tabela } });
+}
+
 /** Texto que marca, na descrição da fatura, que o Piloto já foi abatido (uma vez por conta). */
 export const MARCA_ABATIMENTO_PILOTO = "com abatimento do Piloto";
 
@@ -167,7 +207,8 @@ export async function abrirCobrancaDoPlano(
     const sobrepostas = await tx.fatura.findMany({ where: { contaId, status: "PAGA", renovacao: true, periodoInicio: { gt: agora }, revisao: null }, select: { id: true } });
     if (sobrepostas.length) await tx.fatura.updateMany({ where: { id: { in: sobrepostas.map((f) => f.id) } }, data: { revisao: "RENOVACAO_PAGA_SOBREPOSTA" } });
     const postos = await postosCobrados(tx, contaId);
-    const cheio = valorDoPlano(plano, { postos, ciclo });
+    const tabela = tabelaDoFundador(await tx.conta.findUniqueOrThrow({ where: { id: contaId } }), plano, agora);
+    const cheio = valorDoPlano(plano, { postos, ciclo, tabela });
     const abatimento = await abatimentoDoPiloto(tx, contaId, plano, ciclo, cheio, agora);
     const valor = cheio.minus(abatimento);
     const nova = await tx.fatura.create({
@@ -181,6 +222,7 @@ export async function abrirCobrancaDoPlano(
         metodo: metodo === "ESCOLHER" ? null : metodo,
         plano,
         ciclo,
+        oferta: ofertaDaCompra(plano, postos, tabela),
       },
     });
     // planoPendente fica só para leitura das telas antigas; cancelamento/agendamento só caem quando a compra for paga
@@ -192,13 +234,57 @@ export async function abrirCobrancaDoPlano(
   return { faturaId: r.fatura.id, link: r.fatura.linkPagamento ?? "", valor: r.fatura.valor.toFixed(2), modo: cobranca().modo };
 }
 
-/** Cancela a renovação: o acesso pago segue até o fim do período; cobranças futuras deixam de existir. */
+/**
+ * B1: devolução que o cancelamento geraria agora, para a fatura do período pago em andamento (Carteira ou Assessoria).
+ * Sem período de assinatura em andamento (Grátis, Piloto, compra ainda não paga): null.
+ */
+async function devolucaoNoCancelamento(tx: Tx | typeof db, contaId: string, agora: Date): Promise<{ faturaId: string; reembolso: Reembolso } | null> {
+  const f = await tx.fatura.findFirst({
+    where: { contaId, status: "PAGA", plano: { in: ["CARTEIRA", "ASSESSORIA"] }, periodoInicio: { lte: agora }, periodoFim: { gt: agora }, revisao: null },
+    orderBy: { periodoInicio: "desc" },
+  });
+  if (!f || !f.periodoInicio || !f.plano) return null;
+  // 1ª assinatura: compra (não renovação) sem outra assinatura paga antes dela
+  const antes = await tx.fatura.count({ where: { contaId, id: { not: f.id }, status: { in: ["PAGA", "ESTORNADA"] }, plano: { in: ["CARTEIRA", "ASSESSORIA"] }, criadoEm: { lt: f.criadoEm } } });
+  const tabela = tabelaDaFatura(f.oferta);
+  const mensalCheio = valorDoPlano(f.plano, { postos: f.postos ?? 0, ciclo: "MENSAL", tabela });
+  const reembolso = calcularReembolso(
+    { valor: f.valor.toString(), valorEstornado: f.valorEstornado.toString(), ciclo: f.ciclo, periodoInicio: f.periodoInicio, pagaEm: f.pagaEm },
+    { primeiraAssinatura: !f.renovacao && antes === 0, mensalCheio, agora },
+  );
+  return { faturaId: f.id, reembolso };
+}
+
+/** O que acontece se o cliente cancelar agora (para a tela mostrar antes do clique). */
+export async function previaCancelamento(contaId: string, agora = new Date()) {
+  return (await devolucaoNoCancelamento(db, contaId, agora))?.reembolso ?? null;
+}
+
+/**
+ * Cancela a assinatura (B1). Sem devolução: o acesso pago segue até o fim do período e cobranças futuras deixam de existir.
+ * Com devolução (garantia de 30 dias ou proporcional do anual): o acesso pago termina agora, a fatura fica marcada com o
+ * valor a devolver e a equipe faz a devolução no gateway (o painel interno lista; o webhook do estorno registra).
+ * O cliente recebe a confirmação por e-mail.
+ */
 export async function cancelarRenovacao(contaId: string, agora = new Date()) {
   const r = await db.$transaction(async (tx) => {
     await travarConta(tx, contaId);
     const conta = await tx.conta.findUniqueOrThrow({ where: { id: contaId } });
-    const ativo = !!conta.planoVigenteAte && conta.planoVigenteAte > agora && conta.plano !== "GRATIS";
+    const devolucao = await devolucaoNoCancelamento(tx, contaId, agora);
+    const encerra = !!devolucao?.reembolso.encerraAgora;
+    const ativo = !encerra && !!conta.planoVigenteAte && conta.planoVigenteAte > agora && conta.plano !== "GRATIS";
     const canceladas = await cancelarNaoIniciadas(tx, contaId, "Cancelamento pedido pelo cliente", agora);
+    if (encerra && devolucao)
+      await tx.fatura.update({
+        where: { id: devolucao.faturaId },
+        data: {
+          periodoFim: agora,
+          valorReembolsar: devolucao.reembolso.valor,
+          revisao: devolucao.reembolso.tipo === "GARANTIA" ? "REEMBOLSO_GARANTIA" : "REEMBOLSO_PROPORCIONAL",
+          revisaoResolvidaEm: null,
+          revisaoResolvidaPor: null,
+        },
+      });
     await tx.conta.update({
       where: { id: contaId },
       data: ativo
@@ -206,10 +292,36 @@ export async function cancelarRenovacao(contaId: string, agora = new Date()) {
         : { renovacaoCancelada: true, mudancaAgendada: null, mudancaAgendadaEm: null, planoPendente: null, ...(conta.plano !== "PILOTO" ? { plano: "GRATIS" } : {}) },
     });
     await sincronizarPlano(tx, contaId, agora);
-    return { agendado: ativo, ate: ativo ? conta.planoVigenteAte : null, canceladas };
+    return { agendado: ativo, ate: ativo ? conta.planoVigenteAte : null, canceladas, devolucao: encerra ? devolucao : null };
   });
   await cancelarNoGateway(r.canceladas);
-  return { agendado: r.agendado, ate: r.ate, canceladas: r.canceladas.length };
+  if (r.devolucao) await avisarEquipeRevisao([r.devolucao.faturaId]);
+  await confirmarCancelamento(contaId, r.ate, r.devolucao?.reembolso ?? null);
+  return { agendado: r.agendado, ate: r.ate, canceladas: r.canceladas.length, devolucao: r.devolucao?.reembolso ?? null };
+}
+
+/** B2 item 4: "A solicitação de cancelamento será confirmada por meio eletrônico." */
+async function confirmarCancelamento(contaId: string, ate: Date | null, devolucao: Reembolso | null) {
+  const donos = await db.membro.findMany({ where: { contaId, papel: "DONO" }, include: { usuario: true } });
+  const data = (d: Date) => d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  const linhas = devolucao
+    ? [
+        `Recebemos o seu pedido de cancelamento. ${devolucao.explicacao}`,
+        "",
+        `A devolução de ${reaisBr(devolucao.valor)} é feita pelo mesmo meio de pagamento, em até 10 dias úteis.`,
+      ]
+    : [`Recebemos o seu pedido de cancelamento. Nada mais será cobrado.${ate ? ` O acesso pago segue até ${data(ate)}.` : ""}`];
+  const corpo = [
+    ...linhas,
+    "",
+    "Você pode exportar seus documentos e dados por 30 dias depois do fim do acesso, em Configurações › Dados.",
+    "",
+    `Mudou de ideia? Reative em: ${appUrl("/app/configuracoes?aba=cobranca")}`,
+  ].join("\n");
+  for (const d of donos)
+    await enviar({ contaId, chave: `CANCELAMENTO:${contaId}:${Date.now()}`, tipo: "COBRANCA", canal: "EMAIL", destino: d.usuario.email, assunto: "Cancelamento confirmado", corpo }).catch((e) =>
+      registrar("erro", "aviso_cancelamento_falhou", { contaId, erro: e instanceof Error ? e.message : String(e) }),
+    );
 }
 
 /** Desfaz o cancelamento antes da data: a renovação volta a valer. Nada é cobrado agora. */
@@ -314,6 +426,7 @@ export async function processarEventoPagamento(opts: {
               ...(!f.renovacao ? { renovacaoCancelada: false, mudancaAgendada: null, mudancaAgendadaEm: null, ciclo: f.ciclo ?? undefined } : {}),
             },
           });
+          if (f.plano && !f.renovacao) await marcarFundador(tx, f.contaId, f.plano, f.oferta, agora);
         }
       }
       await sincronizarPlano(tx, f.contaId, agora);
@@ -369,7 +482,8 @@ export async function renovarAssinaturas(agora = new Date()) {
           const plano = atual.mudancaAgendada && atual.mudancaAgendada !== "GRATIS" ? atual.mudancaAgendada : atual.plano;
           const ciclo = (atual.ciclo === "ANUAL" ? "ANUAL" : "MENSAL") as Ciclo;
           const postos = await postosCobrados(tx, contaId);
-          const valor = valorDoPlano(plano, { postos, ciclo });
+          const tabela = tabelaDoFundador(atual, plano, inicio);
+          const valor = valorDoPlano(plano, { postos, ciclo, tabela });
           const nova = await tx.fatura.create({
             data: {
               contaId,
@@ -383,6 +497,7 @@ export async function renovarAssinaturas(agora = new Date()) {
               periodoInicio: inicio,
               periodoFim: fimDoPeriodo(inicio, ciclo),
               renovacao: true,
+              oferta: ofertaDaCompra(plano, postos, tabela),
             },
           });
           fatura = await garantirCobrancaNoGateway(tx, nova.id, "ESCOLHER", atual.membros[0]?.usuario.email ?? "");
@@ -415,7 +530,12 @@ export async function resumoAssinatura(contaId: string, agora = new Date()) {
     faturas,
     postos,
     ciclo,
-    valorRenovacao: conta.plano === "CARTEIRA" || conta.plano === "ASSESSORIA" ? valorDoPlano(conta.mudancaAgendada && conta.mudancaAgendada !== "GRATIS" ? conta.mudancaAgendada : conta.plano, { postos, ciclo }).toFixed(2) : null,
+    valorRenovacao: (() => {
+      if (conta.plano !== "CARTEIRA" && conta.plano !== "ASSESSORIA") return null;
+      const plano = conta.mudancaAgendada && conta.mudancaAgendada !== "GRATIS" ? conta.mudancaAgendada : conta.plano;
+      return valorDoPlano(plano, { postos, ciclo, tabela: tabelaDoFundador(conta, plano, conta.planoVigenteAte ?? agora) }).toFixed(2);
+    })(),
+    fundadorAte: conta.fundadorAte && conta.fundadorAte > agora ? conta.fundadorAte : null,
     proxima,
     pendenteCompra,
     revisoes,
@@ -443,6 +563,8 @@ export const MOTIVO_REVISAO: Record<string, string> = {
   ESTORNO_PARCIAL: "Estorno parcial feito no gateway: conferir o acordo com o cliente (o acesso foi mantido).",
   CHARGEBACK: "Contestação no cartão: responder no Asaas (o acesso segue até a decisão).",
   RENOVACAO_PAGA_SOBREPOSTA: "Renovação já paga ficou sobreposta a um upgrade: combinar devolução ou crédito com o cliente.",
+  REEMBOLSO_GARANTIA: "Cancelamento na garantia de 30 dias: devolver o valor indicado no Asaas (estorno) em até 10 dias úteis.",
+  REEMBOLSO_PROPORCIONAL: "Cancelamento do anual: devolver o valor proporcional indicado no Asaas (estorno parcial) em até 10 dias úteis.",
 };
 
 const emailsDaEquipe = () => (process.env.PAINEL_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
@@ -461,6 +583,7 @@ async function avisarEquipeRevisao(faturaIds: string[]) {
       "",
       `Conta: ${f.conta.nome}`,
       `Fatura: ${f.descricao} · ${reais(f.valor.toFixed(2))}${f.valorEstornado.gt(0) ? ` · estornado ${reais(f.valorEstornado.toFixed(2))}` : ""}`,
+      ...(f.valorReembolsar ? [`Valor a devolver: ${reais(f.valorReembolsar.toFixed(2))}`] : []),
       ...(f.gatewayId ? [`Cobrança no Asaas: ${f.gatewayId}`] : []),
       "",
       `Lista no painel interno: ${appUrl("/app/interno#revisoes")}`,

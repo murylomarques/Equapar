@@ -86,6 +86,8 @@ export function transicao(f: FaturaRegra, evento: EventoGateway, agora: Date, ex
       if (s !== "PAGA") return { mudou: false, motivo: `estorno parcial ignorado (fatura ${s.toLowerCase()})` };
       const v = extra.valorEstornado != null ? new Decimal(extra.valorEstornado) : null;
       if (v && v.gte(f.valor)) return { mudou: true, motivo: "estorno parcial do valor total", status: "ESTORNADA", valorEstornado: new Decimal(f.valor).toFixed(2) };
+      // devolução do cancelamento (garantia ou proporcional do anual) feita pela equipe: o acesso já terminou; não é acordo novo
+      if (f.revisao?.startsWith("REEMBOLSO_")) return { mudou: true, motivo: "devolução do cancelamento registrada", valorEstornado: v ? v.toFixed(2) : undefined };
       // acesso mantido: devolução parcial é acordo comercial; fica para revisão humana
       return { mudou: true, motivo: "estorno parcial: acesso mantido, revisar", valorEstornado: v ? v.toFixed(2) : undefined, revisao: "ESTORNO_PARCIAL" };
     }

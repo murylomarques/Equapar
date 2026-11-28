@@ -136,6 +136,9 @@ export function FormEmpresa({ novaConta = false, assessoria = true }: { novaCont
       )}
       <CampoCnpj nome="cnpj" rotulo={tipo === "ASSESSORIA" ? "CNPJ do primeiro cliente" : "CNPJ da empresa"} opcional={tipo === "ASSESSORIA"} />
       <CampoTexto nome="razaoSocial" rotulo={tipo === "ASSESSORIA" ? "Nome da assessoria" : "Razão social"} opcional />
+      <Consentimento nome="termos">
+        Li e aceito os <Link href="/termos">termos de uso</Link> e a <Link href="/privacidade">política de privacidade</Link>.
+      </Consentimento>
       <BotaoEnvio>Continuar</BotaoEnvio>
     </FormAcao>
   );

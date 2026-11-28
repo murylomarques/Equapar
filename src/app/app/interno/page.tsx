@@ -128,6 +128,7 @@ export default async function PainelInterno() {
                   <div>
                     <strong style={{ fontWeight: 500 }}>{f.conta.nome}</strong> · {f.descricao} · {reais(f.valor.toFixed(2))}
                     {f.valorEstornado.gt(0) ? ` · estornado ${reais(f.valorEstornado.toFixed(2))}` : ""}
+                    {f.valorReembolsar ? ` · devolver ${reais(f.valorReembolsar.toFixed(2))}` : ""}
                     <span className="legenda" style={{ display: "block" }}>
                       {MOTIVO_REVISAO[f.revisao!] ?? f.revisao}
                       {f.gatewayId ? ` Cobrança no Asaas: ${f.gatewayId}.` : ""}

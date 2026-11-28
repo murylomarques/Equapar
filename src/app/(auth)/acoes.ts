@@ -1,4 +1,5 @@
 "use server";
+import { TERMOS_VERSAO } from "@/lib/termos";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -111,6 +112,8 @@ export async function criarConta(_: Estado, fd: FormData): Promise<Estado> {
       nome: d.nome,
       email: d.email,
       senhaHash: await hashSenha(d.senha),
+      termosVersao: TERMOS_VERSAO,
+      termosAceitosEm: new Date(),
       membros: {
         create: {
           papel: "DONO",
@@ -145,6 +148,8 @@ export async function completarEmpresa(_: Estado, fd: FormData): Promise<Estado>
   const cnpj = normalizarCnpj(String(fd.get("cnpj") ?? ""));
   const razao = String(fd.get("razaoSocial") ?? "").trim();
   if (!(tipo === "ASSESSORIA" && !cnpj) && !cnpjValido(cnpj)) return { campos: { cnpj: "Esse CNPJ não existe. Confira os 14 caracteres." } };
+  if (fd.get("termos") !== "on") return { campos: { termos: "Para criar a conta, aceite os termos de uso e a política de privacidade." } };
+  await db.usuario.update({ where: { id: s.usuarioId }, data: { termosVersao: TERMOS_VERSAO, termosAceitosEm: new Date() } });
   const m = await db.membro.create({
     data: {
       usuario: { connect: { id: s.usuarioId } },

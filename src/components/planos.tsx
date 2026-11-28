@@ -131,7 +131,8 @@ export function TabelaPlanos({ exemploCarteira = true, comparar = false }: { exe
       </div>
       <p className="legenda mt-16 mb-0">
         Preço de fundador: os {PRECOS.fundadorClientes} primeiros clientes mantêm este preço por {PRECOS.fundadorMeses} meses. Garantia de {PRECOS.garantiaDias} dias: se desistir
-        no primeiro mês, devolvemos a 1ª mensalidade (a garantia não cobre o resultado do pedido no órgão).
+        no primeiro mês, devolvemos o valor pago na 1ª assinatura (a garantia não cobre o resultado do pedido no órgão). No anual, cancele quando quiser, sem multa: descontamos os
+        meses já iniciados pelo preço do plano mensal e devolvemos o restante.
       </p>
 
       {comparar && (

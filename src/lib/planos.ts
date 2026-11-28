@@ -7,20 +7,21 @@ import Decimal from "decimal.js";
 export type PlanoId = "GRATIS" | "PILOTO" | "CARTEIRA" | "ASSESSORIA";
 export type Ciclo = "MENSAL" | "ANUAL";
 
-import { PRECOS } from "./precos";
+import { PRECOS, tabelaAtual, type TabelaPrecos } from "./precos";
 export { PRECOS };
 
-/** Valor de uma fatura do ciclo: mensal ou 12 meses com o desconto anual. */
-export function valorDoPlano(plano: PlanoId, opts: { postos: number; ciclo: Ciclo }): Decimal {
+/** Valor de uma fatura do ciclo: mensal ou 12 meses pelo preço de N. `tabela`: a do fundador, quando houver. */
+export function valorDoPlano(plano: PlanoId, opts: { postos: number; ciclo: Ciclo; tabela?: TabelaPrecos | null }): Decimal {
+  const p = opts.tabela ?? tabelaAtual();
   let mensal: Decimal;
-  if (plano === "CARTEIRA") mensal = Decimal.max(PRECOS.carteiraMinimo, new Decimal(PRECOS.carteiraPorPosto).times(Math.max(0, opts.postos)));
+  if (plano === "CARTEIRA") mensal = Decimal.max(p.carteiraMinimo, new Decimal(p.carteiraPorPosto).times(Math.max(0, opts.postos)));
   else if (plano === "ASSESSORIA")
     // R$ 1.497 até 1.500 postos somados dos clientes; R$ 1 por posto acima disso (fecha a arbitragem com a Carteira)
-    mensal = new Decimal(PRECOS.assessoria).plus(new Decimal(PRECOS.assessoriaPorPostoExtra).times(Math.max(0, opts.postos - PRECOS.assessoriaPostosIncluidos)));
+    mensal = new Decimal(p.assessoria).plus(new Decimal(p.assessoriaPorPostoExtra).times(Math.max(0, opts.postos - p.assessoriaPostosIncluidos)));
   else return new Decimal(0); // Grátis: nada; Piloto: cobrado por pedido, não por mês
   if (opts.ciclo === "MENSAL") return mensal.toDecimalPlaces(2);
   // anual: 12 meses pelo preço de N (padrão 10)
-  return mensal.times(PRECOS.mesesPagosNoAnual()).toDecimalPlaces(2);
+  return mensal.times(p.mesesPagosNoAnual).toDecimalPlaces(2);
 }
 
 // ---------------------------------------------------------------------------

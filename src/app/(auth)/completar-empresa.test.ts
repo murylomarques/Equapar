@@ -19,12 +19,14 @@ vi.mock("@/lib/db", () => ({
   db: {
     membro: { count: vi.fn(async () => membros), create: vi.fn(async (a) => (criados.push(a), { contaId: "nova" })) },
     sessao: { update: vi.fn() },
+    usuario: { update: vi.fn() },
   },
 }));
 vi.mock("@/lib/eventos", () => ({ registrarEvento: vi.fn() }));
 const { completarEmpresa } = await import("./acoes");
 const fd = (o: Record<string, string>) => {
   const f = new FormData();
+  f.set("termos", "on"); // aceite dos termos (D)
   for (const [k, v] of Object.entries(o)) f.set(k, v);
   return f;
 };

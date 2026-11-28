@@ -16,7 +16,7 @@ export default function Privacidade() {
       {/* mesma margem esquerda das outras páginas: a coluna de leitura fica dentro da largura do site */}
       <div className="guia documento-legal">
         <h1 className="titulo-landing">Política de privacidade</h1>
-        <p className="legenda documento-data">Atualizado em 25/11/2026.</p>
+        <p className="legenda documento-data">Atualizado em 28/11/2026.</p>
         <h2>Quem somos</h2>
         <p>
           {empresa.texto}. Canal do titular de dados e do encarregado: <a href={`mailto:${empresa.canal}`}>{empresa.canal}</a>.
@@ -62,6 +62,53 @@ export default function Privacidade() {
         <p>
           Com a cobrança encerrada, a conta fica só para leitura e você pode exportar tudo por 30 dias. Depois disso, os documentos que você enviou podem ser apagados. Os dados que a lei
           manda guardar, como cobrança e registros de acesso, ficam separados e são mantidos pelo prazo legal.
+        </p>
+        {/* parecer do advogado de 28/11/2026 (B3), transcrito; o canal vem do ambiente (SITE_EMAIL_CONTATO) */}
+        <h2>Tratamento de dados de clientes do plano Assessoria</h2>
+        <h3>1. Agentes de tratamento</h3>
+        <p>
+          A Equapar atuará como controladora dos dados pessoais necessários à administração de contas, contratação, faturamento, segurança da plataforma e cumprimento de suas próprias obrigações legais.
+        </p>
+        <p>
+          Quanto aos dados pessoais inseridos pelos contratantes para execução dos serviços disponibilizados pela plataforma, a Equapar atuará, conforme as circunstâncias concretas do tratamento, como operadora ou suboperadora, observando as instruções lícitas do respectivo controlador.
+        </p>
+        <p>A assessoria poderá atuar como controladora ou operadora dos dados de seus clientes, conforme as finalidades e responsabilidades efetivamente assumidas.</p>
+        <h3>2. Finalidades</h3>
+        <p>
+          Os dados inseridos na plataforma poderão ser tratados para armazenamento, organização, processamento de informações, elaboração de cálculos, geração de documentos, acompanhamento contratual, suporte técnico, segurança e auditoria das operações contratadas.
+        </p>
+        <p>
+          Os dados não serão comercializados nem utilizados para publicidade ou treinamento de modelos de inteligência artificial sem fundamento jurídico específico e informação adequada aos envolvidos.
+        </p>
+        <h3>3. Minimização de dados</h3>
+        <p>O tratamento será limitado às informações necessárias para execução das funcionalidades contratadas.</p>
+        <p>Deverá ser evitada a inserção de informações pessoais individualizadas quando dados agregados ou anonimizados forem suficientes para a finalidade pretendida.</p>
+        <h3>4. Segurança e segregação</h3>
+        <p>
+          A Equapar adotará medidas técnicas e administrativas proporcionais aos riscos do tratamento, incluindo controles de acesso, segregação lógica entre empresas, proteção das informações e registros de atividades relevantes.
+        </p>
+        <p>O acesso às informações será restrito aos usuários autorizados e aos profissionais cuja atuação seja necessária à prestação dos serviços.</p>
+        <h3>5. Prestadores de serviços</h3>
+        <p>
+          A Equapar poderá contratar prestadores tecnológicos para hospedagem, processamento, armazenamento, segurança e demais atividades necessárias ao funcionamento da plataforma.
+        </p>
+        <p>Esses prestadores estarão sujeitos a obrigações de proteção de dados, confidencialidade e segurança compatíveis com as atividades realizadas.</p>
+        <p>Eventuais transferências internacionais de dados deverão observar os mecanismos e requisitos previstos na LGPD e na regulamentação da ANPD.</p>
+        <h3>6. Direitos dos titulares</h3>
+        <p>As solicitações relacionadas aos direitos dos titulares serão atendidas pela Equapar quando esta atuar como controladora.</p>
+        <p>
+          Quando atuar como operadora ou suboperadora, a Equapar prestará o auxílio necessário ao respectivo controlador para atendimento das solicitações, observadas as responsabilidades legalmente atribuídas a cada agente.
+        </p>
+        <h3>7. Incidentes de segurança</h3>
+        <p>
+          Ao tomar conhecimento de incidente que envolva dados tratados em nome de terceiros, a Equapar comunicará o responsável contratual sem demora injustificada, fornecendo as informações disponíveis necessárias à avaliação, mitigação e cumprimento das obrigações legais.
+        </p>
+        <h3>8. Retenção e exclusão</h3>
+        <p>Os dados serão mantidos durante o período necessário à execução dos serviços e pelo prazo de exportação disponibilizado após o encerramento contratual.</p>
+        <p>Após esse período, serão eliminados ou anonimizados, ressalvadas as hipóteses de conservação legalmente autorizadas.</p>
+        <h3>9. Canal de atendimento</h3>
+        <p>
+          As solicitações relativas à privacidade e à proteção de dados pessoais poderão ser encaminhadas para <a href={`mailto:${empresa.canal}`}>{empresa.canal}</a>.
         </p>
         <h2>Seus direitos</h2>
         <p>

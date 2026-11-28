@@ -36,6 +36,10 @@ async function comprar(plano: "CARTEIRA" | "ASSESSORIA" = "CARTEIRA", quando = n
   await processarEventoPagamento({ faturaId: r.faturaId, evento: "PAGO", eventoId: evt(), agora: quando });
   return r.faturaId;
 }
+/** B1: a garantia de 30 dias devolve e encerra na hora; estes cenários testam o cancelamento fora dela (pago há 31 dias). */
+async function foraDaGarantia() {
+  await db.fatura.updateMany({ where: { contaId, status: "PAGA" }, data: { pagaEm: new Date(Date.now() - 31 * dia) } });
+}
 
 describe("P0: compra, idempotência e eventos fora de ordem", () => {
   it("o plano só vale com o pagamento e ganha um período", async () => {
@@ -72,6 +76,7 @@ describe("P0: compra, idempotência e eventos fora de ordem", () => {
 describe("P0: cancelamento e downgrade", () => {
   it("Grátis com período pago: acesso até o fim do período, renovação futura cancelada, dados preservados", async () => {
     await comprar();
+    await foraDaGarantia();
     const vigente = (await conta()).planoVigenteAte!;
     // renovação já gerada (7 dias antes do fim)
     await renovarAssinaturas(new Date(vigente.getTime() - 3 * dia));
@@ -92,6 +97,7 @@ describe("P0: cancelamento e downgrade", () => {
   });
   it("desfazer o cancelamento antes da data mantém a assinatura", async () => {
     await comprar();
+    await foraDaGarantia();
     await cancelarRenovacao(contaId);
     await reativarRenovacao(contaId);
     expect(await conta()).toMatchObject({ plano: "CARTEIRA", renovacaoCancelada: false, mudancaAgendada: null });
@@ -228,6 +234,7 @@ describe("Auditoria independente: cenários reproduzidos e corrigidos", () => {
   });
   it("abrir um upgrade não desfaz o cancelamento; só o pagamento desfaz", async () => {
     await comprar();
+    await foraDaGarantia();
     await cancelarRenovacao(contaId);
     const up = await abrirCobrancaDoPlano(contaId, "ASSESSORIA", "MENSAL", "PIX", email, new Date(), { analiseManual: true });
     expect(await conta()).toMatchObject({ renovacaoCancelada: true, mudancaAgendada: "GRATIS" });
